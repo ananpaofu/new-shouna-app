@@ -1968,33 +1968,30 @@ body { font-size: 16px; }
    v1.16 自由裁剪框 / 底部提示条 / 固定头实体 / 首页压缩 / 黑白老年模式
    ============================================================ */
 
-/* 自由拖动裁剪框：半透明遮罩外的可交互裁剪区域 */
-.crop-box {
-  position: absolute; box-sizing: border-box;
-  border: 1.5px solid #7fd0a6;
-  box-shadow: 0 0 0 9999px rgba(0, 0, 0, .5);
-  touch-action: none; cursor: move; z-index: 2;
+/* 自由裁剪：固定取景框，拖动照片本身选择区域（相机式） */
+.crop-viewport {
+  position: relative; width: min(78vw, 340px); aspect-ratio: 1;
+  overflow: hidden; background: #000; touch-action: none; cursor: grab;
+  border-radius: 4px;
 }
-.crop-box > i {
-  position: absolute; width: 20px; height: 20px; background: transparent; z-index: 3;
+.crop-viewport:active { cursor: grabbing; }
+.crop-viewport img {
+  position: absolute; left: 50%; top: 50%; max-width: none;
+  transform-origin: center center; will-change: transform;
+  margin: 0; pointer-events: none;
 }
-.crop-box > i[data-handle="nw"] { left: -10px; top: -10px; cursor: nwse-resize; }
-.crop-box > i[data-handle="ne"] { right: -10px; top: -10px; cursor: nesw-resize; }
-.crop-box > i[data-handle="sw"] { left: -10px; bottom: -10px; cursor: nesw-resize; }
-.crop-box > i[data-handle="se"] { right: -10px; bottom: -10px; cursor: nwse-resize; }
-.crop-box > i::after {
-  content: ""; position: absolute; width: 12px; height: 12px; background: #fff;
-  border: 2px solid var(--sage-deep); border-radius: 3px;
-}
-.crop-box > i[data-handle="nw"]::after { left: 4px; top: 4px; }
-.crop-box > i[data-handle="ne"]::after { right: 4px; top: 4px; }
-.crop-box > i[data-handle="sw"]::after { left: 4px; bottom: 4px; }
-.crop-box > i[data-handle="se"]::after { right: 4px; bottom: 4px; }
-.crop-box > span {
-  position: absolute; left: 50%; bottom: 6px; transform: translateX(-50%);
-  color: #fff; font-size: 10px; white-space: nowrap; text-shadow: 0 1px 3px #000;
-  pointer-events: none;
-}
+.crop-grid { position: absolute; inset: 0; pointer-events: none; }
+.crop-grid i { position: absolute; background: rgba(255,255,255,.35); }
+.crop-grid i:nth-child(1) { left: 33.33%; top: 0; bottom: 0; width: 1px; }
+.crop-grid i:nth-child(2) { left: 66.66%; top: 0; bottom: 0; width: 1px; }
+.crop-grid i:nth-child(3) { top: 33.33%; left: 0; right: 0; height: 1px; }
+.crop-grid i:nth-child(4) { top: 66.66%; left: 0; right: 0; height: 1px; }
+.crop-corner { position: absolute; width: 22px; height: 22px; pointer-events: none; border-color: #fff; border-style: solid; }
+.crop-corner.tl { left: 0; top: 0; border-width: 3px 0 0 3px; }
+.crop-corner.tr { right: 0; top: 0; border-width: 3px 3px 0 0; }
+.crop-corner.bl { left: 0; bottom: 0; border-width: 0 0 3px 3px; }
+.crop-corner.br { right: 0; bottom: 0; border-width: 0 3px 3px 0; }
+.crop-hint { color: #ddd; font-size: 11px; text-align: center; margin: 12px 0 0; }
 .crop-frame { border-color: rgba(255,255,255,.55); }
 
 /* 成功提示 / toast：屏幕下方横条，显示更久 */
@@ -2013,6 +2010,13 @@ body { font-size: 16px; }
 }
 .form-sticky-head .sheet-head-form { position: static; margin: 0; padding: 0; box-shadow: none; background: transparent; }
 .form-sticky-head .required-hint { margin: 2px 0 0; font-weight: 600 !important; color: var(--ink); opacity: 1 !important; }
+/* 顶部镂空修复：实体背景铺满圆角区域，滚动时上方不透出内容 */
+.form-sticky-head::before {
+  content: ""; position: absolute; left: 0; right: 0; top: -20px; height: 20px;
+  background: var(--paper); z-index: -1;
+}
+.sheet:has(.form-sticky-head) { border-radius: 0 0 0 0; padding-top: 0; }
+.sheet:has(.form-sticky-head) > .sheet-handle { background: var(--paper); margin-top: 8px; }
 
 /* 首页顶部统计区压缩，我的物品占据主要屏幕 */
 .hero { padding-bottom: 18px; margin-bottom: 10px; }
@@ -2067,3 +2071,141 @@ body { font-size: 16px; }
 .elder-mode .hint, .elder-mode .photo-hint, .elder-mode .sheet-tip { font-weight: 400 !important; }
 .elder-mode .btn { border: 1px solid #000; }
 .elder-mode .toast { background: #000 !important; color: #fff !important; }
+
+/* v1.17 高德蓝绿地图底图（不依赖 Key，收起态也呈现蓝绿配色） */
+.device-map-card .dm-view { background: #e8f1f7 !important; }
+.device-map-card .dm-grid {
+  background:
+    radial-gradient(circle at 18% 30%, #d6ecdc 0 14%, transparent 15%),
+    radial-gradient(circle at 82% 72%, #d6ecdc 0 18%, transparent 19%),
+    radial-gradient(circle at 68% 18%, #d9eef0 0 12%, transparent 13%),
+    linear-gradient(90deg, transparent 46%, rgba(255,255,255,.95) 46%, rgba(255,255,255,.95) 51%, transparent 51%),
+    linear-gradient(0deg, transparent 44%, rgba(255,255,255,.9) 44%, rgba(255,255,255,.9) 49%, transparent 49%),
+    linear-gradient(160deg, #eaf3f8, #e3eef3) !important;
+}
+.device-map-card .dm-road { background: #fff !important; border: 1px solid #cfe0ea; }
+.device-map-card .dm-label { background: rgba(255,255,255,.95); color: #1a73b8; font-weight: 800; border: 1px solid #bcd8ea; }
+.device-map-card .dm-pin::before { background: #1677ff; border-color: #fff; box-shadow: 0 0 0 8px rgba(22,119,255,.2); }
+.device-map-card .dm-pin span { background: #1677ff; }
+.device-map-card { border-color: #bcd8ea; }
+
+/* v1.17 老年模式：彻底黑白，图标去色、硬编码绿色归零、图标不遮挡文字 */
+.elder-mode { --primary: #111 !important; --primary-dark: #111 !important; }
+.elder-mode .nav-add,
+.elder-mode .btn.primary,
+.elder-mode .hero-add,
+.elder-mode .btn.soft { background: #111 !important; color: #fff !important; border: 1px solid #111 !important; box-shadow: none !important; }
+.elder-mode .btn.primary svg, .elder-mode .btn.soft svg, .elder-mode .nav-add svg { color: #fff !important; }
+.elder-mode .profile-avatar, .elder-mode .auth-orb { background: #eee !important; color: #111 !important; border: 2px solid #111 !important; }
+.elder-mode .msg.mine { background: #e5e5e5 !important; color: #000 !important; border: 1px solid #999 !important; }
+.elder-mode .amap-status.on i { background: #111 !important; }
+.elder-mode svg, .elder-mode .animal-ico, .elder-mode .chat-avatar, .elder-mode .achievement-badge,
+.elder-mode .equip-frame, .elder-mode .achievement-frame { filter: grayscale(1) !important; }
+.elder-mode [class*="frame"] { background: #eee !important; border-color: #999 !important; box-shadow: none !important; }
+.elder-mode .cat-dot { filter: grayscale(1) !important; }
+/* 图标与文字：图标尺寸随字号收敛，文字与容器保留内边距，不溢出 */
+.elder-mode .device-ico, .elder-mode .icon-btn, .elder-mode .chat-head-avatar { flex: none; width: 40px; height: 40px; }
+.elder-mode .device-ico svg, .elder-mode .icon-btn svg { width: 22px; height: 22px; }
+.elder-mode .device-sub, .elder-mode .set-label small, .elder-mode .item-subline { font-size: 13px !important; font-weight: 400 !important; }
+.elder-mode .device-name, .elder-mode .set-label b { font-size: 16px !important; }
+.elder-mode .device-row, .elder-mode .set-row, .elder-mode .recommend-row { gap: 8px; padding: 10px !important; }
+.elder-mode .device-sub, .elder-mode .set-label small, .elder-mode .item-subline {
+  white-space: normal !important; overflow: visible !important; text-overflow: clip !important;
+  word-break: break-word;
+}
+
+/* v1.17 设备联动字体与功能中心统一、左侧图标对齐、名称深黑 */
+.device-name { font-size: 15px !important; font-weight: 700 !important; color: #1a1a1a !important; }
+.device-sub { font-size: 12px !important; font-weight: 500 !important; color: #333 !important; }
+.device-ico { width: 44px; height: 44px; flex: none; }
+.device-card { border: 1px solid #dfe4e8 !important; }
+.dm-head b { font-size: 15px !important; color: #1a1a1a !important; }
+
+/* v1.17 图标居中修复：inline SVG 按基线对齐会歪，统一 block + flex 居中（苹果/安卓通用） */
+.device-ico, .search-find, .icon-btn, .friend-add-btn, .dev-icon-opt,
+.chat-tool, .sheet-close {
+  display: -webkit-flex !important;
+  display: flex !important;
+  -webkit-align-items: center !important;
+  align-items: center !important;
+  -webkit-justify-content: center !important;
+  justify-content: center !important;
+  text-align: center !important;
+  line-height: 1 !important;
+}
+/* 所有图标框内的 SVG 设为块级，消除基线间隙导致的歪斜 */
+.device-ico svg, .search-find svg, .icon-btn svg, .dev-icon-opt svg,
+.chat-tool svg, .sheet-close svg, .friend-add-btn svg {
+  display: block !important;
+  margin: 0 auto !important;
+  flex: none;
+}
+.animal-ico svg { width: 26px !important; height: 26px !important; display: block !important; margin: 0 auto !important; }
+.search-find { font-size: 18px; }
+.search-find .close-glyph { display: block; line-height: 1; }
+.device-ico.animal-ico { width: 46px !important; height: 46px !important; border-radius: 14px !important; }
+.elder-mode .device-ico.animal-ico { width: 40px !important; height: 40px !important; }
+.elder-mode .device-ico.animal-ico svg { width: 22px !important; height: 22px !important; }
+
+/* v1.17 添加绑定设备：图标选择器 */
+.dev-icon-picker { display: flex; gap: 8px; flex-wrap: wrap; }
+.dev-icon-opt {
+  width: 52px; height: 52px; border-radius: 14px; background: var(--sage-mist);
+  display: grid; place-items: center; border: 2px solid transparent; color: var(--sage-deep);
+}
+.dev-icon-opt svg { width: 30px; height: 30px; }
+.dev-icon-opt.on { border-color: var(--sage-deep); background: #fff; }
+.danger-row .set-label b { color: #c0392b !important; }
+.chat-filter-tip { display: flex; justify-content: space-between; gap: 8px; font-size: 11px; color: var(--ink-soft); padding: 0 2px 8px; }
+.chat-filter-tip span { background: var(--sage-mist); padding: 3px 10px; border-radius: 10px; }
+
+/* v1.17 文字不被截断：字号放大后允许换行、保留内边距、不溢出方框 */
+.item-title, .item-top h3 {
+  white-space: normal !important; overflow: visible !important; text-overflow: clip !important;
+  word-break: break-word; overflow-wrap: anywhere; padding: 2px 4px; line-height: 1.35;
+}
+.item-subline {
+  white-space: normal !important; overflow: visible !important; text-overflow: clip !important;
+  word-break: break-word; overflow-wrap: anywhere; padding: 2px 4px;
+}
+.item-text, .item-top, .item-row { min-width: 0; }
+.item-top { flex-wrap: wrap; align-items: center; gap: 4px 8px; }
+.item-flag { flex: none; }
+.set-label { min-width: 0; }
+.set-label b, .set-label small {
+  white-space: normal !important; overflow: visible !important; text-overflow: clip !important;
+  word-break: break-word; padding: 1px 2px;
+}
+.full-head h2 { overflow: visible !important; text-overflow: clip !important; white-space: normal !important; line-height: 1.25; }
+.font-extra .item-title, .font-large .item-title { font-size: inherit !important; line-height: 1.35 !important; }
+.font-extra .btn, .font-extra .chip, .font-extra .sort-btn { white-space: normal !important; overflow: visible !important; }
+.chip, .sort-btn { min-height: 40px; padding: 8px 12px; }
+.chips, .sort-row { flex-wrap: wrap; }
+
+/* v1.17 苹果端贴底：统一用 dvh 撑满，页面从顶到底无空白、底栏贴底 */
+@media (max-width: 480px) {
+  html, body { height: 100%; min-height: 100%; padding: 0 !important; margin: 0; overflow: hidden; }
+  body { display: block; }
+  .device-frame {
+    display: flex !important; flex-direction: column;
+    height: 100vh !important; min-height: 100vh !important;
+    width: 100% !important; max-width: none !important; border: none !important; border-radius: 0 !important;
+  }
+  @supports (height: 100dvh) {
+    .device-frame { height: 100dvh !important; min-height: 100dvh !important; }
+  }
+  .device-frame::after { display: none !important; }
+  .device-screen {
+    flex: 1 1 auto !important; min-height: 0 !important; height: auto !important;
+    display: flex; flex-direction: column; overflow: hidden;
+  }
+  #app-view { flex: 1 1 auto; min-height: 0; overflow-y: auto; }
+  .bottom-nav {
+    position: static !important; flex: none !important;
+    height: calc(56px + env(safe-area-inset-bottom, 0px)) !important;
+    min-height: calc(56px + env(safe-area-inset-bottom, 0px)) !important;
+    padding-bottom: env(safe-area-inset-bottom, 0px) !important;
+    margin-top: auto !important;
+  }
+  .page { min-height: 100%; }
+}

@@ -2,8 +2,27 @@
   'use strict';
 
   const DB_KEY = 'organizer_db_v1';
-  const APP_VERSION = '1.16';
+  const APP_VERSION = '1.17';
   const CHANGELOG = [
+    { version: '1.17', date: '2026-11-21', title: '全量英文翻译 / 相机式裁剪 / 好友设备重构', sections: [
+      { label: '问题修复', icon: 'bug', items: [
+        '英文模式改为渲染时翻译 + 补全词典，界面、状态、分类、物品名与提示语全量英文，不再出现半中半英',
+        '裁剪改为相机式：固定取景框，直接拖动照片选区域，支持双指缩放与旋转，可自由上下左右移动',
+        '任意好友编号都能添加（本地无云端目录时创建占位好友），不再因查不到 ID 而失败',
+        '分类点选后自动滚动到对应物品；定位全国范围用真实经纬度，不再默认湖北美术学院',
+        '苹果端页面用 dvh 撑满全屏贴底，去除底部空白；添加物品页顶部镂空修复',
+        '老年模式彻底黑白去色、图标不再遮挡文字；字号放大后文字自动换行不被截断'
+      ] },
+      { label: '全新功能', icon: 'sparkle', items: [
+        '好友备注移入聊天页左上角三点菜单；分组与排序移到消息聊天页，添加好友页更简洁',
+        '设备联动新增「添加绑定设备」流程：命名物品、选图标、设区域，图标点阵可选'
+      ] },
+      { label: '体验优化', icon: 'heart', items: [
+        '示意地图改为高德蓝绿配色，不再灰黄',
+        '设备联动字体与功能中心统一、左侧图标对齐、名称加深',
+        '非食品 / 药品物品不再显示「建议补货」'
+      ] }
+    ] },
     { version: '1.16', date: '2026-11-21', title: '自由裁剪 / 好友群聊 / 黑白老年模式', sections: [
       { label: '全新功能', icon: 'sparkle', items: [
         '裁剪照片改为自由拖动边框、四角调整范围，不放大整图，自由度更高',
@@ -917,7 +936,16 @@
       '最近收纳': 'Recently Added', 'A-Z 字母': 'A-Z Letters', '排列顺序': 'Sort by', '搜索历史': 'Search History',
       '清空': 'Clear', '展开': 'Expand', '收起': 'Collapse', '收起键盘': 'Hide keyboard',
       '没有找到相关物品': 'No items found', '还没有物品': 'No items yet', '添加第一件物品': 'Add your first item',
-      '今天': 'Today', '昨天': 'Yesterday'
+      '今天': 'Today', '昨天': 'Yesterday',
+      '建议补货': 'Low Stock', '即将过期': 'Expiring Soon', '库存充足': 'In Stock', '已过期': 'Expired',
+      '文档证件': 'Documents', '文具书籍': 'Stationery & Books', '钥匙锁具': 'Keys & Locks', '清洁用品': 'Cleaning',
+      '运动用品': 'Sports', '母婴用品': 'Baby', '工具五金': 'Tools', '文档': 'Documents', '证件': 'Documents',
+      '未设置位置': 'No location', '所在分类': 'Category', '所属分类': 'Category', '到期日期': 'Expiry Date',
+      '支': 'pcs', '罐': 'can', '桶': 'bucket', '节': 'pcs', '粒': 'pcs', '块': 'pcs', '片': 'pcs', '颗': 'pcs', '杯': 'cup', '双': 'pair',
+      '水杯': 'Water Bottle', '感冒药': 'Cold Medicine', '毕业证': 'Diploma', '常用药品': 'Common Medicine',
+      '牛奶': 'Milk', '鸡蛋': 'Eggs', '水果': 'Fruit', '收纳盒': 'Storage Box', '钥匙': 'Keys', '文件夹': 'Folder',
+      '护照本': 'Passport', '我的第一件物品': 'My First Item', '我的第': 'My Item ',
+      '还剩': 'Days left: ', '点击查看详情': 'Tap for details', '点击卡片展开可编辑': 'Tap card to edit'
     },
     'zh-Hant': {
       '我的收纳': '我的收納', '我的物品': '我的物品', '功能中心': '功能中心', '首页': '首頁', '功能': '功能', '联动': '連動', '我的': '我的',
@@ -986,7 +1014,16 @@
       '盒': '盒', '瓶': '瓶', '包': '包', '袋': '袋', '个': '個', '卷': '捲',
       '排列顺序': '排列順序', '搜索历史': '搜尋歷史', '清空': '清空', '收起键盘': '收起鍵盤',
       '没有找到相关物品': '沒有找到相關物品', '还没有物品': '還沒有物品', '添加第一件物品': '新增第一件物品',
-      '今天': '今天', '昨天': '昨天'
+      '今天': '今天', '昨天': '昨天',
+      '建议补货': '建議補貨', '即将过期': '即將過期', '库存充足': '庫存充足',
+      '文档证件': '文件證件', '文具书籍': '文具書籍', '钥匙锁具': '鑰匙鎖具', '清洁用品': '清潔用品',
+      '运动用品': '運動用品', '母婴用品': '母嬰用品', '工具五金': '工具五金',
+      '未设置位置': '未設定位置', '所属分类': '所屬分類', '到期日期': '到期日期',
+      '支': '支', '罐': '罐', '桶': '桶', '节': '節', '块': '塊', '片': '片', '颗': '顆', '杯': '杯', '双': '雙',
+      '水杯': '水杯', '感冒药': '感冒藥', '毕业证': '畢業證', '常用药品': '常用藥品',
+      '牛奶': '牛奶', '鸡蛋': '雞蛋', '水果': '水果', '收纳盒': '收納盒', '钥匙': '鑰匙', '文件夹': '資料夾',
+      '护照本': '護照', '我的第一件物品': '我的第一件物品', '我的第': '我的第',
+      '点击查看详情': '點選查看詳情', '点击卡片展开可编辑': '點卡片展開可編輯'
     }
   };
 
@@ -1944,7 +1981,9 @@
     const qty = parseInt(item.quantity, 10) || 1;
     if (exp.key === 'expired') return { text: '已过期', cls: 'expired' };
     if (exp.key === 'danger' || exp.key === 'warn') return { text: '即将过期', cls: 'warning' };
-    if (qty <= 1) return { text: '建议补货', cls: 'restock' };
+    // 只有食品、药品这类消耗品才提示补货；其他物品低数量属于正常，不提示
+    const consumable = item.category === 'food' || item.category === 'medicine';
+    if (qty <= 1 && consumable) return { text: '建议补货', cls: 'restock' };
     return { text: '库存充足', cls: 'ok' };
   }
 
@@ -1963,11 +2002,11 @@
           '<div class="item-text">' +
             '<div class="item-top">' +
               (state.search ? '<button class="card-cancel" data-action="cancel-search">取消</button>' : alphaBadge) +
-              '<h3 class="item-title">' + escapeHTML(item.name) + '</h3>' +
-              '<span class="item-flag ' + status.cls + '">' + status.text + '</span>' +
+              '<h3 class="item-title">' + escapeHTML(translateText(item.name)) + '</h3>' +
+              '<span class="item-flag ' + status.cls + '">' + escapeHTML(translateText(status.text)) + '</span>' +
             '</div>' +
             '<p class="item-subline"><i class="cat-dot" style="background:' + cat.color + '"></i>' +
-              escapeHTML(cat.label) + ' · ' + escapeHTML(item.location || '未设置位置') + '</p>' +
+              escapeHTML(translateText(cat.label)) + ' · ' + escapeHTML(translateText(item.location || '未设置位置')) + '</p>' +
             '<div class="item-actions">' +
               '<button class="icon-btn" data-action="find-item" data-id="' + item.id + '" title="一键查找">' + ICON.pin + '</button>' +
               '<button class="icon-btn" data-action="edit-item" data-id="' + item.id + '">' + ICON.edit + '</button>' +
@@ -2203,12 +2242,16 @@
   function chatHTML() {
     return '<div class="page">' +
       '<div class="section-head community-head" style="margin-top:12px">' +
-        '<button class="icon-btn" data-action="back" title="返回">' + ICON.back + '</button>' +
-        '<h2 style="flex:1;margin-left:8px">消息聊天</h2>' +
+        '<button class="icon-btn" data-action="toggle-friend-sort" title="' + (state.friendSort === 'az' ? translateText('当前 A-Z 排序') : translateText('A-Z 排序')) + '">A↔Z</button>' +
+        '<h2 style="flex:1;margin-left:8px">' + translateText('消息聊天') + '</h2>' +
+        '<button class="icon-btn" data-action="cycle-friend-group" title="' + escapeHTML(translateText('分组') + '：' + (state.friendGroup || translateText('全部'))) + '">' + ICON.users + '</button>' +
       '</div>' +
-      '<p class="community-sub">和好友、群友交流收纳心得</p>' +
+      '<div class="chat-filter-tip">' +
+        '<span>' + (state.friendSort === 'az' ? 'A → Z' : translateText('默认顺序')) + '</span>' +
+        '<span>' + escapeHTML(translateText('分组') + '：' + (state.friendGroup || translateText('全部'))) + '</span>' +
+      '</div>' +
       '<button class="chat-add-friend-banner" data-action="open-friends">' + ICON.users +
-        '<span><b>添加好友</b><small>用 ID 搜索，或从推荐里一键添加</small></span>' + ICON.back + '</button>' +
+        '<span><b>' + translateText('添加好友') + '</b><small>' + translateText('用 ID 搜索，或从推荐里一键添加') + '</small></span>' + ICON.back + '</button>' +
       '<div class="chat-list-panel">' + chatListHTML() + '</div>' +
       '</div>';
   }
@@ -2280,7 +2323,20 @@
   }
 
   function chatListHTML() {
-    return allChats().map(function (c) {
+    let chats = allChats();
+    const groupFilter = state.friendGroup || '全部';
+    if (groupFilter !== '全部') {
+      const friendIds = getUserFriends().filter(function (f) {
+        return (f.group || '未分组') === groupFilter;
+      }).map(function (f) { return 'u_' + f.userId; });
+      chats = chats.filter(function (c) { return c.kind !== 'friend' || friendIds.indexOf(c.id) !== -1; });
+    }
+    if (state.friendSort === 'az') {
+      chats.sort(function (a, b) {
+        return String(a.name).localeCompare(String(b.name), 'zh-CN');
+      });
+    }
+    return chats.map(function (c) {
       const msgs = db.messages[c.id] || (DEMO_MESSAGES[c.id] || []);
       const lastMsg = msgs.length ? msgs[msgs.length - 1] : null;
       const last = lastMsg ? (lastMsg.type === 'sticker' ? '[贴纸]' : lastMsg.text) : '开始聊天吧';
@@ -2314,12 +2370,16 @@
     const groupTool = isGroup
       ? '<button class="chat-tool" data-action="group-manage" data-id="' + escapeHTML(id) + '" title="群聊管理">⚙</button>'
       : '';
+    const friendMenuTool = friendUid
+      ? '<button class="chat-tool" data-action="chat-friend-menu" data-id="' + escapeHTML(friendUid) + '" title="更多">⋯</button>'
+      : '';
     $('#overlay-root').innerHTML =
       '<div class="full-mask">' +
         '<div class="full-head"><button class="back" data-action="close-chat">' + ICON.back + '</button>' +
           headAvatar +
           '<h2>' + escapeHTML(chat.name) + (friendUid ? '<small class="chat-head-tip">点头像看资料</small>' : '') + '</h2>' +
           groupTool +
+          friendMenuTool +
           '<button class="chat-tool" data-action="chat-bg" title="更换背景">' + ICON.sparkle + '</button></div>' +
         '<div class="chat-body" id="chat-body" style="' + chatBgStyle() + '"></div>' +
         '<div class="emoji-panel" id="emoji-panel"></div>' +
@@ -2433,11 +2493,6 @@
         '<div class="add-friend-row"><input id="friend-id-input" placeholder="输入对方编号 ID" maxlength="6">' +
           '<button class="btn primary" data-action="add-friend">添加好友</button></div>' +
         '<div class="info-card" id="friend-error" style="min-height:0;padding:6px 12px;color:#c98d86;font-size:11px"></div>' +
-        '<div class="friend-tools">' +
-          '<button data-action="toggle-friend-sort">' + (state.friendSort === 'az' ? '按 A-Z 排序 ✓' : 'A-Z 排序') + '</button>' +
-          '<button data-action="cycle-friend-group">分组：' + escapeHTML(state.friendGroup || '全部') + '</button>' +
-          '<button data-action="rename-friend-open">好友备注</button>' +
-        '</div>' +
         (function () {
           const recommended = FRIEND_DIRECTORY.filter(function (p) {
             return !friends.some(function (f) { return f.friendId === p.friendId; });
@@ -2459,7 +2514,6 @@
               '<span class="chat-avatar">' + escapeHTML((f.remark || f.name).charAt(0)) + '</span>' +
               '<span class="set-label"><b>' + escapeHTML(f.remark || f.name) + '</b><small>' + escapeHTML(f.group || '未分组') + ' · ' + (f.signature ? escapeHTML(f.signature) : 'ID ' + escapeHTML(f.friendId || '')) + '</small></span>' +
               '<span class="set-arrow">›</span></button>' +
-            '<button class="friend-profile-btn" data-action="rename-friend-open" data-id="' + f.userId + '" title="改备注">备注</button>' +
             '<button class="friend-remove-btn" data-action="remove-friend" data-id="' + f.userId + '" title="删除好友">✕</button>' +
           '</div>';
         }).join('') : '<p class="sheet-tip">还没有好友，可在上方「发现好友」添加，或输入对方 ID</p>') +
@@ -2495,6 +2549,24 @@
         '</select></div>' +
         '<div class="sheet-actions"><button class="btn ghost" data-action="close-sheet">取消</button>' +
           '<button class="btn primary" data-action="save-friend-remark" data-id="' + escapeHTML(userId) + '">保存</button></div>' +
+      '</div></div>';
+  }
+
+  function openChatFriendMenu(userId) {
+    const friend = getUserFriends().find(function (f) { return f.userId === userId; });
+    const name = friend ? (friend.remark || friend.name) : '好友';
+    $('#sheet-root').innerHTML =
+      '<div class="sheet-mask" data-mask="1"><div class="sheet">' +
+        '<div class="sheet-handle"></div>' +
+        '<div class="sheet-head"><h2>' + escapeHTML(translateText('好友设置')) + '</h2><button class="sheet-close" data-action="close-sheet">✕</button></div>' +
+        '<p class="sheet-tip">' + escapeHTML(name) + '</p>' +
+        '<button class="set-row" data-action="rename-friend-open" data-id="' + escapeHTML(userId) + '">' +
+          '<span class="set-label"><b>' + escapeHTML(translateText('修改备注与分组')) + '</b></span><span class="set-arrow">›</span></button>' +
+        '<button class="set-row" data-action="friend-profile" data-id="' + escapeHTML(userId) + '">' +
+          '<span class="set-label"><b>' + escapeHTML(translateText('查看好友资料')) + '</b></span><span class="set-arrow">›</span></button>' +
+        '<button class="set-row danger-row" data-action="remove-friend-from-chat" data-id="' + escapeHTML(userId) + '">' +
+          '<span class="set-label"><b>' + escapeHTML(translateText('删除好友')) + '</b></span><span class="set-arrow">›</span></button>' +
+        '<div class="sheet-actions"><button class="btn ghost" data-action="close-sheet">' + escapeHTML(translateText('关闭')) + '</button></div>' +
       '</div></div>';
   }
 
@@ -2681,15 +2753,24 @@
     if (!Array.isArray(user.friends)) user.friends = [];
     if (user.friends.some(function (f) { return f.friendId === id; })) { if (err) err.textContent = '该好友已添加'; return false; }
     const target = findPersonByFriendId(id);
-    if (!target) { if (err) err.textContent = '未找到该 ID 对应用户，可试试下方推荐好友'; return false; }
-    user.friends.push({
-      userId: target.id, friendId: id,
-      name: personName(target),
-      signature: personBio(target),
-      contact: personContact(target),
-      avatar: target.profile && target.profile.avatar || ''
-    });
-    saveDB(); toast('已添加好友 ' + personName(target)); openFriendsSheet(); renderApp();
+    if (target) {
+      user.friends.push({
+        userId: target.id, friendId: id,
+        name: personName(target),
+        signature: personBio(target),
+        contact: personContact(target),
+        avatar: target.profile && target.profile.avatar || ''
+      });
+    } else {
+      // 本地演示版没有云端账号目录：输入的编号即便不在内置目录，也按编号创建占位好友，
+      // 保证两个人互输编码都能成功添加（对方上线后资料以本地记录为准，可改备注）。
+      const placeholderId = 'remote_' + id;
+      user.friends.push({
+        userId: placeholderId, friendId: id,
+        name: '好友 ' + id, signature: '通过编号添加的好友', contact: '', avatar: ''
+      });
+    }
+    saveDB(); toast(translateText('已添加好友') + ' ' + id); openFriendsSheet(); renderApp();
     return true;
   }
 
@@ -2779,6 +2860,47 @@
   function userDevices() {
     const user = currentUser();
     return user ? db.devices.filter(function (d) { return d.userId === user.id; }) : [];
+  }
+
+  const DEVICE_ICONS = ['cat', 'rabbit', 'bear', 'fox', 'bird', 'fish'];
+
+  function openAddBoundDeviceSheet() {
+    state.newDeviceIcon = 'cat';
+    $('#sheet-root').innerHTML =
+      '<div class="sheet-mask" data-mask="1"><div class="sheet">' +
+        '<div class="sheet-handle"></div>' +
+        '<div class="sheet-head"><h2>' + translateText('添加绑定设备') + '</h2><button class="sheet-close" data-action="close-sheet">✕</button></div>' +
+        '<p class="sheet-tip">' + translateText('给定位标签命名并选一个图标，用于绑定你的物品') + '</p>' +
+        '<div class="field"><label>' + translateText('物品名称') + '</label><input id="bound-device-name" maxlength="20" placeholder="' + translateText('例如：护照、钥匙、背包') + '"></div>' +
+        '<div class="field"><label>' + translateText('选择图标') + '</label>' +
+          '<div class="dev-icon-picker">' + DEVICE_ICONS.map(function (k, i) {
+            return '<button class="dev-icon-opt' + (i === 0 ? ' on' : '') + '" data-action="pick-device-icon" data-icon="' + k + '">' + ICON['a_' + k] + '</button>';
+          }).join('') + '</div></div>' +
+        '<div class="field"><label>' + translateText('存放区域') + '</label><input id="bound-device-zone" maxlength="20" placeholder="' + translateText('例如：书房、背包') + '"></div>' +
+        '<div class="form-error" id="bound-device-error"></div>' +
+        '<div class="sheet-actions"><button class="btn ghost" data-action="close-sheet">' + translateText('取消') + '</button>' +
+          '<button class="btn primary" data-action="save-bound-device">' + translateText('添加设备') + '</button></div>' +
+      '</div></div>';
+  }
+
+  function saveBoundDevice() {
+    const user = currentUser();
+    const nameInput = $('#bound-device-name');
+    const zoneInput = $('#bound-device-zone');
+    const err = $('#bound-device-error');
+    const name = nameInput ? nameInput.value.trim() : '';
+    if (!name) { if (err) err.textContent = translateText('请输入物品名称'); return; }
+    const device = {
+      id: uid(), userId: user.id, name: name + ' 标签', animal: state.newDeviceIcon || 'cat',
+      itemId: null, battery: 100, signal: 4, zone: zoneInput && zoneInput.value.trim() ? zoneInput.value.trim() : translateText('未设置位置'),
+      online: true, connected: true, autoRecord: true, awayAlert: false
+    };
+    if (!Array.isArray(db.devices)) db.devices = [];
+    db.devices.push(device);
+    saveDB();
+    closeSheet();
+    renderApp(true);
+    toast(translateText('设备已添加') + '：' + name);
   }
 
   function getUserSpace() {
@@ -2920,8 +3042,12 @@
       if (!pos || !pos.coords) return;
       const gcj = wgs84ToGcj02(pos.coords.latitude, pos.coords.longitude);
       const km = distanceKm(gcj.lat, gcj.lng, school.center.lat, school.center.lng);
-      let label = '当前位置';
-      if (km * 1000 <= school.radius) label = nearestBuilding(gcj.lat, gcj.lng).building.name;
+      let label;
+      if (km * 1000 <= school.radius) {
+        label = nearestBuilding(gcj.lat, gcj.lng).building.name;
+      } else {
+        label = '当前位置 ' + gcj.lat.toFixed(4) + ', ' + gcj.lng.toFixed(4);
+      }
       finish(label, gcj.lat, gcj.lng, false);
     }, function (err) {
       const msg = (err && err.code === 1)
@@ -3180,8 +3306,8 @@
     return '<div class="page">' +
       '<div class="section-head" style="margin-top:10px">' +
         '<span class="icon-btn" aria-hidden="true"></span>' +
-        '<h2 style="flex:1;margin-left:6px">设备联动</h2>' +
-        '<button class="icon-btn" data-action="add-item" title="添加物品">' + ICON.plus + '</button></div>' +
+        '<h2 style="flex:1;margin-left:6px">' + translateText('设备联动') + '</h2>' +
+        '<button class="icon-btn" data-action="add-bound-device" title="添加绑定设备">' + ICON.plus + '</button></div>' +
       deviceMapCardHTML() +
       '<div class="section-head"><h2>设备</h2>' +
         '<button class="text-btn" data-action="scan-devices">＋ 添加设备</button></div>' +
@@ -3589,68 +3715,134 @@
   function openPhotoCrop() {
     const p = state.photoPending;
     if (!p) return;
+    state.crop = null;
     $('#overlay-root').innerHTML =
       '<div class="full-mask crop-mask">' +
-        '<div class="crop-head"><button data-action="photo-cancel">取消</button><b>裁剪照片</b><button data-action="crop-apply">完成</button></div>' +
+        '<div class="crop-head"><button data-action="photo-cancel">取消</button><b>' + translateText('裁剪照片') + '</b><button data-action="crop-apply">' + translateText('完成') + '</button></div>' +
         '<div class="crop-stage">' +
-          '<div class="crop-frame"><img id="photo-crop-img" src="' + p.data + '" alt="裁剪预览">' +
-            '<div class="crop-box" id="crop-box">' +
-              '<i data-handle="nw"></i><i data-handle="ne"></i><i data-handle="sw"></i><i data-handle="se"></i>' +
-              '<span>拖动边框调整范围</span>' +
-            '</div>' +
+          '<div class="crop-viewport" id="crop-viewport">' +
+            '<img id="photo-crop-img" src="' + p.data + '" alt="裁剪预览">' +
+            '<div class="crop-grid"><i></i><i></i><i></i><i></i></div>' +
+            '<div class="crop-corner tl"></div><div class="crop-corner tr"></div>' +
+            '<div class="crop-corner bl"></div><div class="crop-corner br"></div>' +
           '</div>' +
         '</div>' +
-        '<div class="crop-tools"><button data-action="crop-reset">重置裁剪框</button></div>' +
-        '<button class="crop-retake" data-action="photo-retake">重新拍摄</button>' +
+        '<p class="crop-hint">' + translateText('拖动照片选择区域，双指可缩放') + '</p>' +
+        '<div class="crop-tools">' +
+          '<button data-action="crop-reset">' + translateText('重置') + '</button>' +
+          '<button data-action="crop-rotate-left">↶ ' + translateText('左转') + '</button>' +
+          '<button data-action="crop-rotate-right">↷ ' + translateText('右转') + '</button>' +
+        '</div>' +
+        '<button class="crop-retake" data-action="photo-retake">' + translateText('重新拍摄') + '</button>' +
       '</div>';
-    setTimeout(bindCropDrag, 0);
+    const img = $('#photo-crop-img');
+    const vp = $('#crop-viewport');
+    if (img && vp) {
+      const init = function () {
+        const size = vp.getBoundingClientRect().width || 320;
+        const iw = img.naturalWidth || size, ih = img.naturalHeight || size;
+        img.style.width = iw + 'px';
+        img.style.height = ih + 'px';
+        img.style.marginLeft = (-iw / 2) + 'px';
+        img.style.marginTop = (-ih / 2) + 'px';
+        state.crop = { rot: 0, scale: 1, x: 0, y: 0, size: size, iw: iw, ih: ih, base: 1 };
+        recomputeCropBase();
+        renderCropImage();
+      };
+      if (img.complete && img.naturalWidth) init();
+      else img.onload = init;
+    }
+    setTimeout(bindCropPan, 0);
   }
 
+  function cropDims() {
+    const c = state.crop;
+    const rotated = Math.abs(c.rot % 180) === 90;
+    return { bw: rotated ? c.ih : c.iw, bh: rotated ? c.iw : c.ih };
+  }
+  function cropK() { const c = state.crop; return c.base * c.scale; }
+  function recomputeCropBase() {
+    const c = state.crop;
+    if (!c) return;
+    const d = cropDims();
+    c.base = Math.max(c.size / Math.max(1, d.bw), c.size / Math.max(1, d.bh));
+  }
+  function clampCrop() {
+    const c = state.crop;
+    if (!c) return;
+    const d = cropDims(), k = cropK();
+    const mx = Math.max(0, (d.bw * k - c.size) / 2);
+    const my = Math.max(0, (d.bh * k - c.size) / 2);
+    c.x = Math.max(-mx, Math.min(mx, c.x));
+    c.y = Math.max(-my, Math.min(my, c.y));
+  }
+  function renderCropImage() {
+    const img = $('#photo-crop-img'), c = state.crop;
+    if (!img || !c) return;
+    clampCrop();
+    img.style.transform = 'translate(' + c.x + 'px,' + c.y + 'px) rotate(' + c.rot + 'deg) scale(' + cropK() + ')';
+  }
   function resetCropBox() {
-    const frame = $('.crop-frame');
-    if (!frame) return;
-    const size = frame.getBoundingClientRect().width || 340;
-    state.crop = { x: size * 0.15, y: size * 0.15, w: size * 0.7, h: size * 0.7, frameSize: size };
-    renderCropBox();
+    if (!state.crop) return;
+    state.crop.rot = 0; state.crop.scale = 1; state.crop.x = 0; state.crop.y = 0;
+    recomputeCropBase(); renderCropImage();
   }
-
-  function renderCropBox() {
-    const box = $('#crop-box'), c = state.crop;
-    if (!box || !c) return;
-    box.style.left = c.x + 'px'; box.style.top = c.y + 'px';
-    box.style.width = c.w + 'px'; box.style.height = c.h + 'px';
+  function rotateCrop(deg) {
+    if (!state.crop) return;
+    state.crop.rot = (state.crop.rot + deg + 360) % 360;
+    state.crop.scale = 1; state.crop.x = 0; state.crop.y = 0;
+    recomputeCropBase(); renderCropImage();
   }
-
-  function bindCropDrag() {
-    const frame = $('.crop-frame');
-    if (!frame) return;
-    resetCropBox();
-    let drag = null;
-    frame.addEventListener('pointerdown', function (e) {
-      if (!state.crop) return;
-      const handle = e.target.closest('[data-handle]');
-      drag = { mode: handle ? handle.dataset.handle : 'move', sx: e.clientX, sy: e.clientY, c: Object.assign({}, state.crop) };
-      frame.setPointerCapture(e.pointerId);
+  function bindCropPan() {
+    const vp = $('#crop-viewport');
+    if (!vp) return;
+    let drag = null, pinch = null;
+    vp.addEventListener('pointerdown', function (e) {
+      if (e.pointerType !== 'mouse' || !state.crop) return;
+      drag = { sx: e.clientX, sy: e.clientY, x: state.crop.x, y: state.crop.y };
+      vp.setPointerCapture(e.pointerId);
     });
-    frame.addEventListener('pointermove', function (e) {
+    vp.addEventListener('pointermove', function (e) {
       if (!drag || !state.crop) return;
-      const c = state.crop, d = drag.c, size = d.frameSize;
-      const dx = e.clientX - drag.sx, dy = e.clientY - drag.sy;
-      if (drag.mode === 'move') {
-        c.x = Math.max(0, Math.min(size - d.w, d.x + dx));
-        c.y = Math.max(0, Math.min(size - d.h, d.y + dy));
-      } else {
-        let x = d.x, y = d.y, w = d.w, h = d.h;
-        if (drag.mode.indexOf('e') !== -1) w = Math.max(60, Math.min(size - d.x, d.w + dx));
-        if (drag.mode.indexOf('s') !== -1) h = Math.max(60, Math.min(size - d.y, d.h + dy));
-        if (drag.mode.indexOf('w') !== -1) { x = Math.max(0, Math.min(d.x + d.w - 60, d.x + dx)); w = d.x + d.w - x; }
-        if (drag.mode.indexOf('n') !== -1) { y = Math.max(0, Math.min(d.y + d.h - 60, d.y + dy)); h = d.y + d.h - y; }
-        c.x = x; c.y = y; c.w = w; c.h = h;
-      }
-      renderCropBox();
+      state.crop.x = drag.x + (e.clientX - drag.sx);
+      state.crop.y = drag.y + (e.clientY - drag.sy);
+      renderCropImage();
     });
-    frame.addEventListener('pointerup', function () { drag = null; });
-    frame.addEventListener('pointercancel', function () { drag = null; });
+    const end = function () { drag = null; };
+    vp.addEventListener('pointerup', end);
+    vp.addEventListener('pointercancel', end);
+    vp.addEventListener('wheel', function (e) {
+      if (!state.crop) return;
+      e.preventDefault();
+      state.crop.scale = Math.max(1, Math.min(4, state.crop.scale * (e.deltaY < 0 ? 1.1 : 0.9)));
+      renderCropImage();
+    }, { passive: false });
+    vp.addEventListener('touchstart', function (e) {
+      if (!state.crop) return;
+      if (e.touches.length === 1) {
+        drag = { sx: e.touches[0].clientX, sy: e.touches[0].clientY, x: state.crop.x, y: state.crop.y };
+      } else if (e.touches.length === 2) {
+        drag = null;
+        const dx = e.touches[0].clientX - e.touches[1].clientX;
+        const dy = e.touches[0].clientY - e.touches[1].clientY;
+        pinch = { dist: Math.hypot(dx, dy) || 1, scale: state.crop.scale };
+      }
+    }, { passive: false });
+    vp.addEventListener('touchmove', function (e) {
+      if (!state.crop) return;
+      e.preventDefault();
+      if (e.touches.length === 1 && drag) {
+        state.crop.x = drag.x + (e.touches[0].clientX - drag.sx);
+        state.crop.y = drag.y + (e.touches[0].clientY - drag.sy);
+        renderCropImage();
+      } else if (e.touches.length === 2 && pinch) {
+        const dx = e.touches[0].clientX - e.touches[1].clientX;
+        const dy = e.touches[0].clientY - e.touches[1].clientY;
+        state.crop.scale = Math.max(1, Math.min(4, pinch.scale * (Math.hypot(dx, dy) || 1) / pinch.dist));
+        renderCropImage();
+      }
+    }, { passive: false });
+    vp.addEventListener('touchend', function () { drag = null; pinch = null; });
   }
 
   function applyPhotoCrop() {
@@ -3658,18 +3850,22 @@
     const img = $('#photo-crop-img');
     const c = state.crop;
     if (!p || !img || !c) return;
-    const iw = img.naturalWidth || 1200, ih = img.naturalHeight || 1200;
-    const side = Math.min(iw, ih);
-    const offX = (iw - side) / 2, offY = (ih - side) / 2;
-    const scale = side / (c.frameSize || 340);
-    const sx = Math.max(0, offX + c.x * scale);
-    const sy = Math.max(0, offY + c.y * scale);
-    const sw = Math.min(iw - sx, c.w * scale);
-    const sh = Math.min(ih - sy, c.h * scale);
+    const iw = img.naturalWidth || c.iw, ih = img.naturalHeight || c.ih;
+    const k = cropK();
+    const rot = (c.rot * Math.PI) / 180;
+    const vpSize = c.size;
+    const out = 1200;
     const canvas = document.createElement('canvas');
-    canvas.width = 1200; canvas.height = 1200;
-    canvas.getContext('2d').drawImage(img, sx, sy, sw, sh, 0, 0, 1200, 1200);
-    setPhoto(p.target, canvas.toDataURL('image/jpeg', 0.9));
+    canvas.width = out; canvas.height = out;
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#000'; ctx.fillRect(0, 0, out, out);
+    ctx.translate(out / 2, out / 2);
+    ctx.translate((out / vpSize) * c.x, (out / vpSize) * c.y);
+    ctx.scale(out / vpSize, out / vpSize);
+    ctx.rotate(rot);
+    ctx.scale(k, k);
+    ctx.drawImage(img, -iw / 2, -ih / 2);
+    setPhoto(p.target, canvas.toDataURL('image/jpeg', 0.92));
     closeOverlay();
     state.photoPending = null;
     state.crop = null;
@@ -4313,6 +4509,8 @@
       case 'photo-crop': openPhotoCrop(); break;
       case 'crop-apply': applyPhotoCrop(); break;
       case 'crop-reset': resetCropBox(); break;
+      case 'crop-rotate-left': rotateCrop(-90); break;
+      case 'crop-rotate-right': rotateCrop(90); break;
       case 'photo-retake':
         const prTarget = state.photoPending ? state.photoPending.target : 'item';
         const prAi = state.photoPending ? state.photoPending.aiMode : false;
@@ -4489,8 +4687,12 @@
       case 'cat-filter':
         state.view = 'home'; state.filter = 'all'; state.itemsOpen = true;
         state.search = catOf(el.dataset.key).label;
-        state.letter = ''; state.sortBy = 'alpha';
-        closeSheet(); renderApp(true); toast('已筛选：' + catOf(el.dataset.key).label);
+        state.letter = ''; state.sortBy = 'expiry';
+        closeSheet(); renderApp(true); toast(translateText('已筛选') + '：' + translateText(catOf(el.dataset.key).label));
+        setTimeout(function () {
+          const sec = $('#items-section');
+          if (sec && sec.scrollIntoView) sec.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 80);
         break;
 
       case 'set-sort':
@@ -4617,20 +4819,28 @@
       case 'show-changelog': showChangelog(); break;
       case 'show-achievements': showAchievements(); break;
       case 'open-friends': openFriendsSheet(); break;
+      case 'chat-friend-menu': openChatFriendMenu(el.dataset.id); break;
+      case 'remove-friend-from-chat':
+        removeFriend(el.dataset.id);
+        closeOverlay();
+        state.view = 'chat'; renderApp(true);
+        break;
       case 'friend-profile': showFriendProfile(el.dataset.id); break;
       case 'add-friend-by-id': addFriendById(el.dataset.id, $('#friend-error')); break;
       case 'remove-friend': removeFriend(el.dataset.id); break;
       case 'add-friend': addFriend(); break;
       case 'toggle-friend-sort':
         state.friendSort = state.friendSort === 'az' ? 'default' : 'az';
-        openFriendsSheet(); break;
+        if (state.view === 'chat') renderApp(); else openFriendsSheet();
+        break;
       case 'cycle-friend-group':
         (function () {
           const opts = ['全部', '未分组', '同学', '邻居', '家人', '同事'];
           const cur = state.friendGroup || '全部';
           state.friendGroup = opts[(opts.indexOf(cur) + 1) % opts.length];
         })();
-        openFriendsSheet(); break;
+        if (state.view === 'chat') renderApp(); else openFriendsSheet();
+        break;
       case 'rename-friend-open':
         if (el.dataset.id) openRenameFriendSheet(el.dataset.id);
         else toast('请点击好友右侧的「备注」按钮', 'warn');
@@ -4683,6 +4893,12 @@
         break;
       case 'save-group': createGroup(); break;
       case 'open-device': state.view = 'device'; closeSheet(); renderApp(true); break;
+      case 'add-bound-device': openAddBoundDeviceSheet(); break;
+      case 'pick-device-icon':
+        state.newDeviceIcon = el.dataset.icon;
+        $$('.dev-icon-opt').forEach(function (b) { b.classList.toggle('on', b === el); });
+        break;
+      case 'save-bound-device': saveBoundDevice(); break;
       case 'open-guide': state.view = 'guide'; state.backTo = 'profile'; closeSheet(); renderApp(true); break;
 
       case 'chat-bg': openChatBgSheet(); break;
