@@ -6,13 +6,18 @@
   'use strict';
 
   /* ---------------- 常量 ---------------- */
-  var APP_VERSION = '2.07';
+  var APP_VERSION = '2.08';
   var DB_KEY = 'organizer_local_v2';
   var PREF_KEY = 'organizer_pref_v2';
   var HISTORY_KEY = 'organizer_search_history_v2';
   var ALERT_KEY = 'organizer_alert_read_v2';
 
   var APP_VERSION_CHANGELOG = [
+    { version: '2.08', date: '2026-11-23', title: '氛围背景与实体图标', items: [
+      '首页 / 搜索页增加淡绿渐变与气泡装饰，不再冷清',
+      '侧栏分类换回实体图标，已开封换成不同样式',
+      '搜索 / 联动页保留底部加号，筛选页增加返回键，老年模式放大更多'
+    ] },
     { version: '2.07', date: '2026-11-23', title: '图标、示例物品与到期预警', items: [
       '侧栏分类图标加粗并使用更鲜明的配色，首页换成小房子图标',
       '搜索历史默认只显示第一排，可展开收起；示例物品每次刷新自动更新',
@@ -49,13 +54,13 @@
 
   // 侧边栏分类
   var MAIN_CATEGORIES = [
-    { key: 'all', label: '全部', icon: 'box', color: '#a9782f' },
-    { key: 'best', label: '最佳', icon: 'leaf', color: '#2f9c60' },
-    { key: 'soon', label: '临近过期', icon: 'clock', color: '#2479c4' },
-    { key: 'expired', label: '已过期', icon: 'warn', color: '#e04b44' },
-    { key: 'opened', label: '已开封', icon: 'drop', color: '#d98b2b' },
-    { key: 'stock', label: '库存总览', icon: 'layers', color: '#7959c7' },
-    { key: 'trash', label: '回收站', icon: 'trash', color: '#965656' }
+    { key: 'all', label: '全部', icon: 'box', emoji: '📦', color: '#a9782f' },
+    { key: 'best', label: '最佳', icon: 'leaf', emoji: '🌿', color: '#2f9c60' },
+    { key: 'soon', label: '临近过期', icon: 'clock', emoji: '🕐', color: '#2479c4' },
+    { key: 'expired', label: '已过期', icon: 'warn', emoji: '⚠️', color: '#e04b44' },
+    { key: 'opened', label: '已开封', icon: 'drop', emoji: '📂', color: '#d98b2b' },
+    { key: 'stock', label: '库存总览', icon: 'layers', emoji: '🗂️', color: '#7959c7' },
+    { key: 'trash', label: '回收站', icon: 'trash', emoji: '🗑️', color: '#965656' }
   ];
   var CATEGORY_SVG = {
     box: '<path d="M4 7.5 12 3l8 4.5v9L12 21l-8-4.5z"/><path d="M4 7.5 12 12l8-4.5M12 12v9"/>',
@@ -68,6 +73,7 @@
     hash: '<path d="M5 9h14M5 15h14M10 3 8 21M16 3l-2 18"/>'
   };
   function categoryIconHTML(c) {
+    if (c.emoji) return '<span class="side-emoji side-emoji-solid">' + c.emoji + '</span>';
     var svg = CATEGORY_SVG[c.icon] || CATEGORY_SVG.box;
     return '<span class="side-emoji" style="color:' + (c.color || 'var(--green)') + '">' +
       '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">' + svg + '</svg></span>';
@@ -691,9 +697,12 @@
     }
 
     if (state.view === 'home') {
+      var filtered = state.category !== 'all';
       header.innerHTML = status +
         '<div class="header-row home-header">' +
-          '<button class="icon-btn" data-action="open-sidebar" aria-label="菜单"><span class="menu-lines"><i></i><i></i><i></i></span></button>' +
+          (filtered
+            ? '<button class="icon-btn" data-action="back-to-all" aria-label="返回" title="返回">‹</button>'
+            : '<button class="icon-btn" data-action="open-sidebar" aria-label="菜单"><span class="menu-lines"><i></i><i></i><i></i></span></button>') +
           '<div class="home-title">' + escapeHTML(categoryLabel()) + '</div>' +
           '<div class="header-actions"></div>' +
         '</div>';
@@ -756,7 +765,6 @@
     $('#bottom-nav').innerHTML = tabs.map(function (t) {
       var key = t.key;
       if (key === 'add') {
-        if (state.view !== 'home') return '<span class="nav-add-placeholder" aria-hidden="true"></span>';
         return '<button class="nav-item nav-add" data-action="add-new" aria-label="新增"><span class="add-circle"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span></button>';
       }
       if (key === 'home' && state.multiSelect) {
@@ -893,7 +901,7 @@
         '</div>' +
         '<div class="sidebar-body">' +
           '<div class="side-group">' + MAIN_CATEGORIES.map(sideItem).join('') + '</div>' +
-          '<div class="side-group"><div class="side-item" data-action="manage-categories">' + categoryIconHTML({ icon: 'hash', color: '#5a7ea8' }) + '<span>物品分类</span><span class="side-arrow">›</span></div></div>' +
+          '<div class="side-group"><div class="side-item" data-action="manage-categories">' + categoryIconHTML({ emoji: '#️⃣' }) + '<span>物品分类</span><span class="side-arrow">›</span></div></div>' +
         '</div>' +
       '</aside>';
   }
@@ -1942,6 +1950,7 @@
       case 'clear-search': state.searchQuery = ''; render(); break;
       case 'clear-search-history': state.searchHistory = []; saveSearchHistory(); render(); toast('已清空搜索历史'); break;
       case 'toggle-search-history': state.searchHistoryExpanded = !state.searchHistoryExpanded; render(); break;
+      case 'back-to-all': state.category = 'all'; state.multiSelect = false; state.selectedIds = []; render(); break;
       case 'go-alerts':
         var alerts = getAlerts();
         state.category = alerts.expired.length ? 'expired' : 'soon';
