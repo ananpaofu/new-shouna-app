@@ -6,12 +6,17 @@
   'use strict';
 
   /* ---------------- 常量 ---------------- */
-  var APP_VERSION = '2.04';
+  var APP_VERSION = '2.05';
   var DB_KEY = 'organizer_local_v2';
   var PREF_KEY = 'organizer_pref_v2';
   var HISTORY_KEY = 'organizer_search_history_v2';
 
   var APP_VERSION_CHANGELOG = [
+    { version: '2.05', date: '2026-11-22', title: '表单修复与交互完善', items: [
+      '新增页紧凑布局，分类数量单位同排，保存移入标题栏',
+      '修复保存后首页不刷新，语音搜索可真实转文字',
+      '侧栏图标统一、位置选中高亮、头像可拍照上传'
+    ] },
     { version: '2.04', date: '2026-11-22', title: '设置页与多语言', items: [
       '字体大小 / 粗细 / 颜色可调节，支持简中 / 繁中 / 英文',
       '我的页各项可编辑，保留隐藏注册页与新手教程',
@@ -33,15 +38,27 @@
 
   // 侧边栏分类
   var MAIN_CATEGORIES = [
-    { key: 'all', label: '全部', emoji: '📦' },
-    { key: 'best', label: '最佳', emoji: '🌿' },
-    { key: 'soon', label: '临近过期', emoji: '🕐' },
-    { key: 'expired', label: '已过期', emoji: '⚠️' },
-    { key: 'opened', label: '已开封', emoji: '🥫' },
-    { key: 'history', label: '活动历史', emoji: '📊' },
-    { key: 'stock', label: '库存总览', emoji: '🗂️' },
-    { key: 'trash', label: '回收站', emoji: '🗑️' }
+    { key: 'all', label: '全部', icon: 'box', color: '#8a6a3b' },
+    { key: 'best', label: '最佳', icon: 'leaf', color: '#4f9a6a' },
+    { key: 'soon', label: '临近过期', icon: 'clock', color: '#4d8cc4' },
+    { key: 'expired', label: '已过期', icon: 'warn', color: '#d9534f' },
+    { key: 'stock', label: '库存总览', icon: 'layers', color: '#7a6bb5' },
+    { key: 'trash', label: '回收站', icon: 'trash', color: '#8a8a8a' }
   ];
+  var CATEGORY_SVG = {
+    box: '<path d="M4 7.5 12 3l8 4.5v9L12 21l-8-4.5z"/><path d="M4 7.5 12 12l8-4.5M12 12v9"/>',
+    leaf: '<path d="M20 4C10 4 5 8 5 14a5 5 0 0 0 5 5c6 0 10-5 10-15z"/><path d="M4 20c3-5 7-8 12-10"/>',
+    clock: '<circle cx="12" cy="12" r="8"/><path d="M12 7v5l3 2"/>',
+    warn: '<path d="M12 3 2 20h20z"/><path d="M12 9v5M12 17h.01"/>',
+    layers: '<path d="m12 3 9 5-9 5-9-5z"/><path d="m3 13 9 5 9-5M3 17l9 5 9-5"/>',
+    trash: '<path d="M4 7h16M9 7V4h6v3M6 7l1 14h10l1-14"/><path d="M10 11v6M14 11v6"/>',
+    hash: '<path d="M5 9h14M5 15h14M10 3 8 21M16 3l-2 18"/>'
+  };
+  function categoryIconHTML(c) {
+    var svg = CATEGORY_SVG[c.icon] || CATEGORY_SVG.box;
+    return '<span class="side-emoji" style="color:' + (c.color || 'var(--green)') + '">' +
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">' + svg + '</svg></span>';
+  }
   var DEFAULT_CATEGORIES = [
     '食品', '药品', '化妆品', '衣物', '文档证件', '电子产品', '文具书籍',
     '钥匙锁具', '清洁用品', '运动用品', '母婴用品', '工具五金', '其他'
@@ -223,6 +240,7 @@
     searchQuery: '',
     searchHistory: [],
     searchFocused: false,
+    recognizing: false,
     sidebarOpen: false,
     sheet: null,
     overlay: null,
@@ -394,7 +412,10 @@
     for (var i = 0; i < db.items.length; i++) { if (db.items[i].id === item.id) { idx = i; break; } }
     if (idx >= 0) db.items[idx] = item; else db.items.unshift(item);
     db.history = db.history || [];
+    var cutoff = Date.now() - 30 * 86400000;
+    db.history = db.history.filter(function (h) { return h && h.time > cutoff; });
     db.history.unshift({ time: Date.now(), itemId: item.id, name: item.name, action: idx >= 0 ? 'edit' : 'add' });
+    db.history = db.history.slice(0, 200);
     saveDB(db);
   }
   function removeItem(id, toTrash) {
@@ -473,6 +494,16 @@
       return;
     }
 
+    if (state.view === 'form') {
+      header.innerHTML = status +
+        '<div class="header-row form-header">' +
+          '<button class="icon-btn form-cancel" data-action="cancel-form" aria-label="取消">✕</button>' +
+          '<div class="header-title">' + (state.editingId ? '编辑物品' : '新增物品') + '</div>' +
+          '<button class="form-save" data-action="save-form">保存</button>' +
+        '</div>' +
+        '<div class="required-note">* 为必填项，未标注的为选填项</div>';
+      return;
+    }
     if (state.view === 'link') {
       header.innerHTML = status +
         '<div class="header-row link-header">' +
@@ -488,12 +519,11 @@
       tutorial: '新手教程', password: '修改密码', achievement: '成就等级', register: '注册'
     };
     var title = titles[state.view] || '寻迹';
-    var showMenu = state.view === 'me';
-    var showBack = ['prefs', 'categoryManage', 'form', 'itemDetail', 'tutorial', 'password', 'achievement', 'register'].indexOf(state.view) >= 0;
+    var showBack = ['prefs', 'categoryManage', 'itemDetail', 'tutorial', 'password', 'achievement', 'register'].indexOf(state.view) >= 0;
+    var headerClass = state.view === 'me' ? 'header-row me-header' : 'header-row';
     header.innerHTML = status +
-      '<div class="header-row">' +
+      '<div class="' + headerClass + '">' +
         (showBack ? '<button class="icon-btn" data-action="go-back" aria-label="返回">‹</button>' : '') +
-        (showMenu ? '<button class="icon-btn" data-action="open-sidebar" aria-label="菜单"><span class="menu-lines"><i></i><i></i><i></i></span></button>' : '') +
         '<div class="header-title">' + escapeHTML(title) + '</div>' +
       '</div>';
   }
@@ -611,30 +641,24 @@
       best: count(function (it) { var d = daysUntil(it.expiry); return d != null && d > 7; }),
       soon: count(function (it) { var d = daysUntil(it.expiry); return d != null && d >= 0 && d <= 7; }),
       expired: count(function (it) { var d = daysUntil(it.expiry); return d != null && d < 0; }),
-      opened: count(function (it) { return !!it.opened; }),
       trash: items.filter(function (it) { return !!it.trashed; }).length
     };
     function sideItem(c) {
       var cnt = counts[c.key];
       return '<div class="side-item' + (state.category === c.key ? ' active' : '') + '" data-action="set-category" data-cat="' + escapeHTML(c.key) + '">' +
-        '<span class="side-emoji">' + c.emoji + '</span><span>' + escapeHTML(c.label) + '</span>' +
+        categoryIconHTML(c) + '<span>' + escapeHTML(c.label) + '</span>' +
         (cnt != null ? '<span class="side-count">' + cnt + '</span>' : '') + '</div>';
     }
     return '<div class="side-mask' + (state.sidebarOpen ? ' show' : '') + '" data-action="close-sidebar"></div>' +
       '<aside class="sidebar' + (state.sidebarOpen ? ' show' : '') + '">' +
         '<div class="sidebar-head">' +
-          '<div class="sidebar-title-row"><div><div class="sidebar-title">寻迹</div><span class="sidebar-badge">基础</span></div></div>' +
-          '<div class="sidebar-icons">' +
-            '<span data-action="notification-hint" title="通知"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M18 9a6 6 0 0 0-12 0c0 7-3 8-3 8h18s-3-1-3-8"/><path d="M10.5 20a2 2 0 0 0 3 0"/></svg></span>' +
+          '<div class="sidebar-title-row"><div><div class="sidebar-title">寻迹</div><span class="sidebar-badge">基础</span></div>' +
+            '<span class="sidebar-icons" data-action="notification-hint" title="通知"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M18 9a6 6 0 0 0-12 0c0 7-3 8-3 8h18s-3-1-3-8"/><path d="M10.5 20a2 2 0 0 0 3 0"/></svg></span>' +
           '</div>' +
         '</div>' +
         '<div class="sidebar-body">' +
           '<div class="side-group">' + MAIN_CATEGORIES.map(sideItem).join('') + '</div>' +
-          '<div class="side-group"><div class="side-item" data-action="manage-categories"><span class="side-emoji">#</span><span>物品分类</span><span class="side-arrow">›</span></div></div>' +
-        '</div>' +
-        '<div class="sidebar-foot">' +
-          '<button class="add-folder" data-action="manage-categories">＋ 添加</button>' +
-          '<button class="icon-btn" data-action="go-me"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg></button>' +
+          '<div class="side-group"><div class="side-item" data-action="manage-categories">' + categoryIconHTML({ icon: 'hash', color: '#8a8a8a' }) + '<span>物品分类</span><span class="side-arrow">›</span></div></div>' +
         '</div>' +
       '</aside>';
   }
@@ -652,30 +676,38 @@
         '<span class="form-value' + (v ? '' : ' placeholder') + '" data-action="pick-date" data-field="' + field + '">' +
         (v ? escapeHTML(formatDate(v)) : '请选择日期') + '</span></div>';
     }
-    return '<div class="page form-page">' +
+    function inlineOrSelect(id, action, value, placeholder) {
+      return '<input class="form-input select-input" id="' + id + '" value="' + escapeHTML(value || '') + '" placeholder="' + escapeHTML(placeholder) + '">' +
+        '<span class="select-hint" data-action="' + action + '">›</span>';
+    }
+    var folderCell = d.categoryCustom
+      ? inlineOrSelect('f-folder-inline', 'pick-category', d.folder, '输入分类名称')
+      : '<span class="form-value" data-action="pick-category">' + escapeHTML(d.folder || '食品') + ' ›</span>';
+    var unitCell = d.unitCustom
+      ? inlineOrSelect('f-unit-inline', 'pick-unit', d.unit, '输入单位')
+      : '<span class="form-value" data-action="pick-unit">' + escapeHTML(d.unit || '件') + ' ›</span>';
+    var reminderCell = d.reminderCustom
+      ? inlineOrSelect('f-reminder-inline', 'pick-reminder', d.reminder, '天数')
+      : '<span class="form-value" data-action="pick-reminder">' + (d.reminder != null ? d.reminder + ' 天前' : '7 天前') + ' ›</span>';
+    return '<div class="page form-page compact-form">' +
       '<div class="form-group">' +
-        '<div class="form-row"><div class="form-label">物品名称</div><input class="form-input" id="f-name" placeholder="请输入名称" value="' + escapeHTML(d.name || '') + '"></div>' +
+        '<div class="form-row"><div class="form-label">物品名称 *</div><input class="form-input" id="f-name" placeholder="请输入名称" value="' + escapeHTML(d.name || '') + '"></div>' +
         '<div class="form-row"><div class="form-label">图片</div><div class="photo-grid">' + photoHTML + '</div></div>' +
-        '<div class="form-row dual-row">' +
-          '<div class="dual-col"><div class="form-label">分类</div><span class="form-value" data-action="pick-category">' + escapeHTML(d.categoryCustom ? '自定义分类' : (d.folder || '食品')) + ' ›</span></div>' +
-          '<div class="dual-col"><div class="form-label">数量</div><div class="qty-stepper"><button data-action="qty-minus">−</button><span>' + (Number(d.quantity) || 1) + '</span><button data-action="qty-plus">＋</button></div></div>' +
+        '<div class="form-row triple-row">' +
+          '<div class="triple-col cat-col"><div class="form-label">分类</div>' + folderCell + '</div>' +
+          '<div class="triple-col qty-col"><div class="form-label">数量</div><div class="qty-stepper"><button data-action="qty-minus">−</button><span>' + (Number(d.quantity) || 1) + '</span><button data-action="qty-plus">＋</button></div></div>' +
+          '<div class="triple-col unit-col"><div class="form-label">单位</div>' + unitCell + '</div>' +
         '</div>' +
-        (d.categoryCustom ? '<div class="form-row"><div class="form-label">自定义分类</div><input class="form-input" id="f-category-custom" placeholder="输入分类名称" value="' + escapeHTML(d.folder || '') + '"></div>' : '') +
-        '<div class="form-row"><div class="form-label">单位</div><span class="form-value" data-action="pick-unit">' + escapeHTML(d.unitCustom ? '自定义' : (d.unit || '件')) + ' ›</span></div>' +
-        (d.unitCustom ? '<div class="form-row"><div class="form-label">自定义单位</div><input class="form-input" id="f-unit-custom" placeholder="输入单位名称" value="' + escapeHTML(d.unit || '') + '"></div>' : '') +
         '<div class="form-row dual-row">' + dateCell('production', '生产日期') + dateCell('expiry', '保质期至') + '</div>' +
-        '<div class="form-row"><div class="form-label">过期提醒</div><span class="form-value" data-action="pick-reminder">' + (d.reminder != null ? d.reminder + ' 天前' : '7 天前') + ' ›</span></div>' +
+        '<div class="form-row"><div class="form-label">过期提醒</div>' + reminderCell + '</div>' +
       '</div>' +
       '<div class="more-block">' +
         '<div class="form-row"><div class="form-label">存放位置</div><input class="form-input" id="f-location" placeholder="例如：冰箱第二层" value="' + escapeHTML(d.location || '') + '"></div>' +
         '<div class="location-presets">' + LOCATION_PRESETS.map(function (p) {
-          return '<button data-action="set-location" data-value="' + escapeHTML(p) + '">' + escapeHTML(p) + '</button>';
+          var active = d.location === p ? ' active' : '';
+          return '<button class="' + active + '" data-action="set-location" data-value="' + escapeHTML(p) + '">' + escapeHTML(p) + '</button>';
         }).join('') + '</div>' +
         '<div class="form-row"><div class="form-label">备注</div><input class="form-input" id="f-note" placeholder="补充说明（选填）" value="' + escapeHTML(d.note || '') + '"></div>' +
-      '</div>' +
-      '<div class="form-actions">' +
-        '<button class="btn" data-action="save-form" data-again="1">' + (state.editingId ? '保存并继续' : '再加一次') + '</button>' +
-        '<button class="btn btn-primary" data-action="save-form">' + (state.editingId ? '保存' : '添加') + '</button>' +
       '</div>' +
       '<input type="file" id="f-image-file" accept="image/*" multiple style="display:none">' +
     '</div>';
@@ -768,7 +800,7 @@
         '<div class="big-search-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m15.5 15.5 5 5"/></svg></div>' +
         '<div class="empty-title">暂无搜索历史</div>' +
         '<div class="empty-sub">输入任何内容或扫一扫开始搜索</div>' +
-        (state.searchFocused ? '<button class="voice-btn" data-action="voice-search">🎤 按住语音搜索</button>' : '') +
+        (state.searchFocused ? '<button class="voice-btn' + (state.recognizing ? ' recording' : '') + '" data-action="voice-search">🎤 ' + (state.recognizing ? '正在聆听…' : '按住语音搜索') + '</button>' : '') +
         '</div>' + history;
     }
     var placeholder = state.searchFocused ? '搜索物品记录、分类、位置等' : '快速搜索';
@@ -805,7 +837,9 @@
     }
     var count = getItems().filter(function (it) { return !it.trashed; }).length;
     return '<div class="page me-page">' +
-      '<div class="me-hero"><div class="me-avatar">我<span class="me-edit" data-action="edit-profile" data-key="avatar" data-title="头像文字" data-value="' + escapeHTML(p.avatar || '我') + '">✎</span></div>' +
+      '<div class="me-hero"><div class="me-avatar" data-action="pick-avatar">' +
+        (String(p.avatar || '').indexOf('data:') === 0 ? '<img src="' + escapeHTML(p.avatar) + '" alt="">' : escapeHTML(p.avatar || '我')) +
+        '<span class="me-edit">✎</span></div>' +
         '<div class="me-name">' + escapeHTML(p.nickname || '我的收纳') + '</div><div class="me-id">@local_user · ID 963221</div></div>' +
       '<div class="me-card"><div class="me-card-title">个人信息<span>⌃</span></div>' +
         editRow('nickname', '👤', '昵称', p.nickname || '我的收纳') +
@@ -831,6 +865,7 @@
       '<div class="me-card me-version" data-action="show-version"><span class="me-icon">📄</span><div class="me-row-main"><div class="me-row-title">版本与更新</div><div class="me-row-sub">查看历史更新内容</div></div><span class="me-badge">v' + APP_VERSION + '</span><span class="me-arrow">›</span></div>' +
       '<div class="me-foot">注册于 2026-11-19 · 已收纳 ' + count + ' 件物品</div>' +
       '<button class="me-logout" data-action="logout-hint">退出登录</button>' +
+      '<input type="file" id="profile-image-file" accept="image/*" style="display:none">' +
     '</div>';
   }
 
@@ -1131,8 +1166,9 @@
     var name = $('#f-name'); if (name) d.name = name.value;
     var location = $('#f-location'); if (location) d.location = location.value;
     var note = $('#f-note'); if (note) d.note = note.value;
-    var cat = $('#f-category-custom'); if (cat) d.folder = cat.value;
-    var unit = $('#f-unit-custom'); if (unit) d.unit = unit.value;
+    var cat = $('#f-folder-inline'); if (cat) d.folder = cat.value;
+    var unit = $('#f-unit-inline'); if (unit) d.unit = unit.value;
+    var reminder = $('#f-reminder-inline'); if (reminder) d.reminder = reminder.value;
   }
   function blankDraft(keep) {
     var old = state.formDraft || {};
@@ -1157,11 +1193,16 @@
     state.sidebarOpen = false;
     render();
   }
-  function saveForm(saveAgain) {
+  function saveForm() {
     syncFormDraft();
     var d = state.formDraft || {};
     var name = String(d.name || '').trim();
     if (!name) { toast('请输入物品名称'); return; }
+    var category = String(d.folder || '').trim() || state.folders[0] || '食品';
+    if (d.categoryCustom && category && state.folders.indexOf(category) < 0) {
+      state.folders.push(category);
+      saveFolders();
+    }
     var item = {
       id: state.editingId || uid(),
       name: name,
@@ -1170,10 +1211,10 @@
       image: (d.images && d.images[0]) || d.image || '',
       expiry: d.expiry || '',
       production: d.production || '',
-      reminder: Number(d.reminder) || 0,
+      reminder: Math.max(0, Number(d.reminder) || 0),
       quantity: Math.max(1, Number(d.quantity) || 1),
-      unit: d.unit || '件',
-      folder: d.folder || state.folders[0] || '食品',
+      unit: String(d.unit || '').trim() || '件',
+      folder: category,
       location: d.location || '',
       note: d.note || '',
       opened: !!d.opened,
@@ -1181,17 +1222,14 @@
       trashed: !!d.trashed
     };
     upsertItem(item);
-    if (saveAgain && !state.editingId) {
-      state.formDraft = blankDraft(true);
-      render();
-      toast('已保存，可继续添加');
-    } else {
-      state.editingId = null;
-      state.formDraft = null;
-      state.view = 'home';
-      render();
-      toast('已保存');
-    }
+    state.editingId = null;
+    state.formDraft = null;
+    state.view = 'home';
+    state.category = 'all';
+    state.multiSelect = false;
+    state.selectedIds = [];
+    render();
+    toast('已保存');
   }
   function readImages(files) {
     var arr = Array.prototype.slice.call(files || []).filter(function (f) { return /^image\//.test(f.type); });
@@ -1351,6 +1389,32 @@
       try { next.setSelectionRange(pos, pos); } catch (e) {}
     }
   }
+  function startVoiceSearch() {
+    var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SR) { toast('当前浏览器不支持语音搜索'); return; }
+    var recognition = new SR();
+    recognition.lang = currentLang() === 'en' ? 'en-US' : (currentLang() === 'zh-TW' ? 'zh-TW' : 'zh-CN');
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
+    state.recognizing = true;
+    render();
+    recognition.onresult = function (e) {
+      var text = e.results && e.results[0] && e.results[0][0] ? e.results[0][0].transcript : '';
+      if (text) { state.searchQuery = text; pushSearchHistory(text); }
+      state.recognizing = false;
+      render();
+    };
+    recognition.onerror = function () {
+      state.recognizing = false;
+      render();
+      toast('语音识别失败，请重试');
+    };
+    recognition.onend = function () {
+      state.recognizing = false;
+      render();
+    };
+    try { recognition.start(); } catch (e) { state.recognizing = false; render(); toast('无法启动语音识别'); }
+  }
   function focusSearch() {
     if (state.searchFocused) return;
     state.searchFocused = true;
@@ -1375,7 +1439,7 @@
       case 'go-search': openView('search'); break;
       case 'focus-search': focusSearch(); break;
       case 'cancel-search': cancelSearch(); break;
-      case 'voice-search': toast('语音搜索在本机版未启用'); break;
+      case 'voice-search': startVoiceSearch(); break;
       case 'notification-hint': toast('通知提醒在本机版为演示'); break;
       case 'open-sort-sheet': state.sheet = 'sort'; renderSheet(); break;
       case 'set-sort': state.sortRule = key; state.sheet = null; render(); break;
@@ -1394,6 +1458,7 @@
       case 'edit-profile':
         state.overlay = { type: 'input', title: el.getAttribute('data-title'), field: el.getAttribute('data-key'), value: el.getAttribute('data-value') || '' };
         renderOverlay(); break;
+      case 'pick-avatar': var avatarInput = $('#profile-image-file'); if (avatarInput) avatarInput.click(); break;
       case 'pref-list':
         var pkey = el.getAttribute('data-key');
         var popts = pkey === 'fontSize' ? FONT_SIZE_OPTIONS : pkey === 'fontWeight' ? FONT_WEIGHT_OPTIONS : pkey === 'theme' ? THEME_OPTIONS : LANG_OPTIONS;
@@ -1410,6 +1475,9 @@
       case 'go-trash': setCategory('trash'); break;
       case 'manage-categories': openView('categoryManage'); break;
       case 'add-new': openForm(null); break;
+      case 'cancel-form':
+        syncFormDraft();
+        state.editingId = null; state.formDraft = null; state.view = 'home'; render(); break;
       case 'close-sheet': state.sheet = null; renderSheet(); break;
       case 'toggle-map': state.link.mapExpanded = !state.link.mapExpanded; render(); break;
       case 'open-amap':
@@ -1512,9 +1580,10 @@
         state.overlay = null; render(); break;
       case 'pick-reminder':
         syncFormDraft();
-        openList('过期提醒', 'reminder', [0, 1, 2, 3, 7, 15, 30].map(function (n) {
+        var reminderOpts = [0, 1, 2, 3, 7, 15, 30].map(function (n) {
           return { value: n, label: n === 0 ? '到期当天' : n + ' 天前' };
-        }), state.formDraft.reminder);
+        }).concat([{ value: '自定义', label: '自定义天数' }]);
+        openList('过期提醒', 'reminder', reminderOpts, state.formDraft.reminderCustom ? '自定义' : state.formDraft.reminder);
         break;
       case 'pick-category':
         syncFormDraft();
@@ -1547,11 +1616,15 @@
           state.formDraft.unitCustom = true; state.formDraft.unit = '';
         } else if (key === 'unit') {
           state.formDraft.unitCustom = false; state.formDraft.unit = value;
+        } else if (key === 'reminder' && value === '自定义') {
+          state.formDraft.reminderCustom = true; state.formDraft.reminder = '';
+        } else if (key === 'reminder') {
+          state.formDraft.reminderCustom = false; state.formDraft.reminder = Number(value);
         } else {
-          state.formDraft[key] = key === 'reminder' ? Number(value) : value;
+          state.formDraft[key] = value;
         }
         state.overlay = null; render(); break;
-      case 'save-form': saveForm(el.getAttribute('data-again') === '1'); break;
+      case 'save-form': saveForm(); break;
       case 'close-overlay': state.overlay = null; renderOverlay(); break;
       case 'clear-search': state.searchQuery = ''; render(); break;
       case 'clear-search-history': state.searchHistory = []; saveSearchHistory(); render(); toast('已清空搜索历史'); break;
@@ -1597,6 +1670,25 @@
     });
     document.addEventListener('change', function (e) {
       if (e.target && e.target.id === 'f-image-file') readImages(e.target.files);
+      if (e.target && e.target.id === 'profile-image-file' && e.target.files && e.target.files[0]) {
+        var file = e.target.files[0];
+        var reader = new FileReader();
+        reader.onload = function () {
+          state.pref.avatar = String(reader.result);
+          savePref(); render(); toast('头像已更新');
+        };
+        reader.readAsDataURL(file);
+      }
+    });
+    document.addEventListener('focusin', function (e) {
+      if (document.body && e.target && /^(INPUT|TEXTAREA)$/.test(e.target.tagName)) document.body.classList.add('keyboard-open');
+    });
+    document.addEventListener('focusout', function () {
+      setTimeout(function () {
+        if (!document.body || !document.activeElement || !/^(INPUT|TEXTAREA)$/.test(document.activeElement.tagName)) {
+          document.body.classList.remove('keyboard-open');
+        }
+      }, 120);
     });
   }
 
