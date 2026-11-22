@@ -6,13 +6,21 @@
   'use strict';
 
   /* ---------------- 常量 ---------------- */
-  var APP_VERSION = '2.14';
+  var APP_VERSION = '2.16';
   var DB_KEY = 'organizer_local_v2';
   var PREF_KEY = 'organizer_pref_v2';
   var HISTORY_KEY = 'organizer_search_history_v2';
   var ALERT_KEY = 'organizer_alert_read_v2';
 
   var APP_VERSION_CHANGELOG = [
+    { version: '2.16', date: '2026-11-23', title: '底部图标加大', items: [
+      '五个底部图标和文字加大，当前页高亮为主题色；首页图标下方圆点删除'
+    ] },
+    { version: '2.15', date: '2026-11-23', title: '折叠、iPhone 适配与快速更新', items: [
+      '折叠键现在把物品列表收起为空白，再点展开；iPhone 安全区与底部导航适配',
+      'PWA 检测到新版本自动激活刷新，不再需要清站点数据，已保存物品不会丢失',
+      '示例物品只在无存档时显示，绝不覆盖之前录入的物品'
+    ] },
     { version: '2.14', date: '2026-11-23', title: '联动与我的页可滚动', items: [
       '联动页 / 我的页改为自然下滑，首页和搜索页保持不滚动'
     ] },
@@ -590,6 +598,7 @@
         if (db && Array.isArray(db.items)) return db;
       }
     } catch (e) {}
+    // 仅在完全没有本地存档时返回示例物品；示例不写回存储，绝不覆盖用户已保存的数据
     return { items: JSON.parse(JSON.stringify(DEFAULT_ITEMS)), history: [], folders: DEFAULT_CATEGORIES.slice() };
   }
   function saveDB(db) { try { localStorage.setItem(DB_KEY, JSON.stringify(db)); } catch (e) {} }
@@ -779,7 +788,7 @@
   /* ---------------- 底部导航 ---------------- */
   function navSVG(key) {
     var m = {
-      home: '<path d="M4 10 12 3.5 20 10v9h-5.5v-5.5h-5V19H4z"/><circle cx="12" cy="22" r="1.2"/>',
+      home: '<path d="M4 10 12 3.5 20 10v9h-5.5v-5.5h-5V19H4z"/>',
       search: '<circle cx="11" cy="11" r="6.5"/><path d="m16 16 4 4"/>',
       link: '<circle cx="12" cy="12" r="2"/><path d="M8.5 8.5a5 5 0 0 0 0 7M15.5 8.5a5 5 0 0 1 0 7M5.5 5.5a9 9 0 0 0 0 13M18.5 5.5a9 9 0 0 1 0 13"/>',
       me: '<circle cx="12" cy="8" r="3.6"/><path d="M5 20a7 7 0 0 1 14 0"/>'
@@ -893,6 +902,7 @@
         : '<div class="empty"><div class="empty-emoji">🗂️</div><div class="empty-text">这里还没有物品</div></div>';
     }
     if (state.multiSelect) return '<div class="page home-page multi-page">' + body + '</div>';
+    if (state.compact) body = '<div class="folded-space"></div>';
     return '<div class="page home-page">' +
       '<button class="home-search" data-action="go-search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4 4"/></svg><span>搜索</span></button>' +
       '<div class="sort-row">' +
@@ -902,7 +912,7 @@
         '</button>' +
         '<div class="sort-actions">' +
           '<button class="icon-btn" data-action="enter-multiselect" aria-label="多选" title="多选"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><rect x="4" y="5" width="16" height="14" rx="2"/><path d="m8 12 3 3 5-6"/></svg></button>' +
-          '<button class="icon-btn collapse-btn" data-action="toggle-compact" aria-label="一键收起" title="一键收起"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></button>' +
+          '<button class="icon-btn collapse-btn' + (state.compact ? ' folded' : '') + '" data-action="toggle-compact" aria-label="' + (state.compact ? tr('展开') : tr('一键收起')) + '" title="' + (state.compact ? tr('展开') : tr('一键收起')) + '"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></button>' +
         '</div>' +
       '</div>' + alertBannerHTML() + body + '</div>';
   }
