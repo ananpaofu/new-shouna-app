@@ -6,12 +6,17 @@
   'use strict';
 
   /* ---------------- 常量 ---------------- */
-  var APP_VERSION = '2.2';
+  var APP_VERSION = '2.3';
   var DB_KEY = 'organizer_local_v2';
   var PREF_KEY = 'organizer_pref_v2';
   var HISTORY_KEY = 'organizer_search_history_v2';
 
   var APP_VERSION_CHANGELOG = [
+    { version: '2.3', date: '2026-11-22', title: '表单与分类页面重做', items: [
+      '移除模拟状态栏、二维码图标与温度标签',
+      '日期选择器改为日历弹层，表单改为旧版布局',
+      '新增物品分类页面、数量单位选择与存放位置预设'
+    ] },
     { version: '2.2', date: '2026-11-22', title: '恢复联动与旧版我的页', items: [
       '底部改为首页 / 搜索 / 加号 / 联动 / 我的',
       '恢复设备联动页与高德地图打开按钮',
@@ -39,20 +44,22 @@
     { key: 'stock', label: '库存总览', emoji: '🗂️' },
     { key: 'trash', label: '回收站', emoji: '🗑️' }
   ];
-  var TEMP_TAGS = [
-    { key: '常温', label: '常温', emoji: '🌡️' },
-    { key: '冷藏', label: '冷藏', emoji: '❄️' },
-    { key: '冷冻', label: '冷冻', emoji: '🧊' }
+  var DEFAULT_CATEGORIES = [
+    '食品', '药品', '化妆品', '衣物', '文档证件', '电子产品', '文具书籍',
+    '钥匙锁具', '清洁用品', '运动用品', '母婴用品', '工具五金', '其他'
   ];
-  var DEFAULT_FOLDERS = [
-    { key: '通用', label: '通用', emoji: '📁' },
-    { key: '食品', label: '食品', emoji: '🥫' },
-    { key: '化妆品', label: '化妆品', emoji: '🧴' }
-  ];
+  var CATEGORY_LETTERS = {
+    '食品': 'S', '药品': 'Y', '化妆品': 'H', '衣物': 'Y', '文档证件': 'W',
+    '电子产品': 'D', '文具书籍': 'W', '钥匙锁具': 'Y', '清洁用品': 'Q',
+    '运动用品': 'Y', '母婴用品': 'M', '工具五金': 'G', '其他': 'Q'
+  };
+  var CATEGORY_COLORS = ['#e07a5f', '#8ab17d', '#d9a441', '#7a9cc6', '#a98cc6', '#6fb1a8'];
+  var UNITS = ['件', '卷', '包', '盒', '瓶', '块', '支', '罐', '袋', '个', '双', '片', '颗', '杯', '桶', '节', '粒', '自定义'];
+  var LOCATION_PRESETS = ['冰箱', '厨房', '药箱', '抽屉', '柜子', '衣柜'];
   var ANIMAL_ICONS = ['🐱', '🐶', '🐰', '🐻', '🐼', '🦊', '🐨', '🐯', '🦁', '🐮', '🐷', '🐸', '🐵', '🐔', '🐧', '🦆', '🐝', '🦋'];
   var DEFAULT_ITEMS = [
-    { id: 'demo-1', name: '纯牛奶 250ml', emoji: '🐄', folder: '食品', temp: '冷藏', expiry: '2026-11-25', production: '2026-11-18', reminder: 2, quantity: 6, opened: false, note: '', createdAt: Date.now() - 86400000 },
-    { id: 'demo-2', name: '抹茶面膜', emoji: '🐱', folder: '化妆品', temp: '常温', expiry: '2026-12-20', production: '2026-10-01', reminder: 7, quantity: 3, opened: false, note: '', createdAt: Date.now() - 172800000 }
+    { id: 'demo-1', name: '纯牛奶 250ml', emoji: '🐄', folder: '食品', unit: '瓶', expiry: '2026-11-25', production: '2026-11-18', reminder: 2, quantity: 6, opened: false, note: '', createdAt: Date.now() - 86400000 },
+    { id: 'demo-2', name: '抹茶面膜', emoji: '🐱', folder: '化妆品', unit: '件', expiry: '2026-12-20', production: '2026-10-01', reminder: 7, quantity: 3, opened: false, note: '', createdAt: Date.now() - 172800000 }
   ];
 
   var DEFAULT_PREF = {
@@ -122,6 +129,11 @@
     if (d < 30) return d + ' 天前';
     return Math.floor(d / 30) + ' 个月前';
   }
+  function weekdayCN(str) {
+    if (!str) return '';
+    var d = new Date(str + 'T00:00:00');
+    return ['周日', '周一', '周二', '周三', '周四', '周五', '周六'][d.getDay()] || '';
+  }
   function uid() { return 'i' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
   function daysUntil(dateStr, includeProduceDay) {
     if (!dateStr) return null;
@@ -149,7 +161,7 @@
         if (db && Array.isArray(db.items)) return db;
       }
     } catch (e) {}
-    return { items: JSON.parse(JSON.stringify(DEFAULT_ITEMS)), history: [], folders: DEFAULT_FOLDERS.map(function (f) { return f.key; }) };
+    return { items: JSON.parse(JSON.stringify(DEFAULT_ITEMS)), history: [], folders: DEFAULT_CATEGORIES.slice() };
   }
   function saveDB(db) { try { localStorage.setItem(DB_KEY, JSON.stringify(db)); } catch (e) {} }
   function loadPref() {
@@ -220,25 +232,21 @@
     if (cat === 'opened') { return list.filter(function (it) { return !!it.opened; }); }
     if (cat === 'history') { return list.slice().sort(function (a, b) { return (b.createdAt || 0) - (a.createdAt || 0); }); }
     if (cat === 'stock') { return list; }
-    // 标签：常温/冷藏/冷冻
-    if (cat === '常温' || cat === '冷藏' || cat === '冷冻') {
-      return list.filter(function (it) { return it.temp === cat; });
-    }
-    // 文件夹分类
+    // 物品分类
     if (state.folders.indexOf(cat) >= 0) {
       return list.filter(function (it) { return it.folder === cat; });
     }
     return list;
   }
   function categoryLabel() {
-    var all = MAIN_CATEGORIES.concat(TEMP_TAGS).concat(state.folders.map(function (f) { return { key: f, label: f }; }));
+    var all = MAIN_CATEGORIES.concat(state.folders.map(function (f) { return { key: f, label: f }; }));
     for (var i = 0; i < all.length; i++) { if (all[i].key === state.category) return all[i].label; }
     return '全部';
   }
 
   /* ---------------- 顶部栏 ---------------- */
   function renderHeader() {
-    var status = '<div class="status-bar"><span>9:42</span><span>▮▮▮ ▮▮▮ 100%</span></div>';
+    var status = '';
     var header = $('#app-header');
     if (state.view === 'search') { header.innerHTML = status; return; }
 
@@ -260,7 +268,6 @@
           '<button class="icon-btn" data-action="open-sidebar" aria-label="菜单"><span class="menu-lines"><i></i><i></i><i></i></span></button>' +
           '<div class="home-title">' + escapeHTML(categoryLabel()) + '</div>' +
           '<div class="header-actions">' +
-            '<button class="icon-btn" data-action="scan-hint" aria-label="扫描"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M4 8V5a1 1 0 0 1 1-1h3M16 4h3a1 1 0 0 1 1 1v3M20 16v3a1 1 0 0 1-1 1h-3M8 20H5a1 1 0 0 1-1-1v-3"/><path d="M7 12h10"/></svg></button>' +
             '<button class="icon-btn" data-action="enter-multiselect" aria-label="多选"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="5" cy="12" r="1.4"/><circle cx="12" cy="12" r="1.4"/><circle cx="19" cy="12" r="1.4"/></svg></button>' +
           '</div>' +
         '</div>';
@@ -346,7 +353,7 @@
       ? '<div class="item-thumb"><img src="' + escapeHTML(it.image) + '" alt=""></div>'
       : '<div class="item-thumb">' + escapeHTML(it.emoji || '🐱') + '</div>';
     var tags = '<span class="tag-yellow">' + escapeHTML(it.folder || '通用') + '</span>' +
-      '<span class="tag-gray">剩余 ' + (it.quantity || 1) + ' 件</span>';
+      '<span class="tag-gray">剩余 ' + (it.quantity || 1) + ' ' + escapeHTML(it.unit || '件') + '</span>';
     var time = timeAgo(it.updatedAt || it.createdAt);
     return '<div class="item-card' + (selected ? ' selected' : '') + (state.compact ? ' compact' : '') + '" data-action="' + (state.multiSelect ? 'toggle-select' : 'open-item') + '" data-id="' + it.id + '">' +
       circle + thumb +
@@ -387,8 +394,6 @@
           '<span>' + SORT_LABELS[state.sortRule] + '</span>' +
         '</button>' +
         '<div class="sort-actions">' +
-          '<button class="icon-btn" data-action="toggle-view" aria-label="视图"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M9 5v14"/></svg></button>' +
-          '<button class="icon-btn" data-action="open-sort-sheet" aria-label="排序"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M4 7h16M7 12h10M10 17h4"/></svg></button>' +
           '<button class="icon-btn" data-action="enter-multiselect" aria-label="多选"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><rect x="4" y="5" width="16" height="14" rx="2"/><path d="m8 12 3 3 5-6"/></svg></button>' +
         '</div>' +
       '</div>' + body + '</div>';
@@ -412,26 +417,17 @@
         '<span class="side-emoji">' + c.emoji + '</span><span>' + escapeHTML(c.label) + '</span>' +
         (cnt != null ? '<span class="side-count">' + cnt + '</span>' : '') + '</div>';
     }
-    var mainHTML = MAIN_CATEGORIES.map(sideItem).join('');
-    var tempHTML = TEMP_TAGS.map(sideItem).join('');
-    var folderHTML = state.folders.map(function (f) {
-      var emoji = f === '食品' ? '🥫' : (f === '化妆品' ? '🧴' : '📁');
-      return '<div class="side-item' + (state.category === f ? ' active' : '') + '" data-action="set-category" data-cat="' + escapeHTML(f) + '">' +
-        '<span class="side-emoji">' + emoji + '</span><span>' + escapeHTML(f) + '</span></div>';
-    }).join('');
     return '<div class="side-mask' + (state.sidebarOpen ? ' show' : '') + '" data-action="close-sidebar"></div>' +
       '<aside class="sidebar' + (state.sidebarOpen ? ' show' : '') + '">' +
         '<div class="sidebar-head">' +
           '<div class="sidebar-title-row"><div><div class="sidebar-title">寻迹</div><span class="sidebar-badge">基础</span></div></div>' +
           '<div class="sidebar-icons">' +
-            '<span data-action="go-prefs" title="设置"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-2.9 1.2V21a2 2 0 1 1-4 0v-.1A1.7 1.7 0 0 0 7 19.4a1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1A1.7 1.7 0 0 0 3.1 14a2 2 0 1 1 0-4 1.7 1.7 0 0 0 1.2-2.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1A1.7 1.7 0 0 0 10 3.1a2 2 0 1 1 4 0 1.7 1.7 0 0 0 2.9 1.2l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1A1.7 1.7 0 0 0 20.9 10a2 2 0 1 1 0 4 1.7 1.7 0 0 0-1.5 1z"/></svg></span>' +
-            '<span data-action="go-link" title="联动"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle cx="12" cy="12" r="2"/><path d="M8.5 8.5a5 5 0 0 0 0 7M15.5 8.5a5 5 0 0 1 0 7M5.5 5.5a9 9 0 0 0 0 13M18.5 5.5a9 9 0 0 1 0 13"/></svg></span>' +
+            '<span data-action="notification-hint" title="通知"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M18 9a6 6 0 0 0-12 0c0 7-3 8-3 8h18s-3-1-3-8"/><path d="M10.5 20a2 2 0 0 0 3 0"/></svg></span>' +
           '</div>' +
         '</div>' +
         '<div class="sidebar-body">' +
-          '<div class="side-group">' + mainHTML + '</div>' +
-          '<div class="side-group"><div class="side-group-label">标签</div>' + tempHTML + '</div>' +
-          '<div class="side-group"><div class="side-group-label">文件夹</div>' + folderHTML + '</div>' +
+          '<div class="side-group">' + MAIN_CATEGORIES.map(sideItem).join('') + '</div>' +
+          '<div class="side-group"><div class="side-item" data-action="manage-categories"><span class="side-emoji">#</span><span>物品分类</span><span class="side-arrow">›</span></div></div>' +
         '</div>' +
         '<div class="sidebar-foot">' +
           '<button class="add-folder" data-action="manage-categories">＋ 添加</button>' +
@@ -447,20 +443,32 @@
     var photoHTML = images.map(function (src, i) {
       return '<div class="photo-thumb"><img src="' + escapeHTML(src) + '" alt=""><span class="photo-del" data-action="remove-photo" data-index="' + i + '">✕</span></div>';
     }).join('') + '<div class="photo-upload" data-action="pick-image"><span>＋</span><span>拍照/选图</span></div>';
+    function dateCell(field, label) {
+      var v = d[field];
+      return '<div class="dual-col"><div class="form-label">' + label + '</div>' +
+        '<span class="form-value' + (v ? '' : ' placeholder') + '" data-action="pick-date" data-field="' + field + '">' +
+        (v ? escapeHTML(formatDate(v)) : '请选择日期') + '</span></div>';
+    }
     return '<div class="page form-page">' +
       '<div class="form-group">' +
         '<div class="form-row"><div class="form-label">物品名称</div><input class="form-input" id="f-name" placeholder="请输入名称" value="' + escapeHTML(d.name || '') + '"></div>' +
         '<div class="form-row"><div class="form-label">图片</div><div class="photo-grid">' + photoHTML + '</div></div>' +
-        '<div class="form-row"><div class="form-label">保质期至</div><span class="form-value' + (d.expiry ? '' : ' placeholder') + '" data-action="pick-date" data-field="expiry">' + (d.expiry ? escapeHTML(formatDate(d.expiry)) : '请选择日期') + '</span><span class="form-arrow">›</span></div>' +
-        '<div class="form-row"><div class="form-label">生产日期</div><span class="form-value' + (d.production ? '' : ' placeholder') + '" data-action="pick-date" data-field="production">' + (d.production ? escapeHTML(formatDate(d.production)) : '请选择日期') + '</span><span class="form-arrow">›</span></div>' +
-        '<div class="form-row"><div class="form-label">过期提醒</div><span class="form-value" data-action="pick-reminder">' + (d.reminder != null ? d.reminder + ' 天前' : '7 天前') + '<span class="form-arrow">›</span></span></div>' +
-        '<div class="form-row"><div class="form-label">库存数量</div><input class="form-input" id="f-qty" type="number" min="1" value="' + (d.quantity || 1) + '"></div>' +
+        '<div class="form-row dual-row">' +
+          '<div class="dual-col"><div class="form-label">分类</div><span class="form-value" data-action="pick-category">' + escapeHTML(d.categoryCustom ? '自定义分类' : (d.folder || '食品')) + ' ›</span></div>' +
+          '<div class="dual-col"><div class="form-label">数量</div><div class="qty-stepper"><button data-action="qty-minus">−</button><span>' + (Number(d.quantity) || 1) + '</span><button data-action="qty-plus">＋</button></div></div>' +
+        '</div>' +
+        (d.categoryCustom ? '<div class="form-row"><div class="form-label">自定义分类</div><input class="form-input" id="f-category-custom" placeholder="输入分类名称" value="' + escapeHTML(d.folder || '') + '"></div>' : '') +
+        '<div class="form-row"><div class="form-label">单位</div><span class="form-value" data-action="pick-unit">' + escapeHTML(d.unitCustom ? '自定义' : (d.unit || '件')) + ' ›</span></div>' +
+        (d.unitCustom ? '<div class="form-row"><div class="form-label">自定义单位</div><input class="form-input" id="f-unit-custom" placeholder="输入单位名称" value="' + escapeHTML(d.unit || '') + '"></div>' : '') +
+        '<div class="form-row dual-row">' + dateCell('production', '生产日期') + dateCell('expiry', '保质期至') + '</div>' +
+        '<div class="form-row"><div class="form-label">过期提醒</div><span class="form-value" data-action="pick-reminder">' + (d.reminder != null ? d.reminder + ' 天前' : '7 天前') + ' ›</span></div>' +
       '</div>' +
       '<div class="more-block">' +
-        '<div class="form-row"><div class="form-label">标签</div><span class="form-value" data-action="pick-temp">' + (d.temp || '常温') + '<span class="form-arrow">›</span></span></div>' +
-        '<div class="form-row"><div class="form-label">位置</div><input class="form-input" id="f-location" placeholder="如：冰箱第二层" value="' + escapeHTML(d.location || '') + '"></div>' +
-        '<div class="form-row"><div class="form-label">文件夹</div><span class="form-value" data-action="pick-folder">' + (d.folder || '食品') + '<span class="form-arrow">›</span></span></div>' +
-        '<div class="form-row"><div class="form-label">备注</div><input class="form-input" id="f-note" placeholder="选填" value="' + escapeHTML(d.note || '') + '"></div>' +
+        '<div class="form-row"><div class="form-label">存放位置</div><input class="form-input" id="f-location" placeholder="例如：冰箱第二层" value="' + escapeHTML(d.location || '') + '"></div>' +
+        '<div class="location-presets">' + LOCATION_PRESETS.map(function (p) {
+          return '<button data-action="set-location" data-value="' + escapeHTML(p) + '">' + escapeHTML(p) + '</button>';
+        }).join('') + '</div>' +
+        '<div class="form-row"><div class="form-label">备注</div><input class="form-input" id="f-note" placeholder="补充说明（选填）" value="' + escapeHTML(d.note || '') + '"></div>' +
       '</div>' +
       '<div class="form-actions">' +
         '<button class="btn" data-action="save-form" data-again="1">' + (state.editingId ? '保存并继续' : '再加一次') + '</button>' +
@@ -529,7 +537,7 @@
     if (q) {
       list = getItems().filter(function (it) {
         if (it.trashed) return false;
-        var text = [it.name, it.folder, it.temp, it.location, it.note].join(' ').toLowerCase();
+        var text = [it.name, it.folder, it.unit, it.location, it.note].join(' ').toLowerCase();
         return text.indexOf(kw) >= 0;
       });
     }
@@ -552,7 +560,7 @@
         (state.searchFocused ? '<button class="voice-btn" data-action="voice-search">🎤 按住语音搜索</button>' : '') +
         '</div>' + history;
     }
-    var placeholder = state.searchFocused ? '搜索物品记录、文件夹、标签等' : '快速搜索';
+    var placeholder = state.searchFocused ? '搜索物品记录、分类、位置等' : '快速搜索';
     return '<div class="page search-page">' +
       '<div class="search-top">' +
         '<div class="search-bar' + (state.searchFocused ? ' focused' : '') + '" data-action="focus-search">' +
@@ -702,22 +710,23 @@
 
   /* ---------------- 分类管理 ---------------- */
   function categoryManageHTML() {
-    var folders = state.folders.map(function (f) {
-      return '<div class="link-row"><span class="bold">' + escapeHTML(f) + '</span>' +
-        (f === '通用' ? '<span class="muted small">默认</span>' : '<button class="link-btn ghost" style="width:auto;padding:6px 12px;margin:0" data-action="delete-folder" data-folder="' + escapeHTML(f) + '">删除</button>') +
-        '</div>';
+    var items = getItems().filter(function (it) { return !it.trashed; });
+    function letterOf(f) { return CATEGORY_LETTERS[f] || f.charAt(0).toUpperCase(); }
+    var sorted = state.folders.slice().sort(function (a, b) { return letterOf(a).localeCompare(letterOf(b)); });
+    var rows = sorted.map(function (f, i) {
+      var cnt = items.filter(function (it) { return it.folder === f; }).length;
+      return '<div class="category-row" data-action="set-category" data-cat="' + escapeHTML(f) + '">' +
+        '<span class="cat-letter">' + letterOf(f) + '</span>' +
+        '<span class="cat-dot" style="background:' + CATEGORY_COLORS[i % CATEGORY_COLORS.length] + '"></span>' +
+        '<span class="cat-name">' + escapeHTML(f) + '</span>' +
+        '<span class="cat-count">' + cnt + ' 件</span><span class="me-arrow">›</span></div>';
     }).join('');
-    var tags = TEMP_TAGS.map(function (t) {
-      return '<div class="link-row"><span>' + t.emoji + ' ' + t.label + '</span><span class="muted small">固定标签</span></div>';
-    }).join('');
-    return '<div class="page">' +
-      '<div class="link-card"><div class="form-row" style="padding-left:0">' +
-        '<input class="form-input" id="new-folder-input" placeholder="输入新文件夹名称" style="text-align:left">' +
-        '<button class="link-btn ghost" style="width:auto;padding:9px 14px;margin:0" data-action="add-folder">添加</button>' +
-      '</div></div>' +
-      '<div class="section-title">我的文件夹</div><div class="link-card">' + folders + '</div>' +
-      '<div class="section-title">固定标签</div><div class="link-card">' + tags + '</div>' +
-      '<p class="muted small center">删除文件夹后，其中的物品会移入「通用」</p>' +
+    var letters = sorted.map(letterOf).filter(function (v, i, a) { return a.indexOf(v) === i; }).sort();
+    return '<div class="page category-page">' +
+      '<div class="section-title">物品分类<span class="muted small">按字母排序</span></div>' +
+      '<div class="category-list">' + rows + '</div>' +
+      '<div class="alpha-index">' + letters.map(function (l) { return '<span>' + l + '</span>'; }).join('') + '</div>' +
+      '<div class="category-add"><input id="new-folder-input" placeholder="输入自定义分类名"><button data-action="add-folder">添加</button></div>' +
     '</div>';
   }
 
@@ -745,9 +754,8 @@
         '<div class="link-row"><span>保质期至</span><span class="bold">' + escapeHTML(formatDate(it.expiry)) + '</span></div>' +
         '<div class="link-row"><span>生产日期</span><span>' + escapeHTML(formatDate(it.production)) + '</span></div>' +
         '<div class="link-row"><span>过期提醒</span><span>' + (it.reminder != null ? it.reminder + ' 天前' : '—') + '</span></div>' +
-        '<div class="link-row"><span>数量</span><span>' + (it.quantity || 1) + '</span></div>' +
-        '<div class="link-row"><span>标签</span><span>' + escapeHTML(it.temp || '—') + '</span></div>' +
-        '<div class="link-row"><span>文件夹</span><span>' + escapeHTML(it.folder || '—') + '</span></div>' +
+        '<div class="link-row"><span>数量</span><span>' + (it.quantity || 1) + ' ' + escapeHTML(it.unit || '件') + '</span></div>' +
+        '<div class="link-row"><span>分类</span><span>' + escapeHTML(it.folder || '—') + '</span></div>' +
         '<div class="link-row"><span>位置</span><span>' + escapeHTML(it.location || '—') + '</span></div>' +
         '<div class="link-row"><span>状态</span><span>' + (it.opened ? '已开封' : '未开封') + '</span></div>' +
         '<div class="link-row"><span>备注</span><span style="max-width:62%;text-align:right">' + escapeHTML(it.note || '—') + '</span></div>' +
@@ -763,18 +771,35 @@
         '<div class="sheet-head"><h2>' + escapeHTML(title) + '</h2>' +
         '<button class="sheet-close" data-action="close-overlay">✕</button></div>' + body + '</div>';
   }
+  function calendarPickerHTML(o) {
+    var value = o.value || todayStr();
+    var month = (o.month && !isNaN(o.month.getTime())) ? o.month : new Date(value + 'T00:00:00');
+    var y = month.getFullYear();
+    var mo = month.getMonth();
+    var days = new Date(y, mo + 1, 0).getDate();
+    var start = (new Date(y, mo, 1).getDay() + 6) % 7;
+    var title = value ? (mo + 1) + '月' + Number(value.split('-')[2]) + '日 ' + weekdayCN(value) : '请选择日期';
+    var cells = ['一', '二', '三', '四', '五', '六', '日'].map(function (w) {
+      return '<div class="date-week">' + w + '</div>';
+    }).join('');
+    for (var i = 0; i < start; i++) cells += '<div class="date-cell"></div>';
+    for (var d = 1; d <= days; d++) {
+      var ds = y + '-' + pad(mo + 1) + '-' + pad(d);
+      cells += '<div class="date-cell' + (ds === value ? ' selected' : '') + '" data-action="date-select-day" data-date="' + ds + '">' + d + '</div>';
+    }
+    return '<div class="date-picker">' +
+      '<div class="date-picker-head"><div class="date-year">' + y + '年</div><div class="date-title">' + title + '</div></div>' +
+      '<div class="date-month"><button data-action="date-prev">‹</button><span>' + y + '年' + (mo + 1) + '月</span><button data-action="date-next">›</button></div>' +
+      '<div class="date-grid">' + cells + '</div>' +
+      '<div class="date-picker-foot"><button data-action="clear-date">清除</button><button data-action="cancel-date">取消</button><button data-action="confirm-date">设置</button></div>' +
+    '</div>';
+  }
   function overlayHTML() {
     var o = state.overlay;
     if (!o) return '';
     if (o.type === 'date') {
-      return sheetShell('选择日期',
-        '<p class="sheet-tip">可直接选择，也可点「今天」快速填入</p>' +
-        '<div class="date-pick"><input type="date" id="date-picker-input" value="' + escapeHTML(o.value || todayStr()) + '"></div>' +
-        '<div class="date-actions">' +
-          '<button class="btn" data-action="clear-date">清除</button>' +
-          '<button class="btn" data-action="set-today">今天</button>' +
-          '<button class="btn btn-primary" data-action="confirm-date">确定</button>' +
-        '</div>');
+      return '<div class="sheet-mask show" data-action="cancel-date"></div>' +
+        '<div class="sheet show date-sheet">' + calendarPickerHTML(o) + '</div>';
     }
     if (o.type === 'list') {
       var rows = o.options.map(function (op) {
@@ -806,16 +831,17 @@
     if (state.view !== 'form') return;
     var d = state.formDraft || (state.formDraft = {});
     var name = $('#f-name'); if (name) d.name = name.value;
-    var qty = $('#f-qty'); if (qty) d.quantity = qty.value;
     var location = $('#f-location'); if (location) d.location = location.value;
     var note = $('#f-note'); if (note) d.note = note.value;
+    var cat = $('#f-category-custom'); if (cat) d.folder = cat.value;
+    var unit = $('#f-unit-custom'); if (unit) d.unit = unit.value;
   }
   function blankDraft(keep) {
     var old = state.formDraft || {};
     return {
       name: '', expiry: '', production: '', reminder: 7, quantity: 1,
-      temp: keep && old.temp ? old.temp : '常温',
-      folder: keep && old.folder ? old.folder : (state.folders[0] || '通用'),
+      unit: keep && old.unit ? old.unit : '件',
+      folder: keep && old.folder ? old.folder : (state.folders[0] || '食品'),
       location: '', note: '', emoji: randomAnimal(), opened: false, images: []
     };
   }
@@ -826,6 +852,7 @@
     if (state.formDraft && !state.formDraft.images) {
       state.formDraft.images = state.formDraft.image ? [state.formDraft.image] : [];
     }
+    if (state.formDraft && !state.formDraft.unit) state.formDraft.unit = '件';
     state.view = 'form';
     state.sheet = null;
     state.overlay = null;
@@ -847,8 +874,8 @@
       production: d.production || '',
       reminder: Number(d.reminder) || 0,
       quantity: Math.max(1, Number(d.quantity) || 1),
-      temp: d.temp || '常温',
-      folder: d.folder || state.folders[0] || '通用',
+      unit: d.unit || '件',
+      folder: d.folder || state.folders[0] || '食品',
       location: d.location || '',
       note: d.note || '',
       opened: !!d.opened,
@@ -1052,10 +1079,9 @@
       case 'focus-search': focusSearch(); break;
       case 'cancel-search': cancelSearch(); break;
       case 'voice-search': toast('语音搜索在本机版未启用'); break;
-      case 'scan-hint': toast('扫一扫在本机版未启用'); break;
+      case 'notification-hint': toast('通知提醒在本机版为演示'); break;
       case 'open-sort-sheet': state.sheet = 'sort'; renderSheet(); break;
       case 'set-sort': state.sortRule = key; state.sheet = null; render(); break;
-      case 'toggle-view': state.compact = !state.compact; render(); break;
       case 'enter-multiselect': enterMultiSelect(); break;
       case 'exit-multiselect': exitMultiSelect(); break;
       case 'toggle-select': toggleSelect(id); break;
@@ -1099,20 +1125,51 @@
           render();
         }
         break;
+      case 'qty-plus':
+        syncFormDraft();
+        state.formDraft.quantity = Math.max(1, (Number(state.formDraft.quantity) || 1) + 1);
+        render(); break;
+      case 'qty-minus':
+        syncFormDraft();
+        state.formDraft.quantity = Math.max(1, (Number(state.formDraft.quantity) || 1) - 1);
+        render(); break;
+      case 'set-location':
+        syncFormDraft();
+        state.formDraft.location = el.getAttribute('data-value') || '';
+        render(); break;
       case 'pick-date':
         syncFormDraft();
-        state.overlay = { type: 'date', field: el.getAttribute('data-field'), value: (state.formDraft || {})[el.getAttribute('data-field')] || '' };
+        var field = el.getAttribute('data-field');
+        var picked = (state.formDraft || {})[field] || '';
+        state.overlay = {
+          type: 'date', field: field, value: picked,
+          month: picked ? new Date(picked + 'T00:00:00') : new Date()
+        };
         renderOverlay();
         break;
-      case 'set-today': var dateInput = $('#date-picker-input'); if (dateInput) dateInput.value = todayStr(); break;
+      case 'date-prev':
+        if (state.overlay && state.overlay.month) {
+          state.overlay.month = new Date(state.overlay.month.getFullYear(), state.overlay.month.getMonth() - 1, 1);
+          renderOverlay();
+        }
+        break;
+      case 'date-next':
+        if (state.overlay && state.overlay.month) {
+          state.overlay.month = new Date(state.overlay.month.getFullYear(), state.overlay.month.getMonth() + 1, 1);
+          renderOverlay();
+        }
+        break;
+      case 'date-select-day':
+        if (state.overlay) { state.overlay.value = el.getAttribute('data-date'); renderOverlay(); }
+        break;
+      case 'cancel-date': state.overlay = null; renderOverlay(); break;
       case 'clear-date':
+        syncFormDraft();
         if (state.formDraft && state.overlay) state.formDraft[state.overlay.field] = '';
         state.overlay = null; render(); break;
       case 'confirm-date':
-        var picker = $('#date-picker-input');
-        var field = state.overlay ? state.overlay.field : null;
         syncFormDraft();
-        if (state.formDraft && field) state.formDraft[field] = picker ? picker.value : '';
+        if (state.formDraft && state.overlay) state.formDraft[state.overlay.field] = state.overlay.value || '';
         state.overlay = null; render(); break;
       case 'pick-reminder':
         syncFormDraft();
@@ -1120,21 +1177,31 @@
           return { value: n, label: n === 0 ? '到期当天' : n + ' 天前' };
         }), state.formDraft.reminder);
         break;
-      case 'pick-temp':
+      case 'pick-category':
         syncFormDraft();
-        openList('选择标签', 'temp', TEMP_TAGS.map(function (t) {
-          return { value: t.key, label: t.label, emoji: t.emoji };
-        }), state.formDraft.temp);
+        openList('选择分类', 'folder', state.folders.concat(['自定义分类']).map(function (f) {
+          return { value: f, label: f };
+        }), state.formDraft.categoryCustom ? '自定义分类' : state.formDraft.folder);
         break;
-      case 'pick-folder':
+      case 'pick-unit':
         syncFormDraft();
-        openList('选择文件夹', 'folder', state.folders.map(function (f) {
-          return { value: f, label: f, emoji: '📁' };
-        }), state.formDraft.folder);
+        openList('选择单位', 'unit', UNITS.map(function (u) {
+          return { value: u, label: u };
+        }), state.formDraft.unitCustom ? '自定义' : state.formDraft.unit);
         break;
       case 'pick-option':
         syncFormDraft();
-        state.formDraft[key] = key === 'reminder' ? Number(value) : value;
+        if (key === 'folder' && value === '自定义分类') {
+          state.formDraft.categoryCustom = true; state.formDraft.folder = '';
+        } else if (key === 'folder') {
+          state.formDraft.categoryCustom = false; state.formDraft.folder = value;
+        } else if (key === 'unit' && value === '自定义') {
+          state.formDraft.unitCustom = true; state.formDraft.unit = '';
+        } else if (key === 'unit') {
+          state.formDraft.unitCustom = false; state.formDraft.unit = value;
+        } else {
+          state.formDraft[key] = key === 'reminder' ? Number(value) : value;
+        }
         state.overlay = null; render(); break;
       case 'save-form': saveForm(el.getAttribute('data-again') === '1'); break;
       case 'close-overlay': state.overlay = null; renderOverlay(); break;
@@ -1189,9 +1256,14 @@
   function init() {
     var db = loadDB();
     state.pref = loadPref();
-    state.folders = Array.isArray(db.folders) && db.folders.length
-      ? db.folders.slice()
-      : DEFAULT_FOLDERS.map(function (f) { return f.key; });
+    var extras = Array.isArray(db.folders)
+      ? db.folders.filter(function (f) { return DEFAULT_CATEGORIES.indexOf(f) < 0 && f !== '通用'; })
+      : [];
+    state.folders = DEFAULT_CATEGORIES.concat(extras.filter(function (f, i, a) { return a.indexOf(f) === i; }));
+    if (JSON.stringify(db.folders || []) !== JSON.stringify(state.folders)) {
+      db.folders = state.folders.slice();
+      saveDB(db);
+    }
     state.searchHistory = loadSearchHistory();
     bindEvents();
     render();
