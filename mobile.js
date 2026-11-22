@@ -6,13 +6,16 @@
   'use strict';
 
   /* ---------------- 常量 ---------------- */
-  var APP_VERSION = '2.13';
+  var APP_VERSION = '2.14';
   var DB_KEY = 'organizer_local_v2';
   var PREF_KEY = 'organizer_pref_v2';
   var HISTORY_KEY = 'organizer_search_history_v2';
   var ALERT_KEY = 'organizer_alert_read_v2';
 
   var APP_VERSION_CHANGELOG = [
+    { version: '2.14', date: '2026-11-23', title: '联动与我的页可滚动', items: [
+      '联动页 / 我的页改为自然下滑，首页和搜索页保持不滚动'
+    ] },
     { version: '2.13', date: '2026-11-23', title: '加号位置再微调', items: [
       '底部加号略微下移并缩小，顶部与相邻导航图标对齐'
     ] },
