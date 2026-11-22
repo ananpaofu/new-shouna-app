@@ -1,13 +1,13 @@
 {
-  "name": "收纳小管家 · 手机版",
-  "short_name": "收纳小管家",
-  "description": "让每件物品，都有迹可循",
+  "name": "过期啦 · 收纳保质期记录",
+  "short_name": "过期啦",
+  "description": "黑白极简的单机收纳保质期记录",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#faf6ef",
-  "theme_color": "#faf6ef",
+  "background_color": "#ffffff",
+  "theme_color": "#ffffff",
   "lang": "zh-CN",
   "icons": [
     {
