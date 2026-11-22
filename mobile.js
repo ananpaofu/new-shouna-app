@@ -6,12 +6,23 @@
   'use strict';
 
   /* ---------------- 常量 ---------------- */
-  var APP_VERSION = '2.05';
+  var APP_VERSION = '2.07';
   var DB_KEY = 'organizer_local_v2';
   var PREF_KEY = 'organizer_pref_v2';
   var HISTORY_KEY = 'organizer_search_history_v2';
+  var ALERT_KEY = 'organizer_alert_read_v2';
 
   var APP_VERSION_CHANGELOG = [
+    { version: '2.07', date: '2026-11-23', title: '图标、示例物品与到期预警', items: [
+      '侧栏分类图标加粗并使用更鲜明的配色，首页换成小房子图标',
+      '搜索历史默认只显示第一排，可展开收起；示例物品每次刷新自动更新',
+      '无照片物品按名称生成主题色线稿图，首页增加到期预警弹窗'
+    ] },
+    { version: '2.06', date: '2026-11-22', title: '全屏布局与成就装扮', items: [
+      '全屏无滚动布局，非首页隐藏加号，普通列表不再出现选择圆圈',
+      '成就页一横排等级、卡面 / 头像框 / 动物头像框可解锁',
+      '老年模式独立放大全部文字图标，英文界面完整翻译'
+    ] },
     { version: '2.05', date: '2026-11-22', title: '表单修复与交互完善', items: [
       '新增页紧凑布局，分类数量单位同排，保存移入标题栏',
       '修复保存后首页不刷新，语音搜索可真实转文字',
@@ -38,18 +49,20 @@
 
   // 侧边栏分类
   var MAIN_CATEGORIES = [
-    { key: 'all', label: '全部', icon: 'box', color: '#8a6a3b' },
-    { key: 'best', label: '最佳', icon: 'leaf', color: '#4f9a6a' },
-    { key: 'soon', label: '临近过期', icon: 'clock', color: '#4d8cc4' },
-    { key: 'expired', label: '已过期', icon: 'warn', color: '#d9534f' },
-    { key: 'stock', label: '库存总览', icon: 'layers', color: '#7a6bb5' },
-    { key: 'trash', label: '回收站', icon: 'trash', color: '#8a8a8a' }
+    { key: 'all', label: '全部', icon: 'box', color: '#a9782f' },
+    { key: 'best', label: '最佳', icon: 'leaf', color: '#2f9c60' },
+    { key: 'soon', label: '临近过期', icon: 'clock', color: '#2479c4' },
+    { key: 'expired', label: '已过期', icon: 'warn', color: '#e04b44' },
+    { key: 'opened', label: '已开封', icon: 'drop', color: '#d98b2b' },
+    { key: 'stock', label: '库存总览', icon: 'layers', color: '#7959c7' },
+    { key: 'trash', label: '回收站', icon: 'trash', color: '#965656' }
   ];
   var CATEGORY_SVG = {
     box: '<path d="M4 7.5 12 3l8 4.5v9L12 21l-8-4.5z"/><path d="M4 7.5 12 12l8-4.5M12 12v9"/>',
     leaf: '<path d="M20 4C10 4 5 8 5 14a5 5 0 0 0 5 5c6 0 10-5 10-15z"/><path d="M4 20c3-5 7-8 12-10"/>',
     clock: '<circle cx="12" cy="12" r="8"/><path d="M12 7v5l3 2"/>',
     warn: '<path d="M12 3 2 20h20z"/><path d="M12 9v5M12 17h.01"/>',
+    drop: '<path d="M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11z"/><path d="M9 14a3 3 0 0 0 3 3"/>',
     layers: '<path d="m12 3 9 5-9 5-9-5z"/><path d="m3 13 9 5 9-5M3 17l9 5 9-5"/>',
     trash: '<path d="M4 7h16M9 7V4h6v3M6 7l1 14h10l1-14"/><path d="M10 11v6M14 11v6"/>',
     hash: '<path d="M5 9h14M5 15h14M10 3 8 21M16 3l-2 18"/>'
@@ -57,7 +70,7 @@
   function categoryIconHTML(c) {
     var svg = CATEGORY_SVG[c.icon] || CATEGORY_SVG.box;
     return '<span class="side-emoji" style="color:' + (c.color || 'var(--green)') + '">' +
-      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">' + svg + '</svg></span>';
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">' + svg + '</svg></span>';
   }
   var DEFAULT_CATEGORIES = [
     '食品', '药品', '化妆品', '衣物', '文档证件', '电子产品', '文具书籍',
@@ -72,10 +85,37 @@
   var UNITS = ['件', '卷', '包', '盒', '瓶', '块', '支', '罐', '袋', '个', '双', '片', '颗', '杯', '桶', '节', '粒', '自定义'];
   var LOCATION_PRESETS = ['冰箱', '厨房', '药箱', '抽屉', '柜子', '衣柜'];
   var ANIMAL_ICONS = ['🐱', '🐶', '🐰', '🐻', '🐼', '🦊', '🐨', '🐯', '🦁', '🐮', '🐷', '🐸', '🐵', '🐔', '🐧', '🦆', '🐝', '🦋'];
-  var DEFAULT_ITEMS = [
-    { id: 'demo-1', name: '纯牛奶 250ml', emoji: '🐄', folder: '食品', unit: '瓶', expiry: '2026-11-25', production: '2026-11-18', reminder: 2, quantity: 6, opened: false, note: '', createdAt: Date.now() - 86400000 },
-    { id: 'demo-2', name: '抹茶面膜', emoji: '🐱', folder: '化妆品', unit: '件', expiry: '2026-12-20', production: '2026-10-01', reminder: 7, quantity: 3, opened: false, note: '', createdAt: Date.now() - 172800000 }
+  var DEMO_POOL = [
+    { name: '鸡蛋', folder: '食品', unit: '枚', art: 'egg', emoji: '🥚' },
+    { name: '全脂牛奶', folder: '食品', unit: '盒', art: 'milk', emoji: '🥛' },
+    { name: '维生素C片', folder: '药品', unit: '瓶', art: 'pill', emoji: '💊' },
+    { name: '防晒霜', folder: '化妆品', unit: '支', art: 'bottle', emoji: '🧴' },
+    { name: '纯牛奶 250ml', folder: '食品', unit: '瓶', art: 'milk', emoji: '🥛' },
+    { name: '抹茶面膜', folder: '化妆品', unit: '件', art: 'jar', emoji: '🧴' },
+    { name: '全麦面包', folder: '食品', unit: '袋', art: 'bag', emoji: '🍞' }
   ];
+  function shiftDate(days) {
+    var d = new Date(); d.setHours(12, 0, 0, 0); d.setDate(d.getDate() + days);
+    return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+  }
+  function buildDemoItems() {
+    var pool = DEMO_POOL.slice();
+    var first = pool.splice(Math.floor(Math.random() * pool.length), 1)[0];
+    var second = pool[Math.floor(Math.random() * pool.length)];
+    var soonOffsets = [-1, 1, 2, 3, 5];
+    var soon = soonOffsets[Math.floor(Math.random() * soonOffsets.length)];
+    var later = 18 + Math.floor(Math.random() * 20);
+    function make(src, id, offset, daysAgo, qty) {
+      return {
+        id: id, name: src.name, emoji: src.emoji, art: src.art, folder: src.folder, unit: src.unit,
+        expiry: shiftDate(offset), production: shiftDate(offset - 7), reminder: 2,
+        quantity: qty, opened: false, note: '', createdAt: Date.now() - daysAgo * 86400000
+      };
+    }
+    return [make(first, 'demo-1', soon, 1, 2 + Math.floor(Math.random() * 6)),
+      make(second, 'demo-2', later, 2, 2 + Math.floor(Math.random() * 5))];
+  }
+  var DEFAULT_ITEMS = buildDemoItems();
 
   var DEFAULT_PREF = {
     layout: 'simple',        // simple / detail / gallery
@@ -93,6 +133,8 @@
     signature: '',
     notifyTime: '09:00',
     frame: '经典卡面',
+    avatarFrame: '经典头像框',
+    animalFrame: '',
     fontSize: 'standard',
     fontWeight: 'standard',
     theme: 'mono',
@@ -115,7 +157,7 @@
   var FONT_SIZE_OPTIONS = [
     { value: 'standard', label: '标准' },
     { value: 'large', label: '大字' },
-    { value: 'elder', label: '老年模式' }
+    { value: 'xlarge', label: '超大' }
   ];
   var FONT_WEIGHT_OPTIONS = [
     { value: 'standard', label: '标准' },
@@ -123,12 +165,17 @@
     { value: 'bold', label: '加粗' }
   ];
   var ACHIEVEMENT_LEVELS = [
-    { level: 1, name: '初出茅庐', need: 0, frame: '经典卡面' },
-    { level: 2, name: '小有收获', need: 5, frame: '绿叶卡面' },
-    { level: 3, name: '收纳能手', need: 15, frame: '暖黄卡面' },
-    { level: 4, name: '整理达人', need: 30, frame: '星蓝卡面' },
-    { level: 5, name: '寻迹大师', need: 60, frame: '金边卡面' }
+    { level: 1, name: '初出茅庐', need: 0, card: '经典卡面', frame: '经典头像框', animal: '', animalFrame: '' },
+    { level: 2, name: '小有收获', need: 5, card: '绿叶卡面', frame: '绿叶头像框', animal: '🐱', animalFrame: '小猫头像框' },
+    { level: 3, name: '收纳能手', need: 15, card: '暖黄卡面', frame: '暖黄头像框', animal: '🐰', animalFrame: '小兔头像框' },
+    { level: 4, name: '整理达人', need: 30, card: '星蓝卡面', frame: '星蓝头像框', animal: '🐻', animalFrame: '小熊头像框' },
+    { level: 5, name: '寻迹大师', need: 60, card: '金边卡面', frame: '金边头像框', animal: '🦊', animalFrame: '小狐头像框' }
   ];
+  var CARD_SKINS = ACHIEVEMENT_LEVELS.map(function (l) { return l.card; });
+  var AVATAR_FRAMES = ACHIEVEMENT_LEVELS.map(function (l) { return l.frame; });
+  var ANIMAL_FRAMES = ACHIEVEMENT_LEVELS.filter(function (l) { return l.animalFrame; }).map(function (l) {
+    return { name: l.animalFrame, animal: l.animal, need: l.need, level: l.level };
+  });
 
   var I18N = {
     'zh-TW': {
@@ -179,7 +226,67 @@
       '搜索物品记录、分类、位置等': '搜尋物品記錄、分類、位置等', '过期日期': '過期日期',
       '食品': '食品', '药品': '藥品', '化妆品': '化妝品', '衣物': '衣物', '文档证件': '文件證件',
       '电子产品': '電子產品', '文具书籍': '文具書籍', '钥匙锁具': '鑰匙鎖具', '清洁用品': '清潔用品',
-      '运动用品': '運動用品', '母婴用品': '母嬰用品', '工具五金': '工具五金', '其他': '其他'
+      '运动用品': '運動用品', '母婴用品': '母嬰用品', '工具五金': '工具五金', '其他': '其他',
+      '注册': '註冊', '未分类': '未分類', '暂无库存': '暫無庫存', '暂无活动记录': '暫無活動記錄',
+      '物品分类': '物品分類', '基础': '基礎', '通知': '通知', '清空': '清空',
+      '初出茅庐': '初出茅廬', '小有收获': '小有收穫', '收纳能手': '收納能手', '整理达人': '整理達人', '寻迹大师': '尋跡大師',
+      '经典卡面': '經典卡面', '绿叶卡面': '綠葉卡面', '暖黄卡面': '暖黃卡面', '星蓝卡面': '星藍卡面', '金边卡面': '金邊卡面',
+      '经典头像框': '經典頭像框', '绿叶头像框': '綠葉頭像框', '暖黄头像框': '暖黃頭像框', '星蓝头像框': '星藍頭像框', '金边头像框': '金邊頭像框',
+      '小猫头像框': '小貓頭像框', '小兔头像框': '小兔頭像框', '小熊头像框': '小熊頭像框', '小狐头像框': '小狐頭像框',
+      '卡面': '卡面', '头像框': '頭像框', '动物头像框': '動物頭像框', '等级': '等級', '解锁': '解鎖',
+      '状态': '狀態', '位置': '位置',
+      '已解锁': '已解鎖', '一键收起': '一鍵收起', '展开': '展開', '库存': '庫存', '库存状态': '庫存狀態',
+      '未开封': '未開封', '未设置日期': '未設定日期', '今天到期': '今天到期', ' 天': ' 天',
+      '过期日期': '過期日期', '物品不存在或已删除': '物品不存在或已刪除',
+      '到期与临期提醒': '到期與臨期提醒', '距离下一级还需': '距離下一級還需',
+      '已达最高等级': '已達最高等級', '* 为必填项，未标注的为选填项': '* 為必填項，其餘為選填項',
+      '输入分类名称': '輸入分類名稱', '输入单位': '輸入單位', '天数': '天數',
+      '列表布局': '列表佈局', '记录方式': '記錄方式', '单条记录': '單筆記錄', '合并记录': '合併記錄',
+      '首页优先排序': '首頁優先排序', '按剩余天数': '按剩餘天數', '按库存数量': '按庫存數量',
+      '剩余时间显示': '剩餘時間顯示', '显示天数': '顯示天數', '显示百分比': '顯示百分比',
+      '日期格式': '日期格式', '按年-月-日': '年-月-日', '按日/月/年': '日/月/年',
+      '统计规则': '統計規則', '按数量统计': '按數量統計', '按种类统计': '按種類統計',
+      '包含子文件夹': '包含子資料夾', '文件夹统计时计入子文件夹': '統計時計入子資料夾',
+      '显示已归档': '顯示已封存', '归档物品也出现在列表中': '已封存物品也顯示在列表中',
+      '包含生产日': '包含生產日', '计算剩余天数时计入生产当天': '計算剩餘天數時計入生產當天',
+      '当前预览 · ': '目前預覽 · ', '简洁列表': '簡潔列表', '详细列表': '詳細列表', '画廊卡片': '畫廊卡片',
+      '简洁': '簡潔', '详细': '詳細', '画廊': '畫廊', '纯牛奶': '純牛奶', '抹茶面膜': '抹茶面膜',
+      '冷藏': '冷藏', '偏好设置保存在本机，仅影响界面显示': '偏好設定儲存在本機，僅影響介面顯示',
+      '6栋学生宿舍 · 2层 · 101': '6棟學生宿舍 · 2層 · 101', '收纳箱 A 标签': '收納箱 A 標籤',
+      '尚未绑定物品 · 储物间 · 未连接': '尚未綁定物品 · 收納間 · 未連線', '电量 82%': '電量 82%',
+      '按字母排序': '按字母排序', '输入自定义分类名': '輸入自訂分類名', '请输入文件夹名称': '請輸入分類名稱',
+      '文件夹已添加': '分類已新增', '文件夹已存在': '分類已存在', '已删除，物品已移入其他': '已刪除，物品已移入其他',
+      '正在聆听…': '正在聆聽…', '当前浏览器不支持语音搜索': '目前瀏覽器不支援語音搜尋',
+      '语音识别失败，请重试': '語音辨識失敗，請重試', '无法启动语音识别': '無法啟動語音辨識',
+      '通知提醒在本机版为演示': '通知提醒在本機版為展示', '添加设备在本机版为演示': '新增設備在本機版為展示',
+      '该功能': '此功能', '在本机版为演示': '在本機版為展示', '本机版无需登录': '本機版無需登入',
+      '密码已更新': '密碼已更新', '两次新密码不一致': '兩次新密碼不一致', '请填写新密码': '請填寫新密碼',
+      '注册信息已保存': '註冊資訊已儲存', '卡面已更新': '卡面已更新', '头像框已更新': '頭像框已更新',
+      '动物头像框已更新': '動物頭像框已更新',
+      '使用指南 · 一步一步学会寻迹': '使用指南 · 一步一步學會尋跡',
+      '第 1 级 · 初出茅庐': '第 1 級 · 初出茅廬', '第 2 级 · 小有收获': '第 2 級 · 小有收穫',
+      '第 3 级 · 收纳能手': '第 3 級 · 收納能手', '第 4 级 · 整理达人': '第 4 級 · 整理達人',
+      '第 5 级 · 寻迹大师': '第 5 級 · 尋跡大師',
+      '第 ': '第 ', ' 步 / 共 ': ' 步 / 共 ', ' 步': ' 步', '上一步': '上一步', '下一步': '下一步', '开始使用': '開始使用',
+      '每页操作演示': '每頁操作示範', '首页 · 找到全部物品': '首頁 · 找到全部物品',
+      '在首页搜索框输入关键词，右侧排序按钮可切换排序，一键收起可压缩卡片高度。': '在首頁搜尋框輸入關鍵詞，右側排序按鈕可切換排序，一鍵收起可壓縮卡片高度。',
+      '搜索 · 语音输入': '搜尋 · 語音輸入', '点击搜索框后点按麦克风，说出物品名称即可自动填入搜索框。': '點選搜尋框後點按麥克風，說出物品名稱即可自動填入搜尋框。',
+      '新增 · 建立物品档案': '新增 · 建立物品檔案', '点底部绿色加号，填写名称、分类、数量、日期，拍照可选，右上角保存。': '點底部綠色加號，填寫名稱、分類、數量、日期，拍照可選，右上角儲存。',
+      '联动 · 地图与设备': '聯動 · 地圖與設備', '查看实时位置，展开地图，或用高德地图打开；设备图标可换成喜欢的小动物。': '查看即時位置，展開地圖，或用高德地圖開啟；設備圖示可換成喜歡的小動物。',
+      '我的 · 个性化设置': '我的 · 個人化設定', '修改昵称头像、字体颜色语言，单独开启老年模式，设置提醒时间与通知时间。': '修改暱稱頭像、字體顏色語言，單獨開啟老年模式，設定提醒時間與通知時間。',
+      '侧栏 · 分类与状态': '側欄 · 分類與狀態', '左滑或点菜单打开侧栏，可按最佳、临期、过期、已开封、库存和回收站筛选。': '左滑或點選選單開啟側欄，可依最佳、臨期、過期、已開封、庫存和回收站篩選。',
+      '成就 · 等级与装扮': '成就 · 等級與裝扮', '等级横向一排展示，解锁卡面、头像框和动物头像框后点按即可更换。': '等級橫向一排展示，解鎖卡面、頭像框和動物頭像框後點按即可更換。',
+      '设置 · 偏好与语言': '設定 · 偏好與語言', '显示偏好里可切换列表样式、日期格式和语言；所有本机设置都会自动保存。': '顯示偏好可切換列表樣式、日期格式與語言；所有本機設定都會自動儲存。',
+      '准备就绪，开始记录吧': '準備就緒，開始記錄吧',
+      'App 呼叫标签，标签发声发光，按信号强弱找到物品。': 'App 呼叫標籤，標籤發聲發光，依訊號強弱找到物品。',
+      '物品离开设定区域时自动提醒，防止遗忘或丢失。': '物品離開設定區域時自動提醒，防止遺忘或遺失。',
+      '标签回到收纳区域时，自动更新收纳时间。': '標籤回到收納區域時，自動更新收納時間。',
+      '标签电量不足时提示更换，避免关键时刻失联。': '標籤電量不足時提醒更換，避免關鍵時刻失聯。',
+      '到期预警': '到期預警', '件物品已过期，请尽快处理': '件物品已過期，請盡快處理',
+      '另有': '另有', '件临近过期': '件臨近過期', '查看': '查看', '已读': '已讀',
+      '展开': '展開', '收起': '收起',
+      '鸡蛋': '雞蛋', '全脂牛奶': '全脂牛奶', '纯牛奶 250ml': '純牛奶 250ml',
+      '维生素C片': '維生素C片', '防晒霜': '防曬霜', '全麦面包': '全麥麵包'
     },
     'en': {
       '全部': 'All', '最佳': 'Best', '临近过期': 'Expiring', '已过期': 'Expired', '已开封': 'Opened',
@@ -203,7 +310,7 @@
       '这里还没有物品': 'No items here', '还没有记录': 'No records', '轻点 + 添加第一条记录吧': 'Tap + to add your first record',
       '个人信息': 'Profile', '界面设置': 'Appearance', '功能设置': 'Features', '昵称': 'Nickname',
       '我的收纳': 'My Storage', '联系方式': 'Contact', '未填写': 'Not set', '个性签名': 'Signature',
-      '成就等级': 'Level', '装扮管理': 'Skins', '字体大小': 'Font size', '标准': 'Standard',
+      '成就等级': 'Level', '装扮管理': 'Skins', '字体大小': 'Font size', '标准': 'Standard', '超大': 'Extra large',
       '字体粗细': 'Font weight', '标准（半粗）': 'Regular / Medium', '界面颜色': 'Theme', '黑白': 'Mono',
       '语言': 'Language', '跟随系统': 'System', '简体中文': 'Simplified Chinese', '繁体中文': 'Traditional Chinese',
       '英文': 'English', '老年模式': 'Elder mode', '超大字体 · 高对比 · 简化功能': 'Larger text, higher contrast, simpler UI',
@@ -229,7 +336,75 @@
       '搜索物品记录、分类、位置等': 'Search records, categories, locations', '过期日期': 'Expiry',
       '食品': 'Food', '药品': 'Medicine', '化妆品': 'Cosmetics', '衣物': 'Clothes', '文档证件': 'Documents',
       '电子产品': 'Electronics', '文具书籍': 'Stationery', '钥匙锁具': 'Keys', '清洁用品': 'Cleaning',
-      '运动用品': 'Sports', '母婴用品': 'Baby', '工具五金': 'Tools', '其他': 'Other'
+      '运动用品': 'Sports', '母婴用品': 'Baby', '工具五金': 'Tools', '其他': 'Other',
+      '注册': 'Sign up', '未分类': 'Uncategorized', '暂无库存': 'No stock', '暂无活动记录': 'No activity',
+      '物品分类': 'Categories', '基础': 'Basic', '通知': 'Notifications', '清空': 'Clear',
+      '初出茅庐': 'Rookie', '小有收获': 'Collector', '收纳能手': 'Organizer', '整理达人': 'Sorter', '寻迹大师': 'Master',
+      '经典卡面': 'Classic card', '绿叶卡面': 'Green card', '暖黄卡面': 'Amber card', '星蓝卡面': 'Blue card', '金边卡面': 'Gold card',
+      '经典头像框': 'Classic frame', '绿叶头像框': 'Green frame', '暖黄头像框': 'Amber frame', '星蓝头像框': 'Blue frame', '金边头像框': 'Gold frame',
+      '小猫头像框': 'Cat frame', '小兔头像框': 'Rabbit frame', '小熊头像框': 'Bear frame', '小狐头像框': 'Fox frame',
+      '卡面': 'Card skins', '头像框': 'Frames', '动物头像框': 'Animal frames', '等级': 'Levels', '解锁': 'Unlock',
+      '状态': 'Status', '位置': 'Location',
+      '已解锁': 'Unlocked', '一键收起': 'Collapse', '展开': 'Expand', '库存': 'Stock', '库存状态': 'Stock status',
+      '未开封': 'Sealed', '未设置日期': 'No expiry set', '今天到期': 'Due today', '剩 ': 'In ', ' 天': ' days',
+      '已过期 ': 'Expired ', '过期日期': 'Expiry date', '物品不存在或已删除': 'Item not found',
+      '到期与临期提醒': 'Due and upcoming reminders', '距离下一级还需': 'Items to next level:',
+      '已达最高等级': 'Maximum level reached', '* 为必填项，未标注的为选填项': '* Required, everything else optional',
+      '输入分类名称': 'Enter category name', '输入单位': 'Enter unit', '天数': 'Days',
+      '列表布局': 'List layout', '记录方式': 'Record mode', '单条记录': 'Single record', '合并记录': 'Merged record',
+      '首页优先排序': 'Home priority', '按剩余天数': 'By days left', '按库存数量': 'By stock',
+      '剩余时间显示': 'Time display', '显示天数': 'Days', '显示百分比': 'Percent',
+      '日期格式': 'Date format', '按年-月-日': 'YYYY-MM-DD', '按日/月/年': 'DD/MM/YYYY',
+      '统计规则': 'Statistics rule', '按数量统计': 'By quantity', '按种类统计': 'By type',
+      '包含子文件夹': 'Include subfolders', '文件夹统计时计入子文件夹': 'Count subfolders in totals',
+      '显示已归档': 'Show archived', '归档物品也出现在列表中': 'Archived items appear in the list',
+      '包含生产日': 'Include production day', '计算剩余天数时计入生产当天': 'Count production day as day one',
+      '当前预览 · ': 'Preview · ', '简洁列表': 'Simple list', '详细列表': 'Detailed list', '画廊卡片': 'Gallery cards',
+      '简洁': 'Simple', '详细': 'Detailed', '画廊': 'Gallery', '纯牛奶': 'Milk', '抹茶面膜': 'Green tea mask',
+      '冷藏': 'Chilled', '偏好设置保存在本机，仅影响界面显示': 'Preferences stay on this device and only affect the UI',
+      '6栋学生宿舍 · 2层 · 101': 'Dorm 6 · Floor 2 · Room 101', '收纳箱 A 标签': 'Storage box A tag',
+      '尚未绑定物品 · 储物间 · 未连接': 'Unbound · Storage · Disconnected', '电量 82%': 'Battery 82%',
+      '当前为交互演示：标签状态在 App 内模拟。开启蓝牙后可搜索附近标签并模拟连接；接入真实硬件时，标签通过蓝牙广播 ID 与信号强度，App 接收后实现查找、离位判定与自动记录。':
+        'Interactive demo: tag status is simulated in the app. Real tags advertise ID and signal strength over Bluetooth for finding, away alerts and auto logging.',
+      '当前使用高德地图 URI 直接唤起本机高德 App；未安装时自动回退到网页版。本机版无需申请 Key。':
+        'The Amap URI opens the installed app, or falls back to the web version. No API key is required.',
+      '按字母排序': 'Sorted A-Z', '输入自定义分类名': 'Enter category name', '请输入文件夹名称': 'Enter folder name',
+      '文件夹已添加': 'Category added', '文件夹已存在': 'Category already exists', '已删除，物品已移入其他': 'Deleted; items moved to Other',
+      '正在聆听…': 'Listening…', '当前浏览器不支持语音搜索': 'Voice search is not supported here',
+      '语音识别失败，请重试': 'Speech recognition failed, please retry', '无法启动语音识别': 'Could not start speech recognition',
+      '通知提醒在本机版为演示': 'Notifications are a demo in local mode', '添加设备在本机版为演示': 'Adding devices is a demo in local mode',
+      '该功能': 'This feature', '在本机版为演示': ' is a demo in local mode', '本机版无需登录': 'Local mode needs no sign-in',
+      '密码已更新': 'Password updated', '两次新密码不一致': 'Passwords do not match', '请填写新密码': 'Enter a new password',
+      '注册信息已保存': 'Registration saved', '卡面已更新': 'Card skin updated', '头像框已更新': 'Avatar frame updated',
+      '动物头像框已更新': 'Animal frame updated', '请输入文件夹名称': 'Enter a category name',
+      '使用指南 · 一步一步学会寻迹': 'Guide · Learn Xunji step by step',
+      '第 1 级 · 初出茅庐': 'Level 1 · Rookie', '第 2 级 · 小有收获': 'Level 2 · Collector',
+      '第 3 级 · 收纳能手': 'Level 3 · Organizer', '第 4 级 · 整理达人': 'Level 4 · Sorter',
+      '第 5 级 · 寻迹大师': 'Level 5 · Master',
+      '第 ': 'Step ', ' 步 / 共 ': ' of ', ' 步': '', '上一步': 'Previous', '下一步': 'Next', '开始使用': 'Get started',
+      '每页操作演示': 'Page-by-page walkthrough', '首页 · 找到全部物品': 'Home · Find all items',
+      '在首页搜索框输入关键词，右侧排序按钮可切换排序，一键收起可压缩卡片高度。': 'Type in the search box, change sorting, or collapse cards to fit more items.',
+      '搜索 · 语音输入': 'Search · Voice input', '点击搜索框后点按麦克风，说出物品名称即可自动填入搜索框。': 'Tap the search box, then the microphone, and speak an item name to fill the search field.',
+      '新增 · 建立物品档案': 'Add · Create an item', '点底部绿色加号，填写名称、分类、数量、日期，拍照可选，右上角保存。': 'Tap the green plus, fill name, category, quantity and dates, optionally add photos, then tap Save.',
+      '联动 · 地图与设备': 'Link · Map and devices', '查看实时位置，展开地图，或用高德地图打开；设备图标可换成喜欢的小动物。': 'View your location, expand the map, open Amap, or switch device icons to an animal.',
+      '我的 · 个性化设置': 'Me · Personalize', '修改昵称头像、字体颜色语言，单独开启老年模式，设置提醒时间与通知时间。': 'Edit profile, fonts, theme and language; enable elder mode separately and set reminder times.',
+      '侧栏 · 分类与状态': 'Sidebar · Categories', '左滑或点菜单打开侧栏，可按最佳、临期、过期、已开封、库存和回收站筛选。': 'Open the sidebar to filter by best, expiring, expired, opened, stock and trash.',
+      '成就 · 等级与装扮': 'Achievements · Levels', '等级横向一排展示，解锁卡面、头像框和动物头像框后点按即可更换。': 'Levels appear in one row; unlock and tap card skins, avatar frames and animal frames.',
+      '设置 · 偏好与语言': 'Settings · Preferences', '显示偏好里可切换列表样式、日期格式和语言；所有本机设置都会自动保存。': 'Change list style, date format and language in Preferences; all settings save locally.',
+      '准备就绪，开始记录吧': 'All set. Start organizing!',
+      '我': 'Me', ' 件': ' pcs', '件 ›': 'pc ›',
+      '年-月-日': 'YYYY-MM-DD', '日/月/年': 'DD/MM/YYYY',
+      'App 呼叫标签，标签发声发光，按信号强弱找到物品。': 'The app calls the tag; it beeps and flashes so you can follow signal strength.',
+      '物品离开设定区域时自动提醒，防止遗忘或丢失。': 'Get an alert when an item leaves its set area.',
+      '标签回到收纳区域时，自动更新收纳时间。': 'Storage time updates when the tag returns to its area.',
+      '标签电量不足时提示更换，避免关键时刻失联。': 'A low-battery alert reminds you to replace the tag.',
+      '到期预警': 'Expiry alert', '有': '', '件物品已过期，请尽快处理': 'items expired, please handle soon',
+      '另有': 'plus', '件临近过期': 'expiring soon', '查看': 'View', '已读': 'Mark read',
+      '展开': 'Expand', '收起': 'Collapse',
+      '鸡蛋': 'Eggs', '全脂牛奶': 'Whole milk', '纯牛奶 250ml': 'Milk 250ml',
+      '维生素C片': 'Vitamin C tablets', '防晒霜': 'Sunscreen', '全麦面包': 'Whole wheat bread',
+      '枚': 'pc', '支': 'tube', '卷': 'roll', '块': 'piece', '罐': 'can',
+      '杯': 'cup', '桶': 'bucket', '节': 'section', '粒': 'capsule'
     }
   };
 
@@ -239,6 +414,7 @@
     category: 'all',
     searchQuery: '',
     searchHistory: [],
+    searchHistoryExpanded: false,
     searchFocused: false,
     recognizing: false,
     sidebarOpen: false,
@@ -249,12 +425,14 @@
     formDraft: null,
     sortRule: 'name',
     compact: false,
+    detailCollapsed: false,
     multiSelect: false,
     selectedIds: [],
     link: { mapExpanded: false, icon: '🐱' },
     tutorialStep: 0,
     pref: null,
-    folders: []
+    folders: [],
+    alertDismissed: ''
   };
 
   /* ---------------- 工具 ---------------- */
@@ -306,6 +484,7 @@
   function toast(msg) {
     var root = $('#toast-root'); if (!root) return;
     var el = document.createElement('div'); el.className = 'toast'; el.textContent = msg;
+    el.textContent = tr(msg);
     root.appendChild(el);
     setTimeout(function () { el.remove(); }, 1800);
   }
@@ -458,6 +637,35 @@
     }
     return list;
   }
+  function getAlerts() {
+    var expired = [], soon = [];
+    getItems().forEach(function (it) {
+      if (it.trashed) return;
+      var d = daysUntil(it.expiry);
+      if (d == null) return;
+      if (d < 0) expired.push(it);
+      else if (d <= 7) soon.push(it);
+    });
+    return { expired: expired, soon: soon, all: expired.concat(soon) };
+  }
+  function alertKey(alerts) {
+    return alerts.all.map(function (it) {
+      return [it.id, it.name, it.expiry, it.quantity, it.updatedAt || it.createdAt || ''].join(':');
+    }).join('|');
+  }
+  function alertBannerHTML() {
+    if (state.view !== 'home' || state.category !== 'all' || state.multiSelect) return '';
+    var alerts = getAlerts();
+    if (!alerts.all.length || state.alertDismissed === alertKey(alerts)) return '';
+    var text = tr('有') + ' ' + alerts.expired.length + ' ' + tr('件物品已过期，请尽快处理');
+    if (alerts.soon.length) text += ' · ' + tr('另有') + ' ' + alerts.soon.length + ' ' + tr('件临近过期');
+    return '<div class="alert-banner">' +
+      '<span class="alert-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 2 20h20z"/><path d="M12 9v5M12 17h.01"/></svg></span>' +
+      '<div class="alert-copy"><b>' + tr('到期预警') + '</b><span>' + escapeHTML(text) + '</span></div>' +
+      '<button class="alert-arrow" data-action="go-alerts" aria-label="' + tr('查看') + '">›</button>' +
+      '<button class="alert-dismiss" data-action="dismiss-alert">' + tr('已读') + '</button>' +
+    '</div>';
+  }
   function categoryLabel() {
     var all = MAIN_CATEGORIES.concat(state.folders.map(function (f) { return { key: f, label: f }; }));
     for (var i = 0; i < all.length; i++) { if (all[i].key === state.category) return all[i].label; }
@@ -487,9 +695,7 @@
         '<div class="header-row home-header">' +
           '<button class="icon-btn" data-action="open-sidebar" aria-label="菜单"><span class="menu-lines"><i></i><i></i><i></i></span></button>' +
           '<div class="home-title">' + escapeHTML(categoryLabel()) + '</div>' +
-          '<div class="header-actions">' +
-            '<button class="icon-btn" data-action="enter-multiselect" aria-label="多选"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="5" cy="12" r="1.4"/><circle cx="12" cy="12" r="1.4"/><circle cx="19" cy="12" r="1.4"/></svg></button>' +
-          '</div>' +
+          '<div class="header-actions"></div>' +
         '</div>';
       return;
     }
@@ -531,12 +737,13 @@
   /* ---------------- 底部导航 ---------------- */
   function navSVG(key) {
     var m = {
-      home: '<rect x="4" y="6" width="16" height="14" rx="2.5"/><path d="M4 10h16M8 6V4.5h8V6"/>',
+      home: '<path d="M4 10 12 3.5 20 10v9h-5.5v-5.5h-5V19H4z"/><circle cx="12" cy="22" r="1.2"/>',
       search: '<circle cx="11" cy="11" r="6.5"/><path d="m16 16 4 4"/>',
       link: '<circle cx="12" cy="12" r="2"/><path d="M8.5 8.5a5 5 0 0 0 0 7M15.5 8.5a5 5 0 0 1 0 7M5.5 5.5a9 9 0 0 0 0 13M18.5 5.5a9 9 0 0 1 0 13"/>',
       me: '<circle cx="12" cy="8" r="3.6"/><path d="M5 20a7 7 0 0 1 14 0"/>'
     };
-    return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">' + (m[key] || '') + '</svg>';
+    var sw = key === 'home' ? '2' : '1.9';
+    return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="' + sw + '" stroke-linecap="round" stroke-linejoin="round">' + (m[key] || '') + '</svg>';
   }
   function renderNav() {
     var tabs = [
@@ -549,6 +756,7 @@
     $('#bottom-nav').innerHTML = tabs.map(function (t) {
       var key = t.key;
       if (key === 'add') {
+        if (state.view !== 'home') return '<span class="nav-add-placeholder" aria-hidden="true"></span>';
         return '<button class="nav-item nav-add" data-action="add-new" aria-label="新增"><span class="add-circle"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span></button>';
       }
       if (key === 'home' && state.multiSelect) {
@@ -579,20 +787,45 @@
       return String(a.name || '').localeCompare(String(b.name || ''), 'zh-CN');
     });
   }
+  var ITEM_ARTS = {
+    egg: '<ellipse cx="19" cy="28" rx="9" ry="11"/><ellipse cx="29" cy="28" rx="9" ry="11"/>',
+    milk: '<path d="M15 14h18v25H15z"/><path d="M15 14l9-7 9 7"/><rect x="19" y="25" width="10" height="5" rx="1"/>',
+    pill: '<path d="M18 16h12v4H18z"/><path d="M19 20v17a4 4 0 0 0 4 4h2a4 4 0 0 0 4-4V20"/><path d="M20 26h8"/>',
+    bottle: '<path d="M20 9h8v6l4 5v19H16V20l4-5z"/><path d="M18 27h12"/>',
+    jar: '<path d="M17 18h14v21H17z"/><path d="M19 14h10v4H19z"/><path d="M20 27h8"/>',
+    bag: '<path d="M13 19h22l-2 21H15z"/><path d="M18 19c0-6 2-9 6-9s6 3 6 9"/>',
+    box: '<path d="M10 17 24 10l14 7v18l-14 7-14-7z"/><path d="M10 17l14 7 14-7M24 24v18"/>'
+  };
+  function itemArtKey(it) {
+    var name = String(it.name || '');
+    if (it.art && ITEM_ARTS[it.art]) return it.art;
+    if (/蛋/.test(name)) return 'egg';
+    if (/奶|乳/.test(name)) return 'milk';
+    if (/药|维生素|胶囊|片/.test(name)) return 'pill';
+    if (/防晒|霜|护肤|化妆|面膜/.test(name)) return 'jar';
+    if (/面包|零食|食品/.test(name)) return 'bag';
+    return 'box';
+  }
+  function itemArtHTML(it) {
+    return '<svg class="item-art" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">' +
+      (ITEM_ARTS[itemArtKey(it)] || ITEM_ARTS.box) + '</svg>';
+  }
   function itemCardHTML(it) {
     var selected = state.multiSelect && state.selectedIds.indexOf(it.id) >= 0;
-    var circle = '<span class="pick-circle' + (selected ? ' on' : '') + '" data-action="toggle-select" data-id="' + it.id + '"></span>';
+    var circle = state.multiSelect
+      ? '<span class="pick-circle' + (selected ? ' on' : '') + '" data-action="toggle-select" data-id="' + it.id + '"></span>' : '';
     var thumb = it.image
       ? '<div class="item-thumb"><img src="' + escapeHTML(it.image) + '" alt=""></div>'
-      : '<div class="item-thumb">' + escapeHTML(it.emoji || '🐱') + '</div>';
+      : '<div class="item-thumb art-thumb">' + itemArtHTML(it) + '</div>';
     var tags = '<span class="tag-yellow">' + escapeHTML(it.folder || '未分类') + '</span>' +
-      '<span class="tag-gray">剩余 ' + (it.quantity || 1) + ' ' + escapeHTML(it.unit || '件') + '</span>';
+      '<span class="tag-gray">' + tr('剩余') + ' ' + (it.quantity || 1) + ' ' + escapeHTML(tr(it.unit || '件')) + '</span>';
     var time = timeAgo(it.updatedAt || it.createdAt);
+    var stock = '<div class="stock-box"><span>' + tr('库存') + '</span><b>' + (Number(it.quantity) || 1) + '</b><small>' + escapeHTML(tr(it.unit || '件')) + '</small></div>';
     return '<div class="item-card' + (selected ? ' selected' : '') + (state.compact ? ' compact' : '') + '" data-action="' + (state.multiSelect ? 'toggle-select' : 'open-item') + '" data-id="' + it.id + '">' +
-      circle + thumb +
+      circle + stock + thumb +
       '<div class="item-main"><div class="item-name">' + escapeHTML(it.name) + '</div>' +
         '<div class="item-tags">' + tags + '</div>' +
-        '<div class="item-expiry">过期日期 ' + escapeHTML(formatDotDate(it.expiry)) + '</div>' +
+        '<div class="item-expiry">' + tr('过期日期') + ' ' + escapeHTML(formatDotDate(it.expiry)) + '</div>' +
       '</div>' +
       (time ? '<div class="item-time">' + escapeHTML(time) + '</div>' : '') +
     '</div>';
@@ -627,9 +860,10 @@
           '<span>' + SORT_LABELS[state.sortRule] + '</span>' +
         '</button>' +
         '<div class="sort-actions">' +
-          '<button class="icon-btn" data-action="enter-multiselect" aria-label="多选"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><rect x="4" y="5" width="16" height="14" rx="2"/><path d="m8 12 3 3 5-6"/></svg></button>' +
+          '<button class="icon-btn" data-action="enter-multiselect" aria-label="多选" title="多选"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><rect x="4" y="5" width="16" height="14" rx="2"/><path d="m8 12 3 3 5-6"/></svg></button>' +
+          '<button class="icon-btn collapse-btn" data-action="toggle-compact" aria-label="一键收起" title="一键收起"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></button>' +
         '</div>' +
-      '</div>' + body + '</div>';
+      '</div>' + alertBannerHTML() + body + '</div>';
   }
 
   /* ---------------- 侧边栏 ---------------- */
@@ -641,6 +875,7 @@
       best: count(function (it) { var d = daysUntil(it.expiry); return d != null && d > 7; }),
       soon: count(function (it) { var d = daysUntil(it.expiry); return d != null && d >= 0 && d <= 7; }),
       expired: count(function (it) { var d = daysUntil(it.expiry); return d != null && d < 0; }),
+      opened: count(function (it) { return !!it.opened; }),
       trash: items.filter(function (it) { return !!it.trashed; }).length
     };
     function sideItem(c) {
@@ -653,12 +888,12 @@
       '<aside class="sidebar' + (state.sidebarOpen ? ' show' : '') + '">' +
         '<div class="sidebar-head">' +
           '<div class="sidebar-title-row"><div><div class="sidebar-title">寻迹</div><span class="sidebar-badge">基础</span></div>' +
-            '<span class="sidebar-icons" data-action="notification-hint" title="通知"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M18 9a6 6 0 0 0-12 0c0 7-3 8-3 8h18s-3-1-3-8"/><path d="M10.5 20a2 2 0 0 0 3 0"/></svg></span>' +
+            '<span class="sidebar-icons" data-action="notification-hint" title="通知"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M18 9a6 6 0 0 0-12 0c0 7-3 8-3 8h18s-3-1-3-8"/><path d="M10.5 20a2 2 0 0 0 3 0"/></svg></span>' +
           '</div>' +
         '</div>' +
         '<div class="sidebar-body">' +
           '<div class="side-group">' + MAIN_CATEGORIES.map(sideItem).join('') + '</div>' +
-          '<div class="side-group"><div class="side-item" data-action="manage-categories">' + categoryIconHTML({ icon: 'hash', color: '#8a8a8a' }) + '<span>物品分类</span><span class="side-arrow">›</span></div></div>' +
+          '<div class="side-group"><div class="side-item" data-action="manage-categories">' + categoryIconHTML({ icon: 'hash', color: '#5a7ea8' }) + '<span>物品分类</span><span class="side-arrow">›</span></div></div>' +
         '</div>' +
       '</aside>';
   }
@@ -791,8 +1026,9 @@
         : '<div class="search-empty"><div class="big-search-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m15.5 15.5 5 5"/></svg></div><div class="empty-title">没有找到相关物品</div></div>';
     } else {
       var history = state.searchHistory.length
-        ? '<div class="search-history-block"><div class="section-title">搜索历史<span class="more" data-action="clear-search-history">清空</span></div>' +
-          '<div class="search-history">' + state.searchHistory.map(function (h) {
+        ? '<div class="search-history-block"><div class="section-title">搜索历史' +
+          (state.searchHistory.length > 6 ? '<span class="history-tools"><button class="more" data-action="toggle-search-history">' + (state.searchHistoryExpanded ? tr('收起') : tr('展开')) + '</button><span class="more" data-action="clear-search-history">清空</span></span>' : '<span class="more" data-action="clear-search-history">清空</span>') +
+          '</div><div class="search-history">' + state.searchHistory.slice(0, state.searchHistoryExpanded ? 10 : 6).map(function (h) {
             return '<button class="history-chip" data-action="search-term" data-term="' + escapeHTML(h) + '">' + escapeHTML(h) + '</button>';
           }).join('') + '</div></div>'
         : '';
@@ -845,7 +1081,7 @@
         editRow('nickname', '👤', '昵称', p.nickname || '我的收纳') +
         editRow('contact', '💬', '联系方式', p.contact || '未填写') +
         editRow('signature', '📝', '个性签名', p.signature || '未填写') +
-        optionRow('go-achievement', '🏆', '成就等级', '第 ' + level.level + ' 级 · ' + level.name + ' · 装扮管理') +
+        optionRow('go-achievement', '🏆', '成就等级', tr('第 ' + level.level + ' 级 · ' + level.name) + ' · ' + tr('装扮管理')) +
       '</div>' +
       '<div class="me-card"><div class="me-card-title">界面设置<span>⌃</span></div>' +
         optionRow('pref-list', '▦', '字体大小', labelOf(FONT_SIZE_OPTIONS, p.fontSize), ' data-key="fontSize" data-title="字体大小"') +
@@ -870,21 +1106,49 @@
   }
 
   /* ---------------- 新手教程 ---------------- */
-  function tutorialHTML() {
-    var steps = [
-      { icon: '📦', title: '记录物品', body: '点击底部绿色加号，填写名称、分类、日期和数量，保存后物品会出现在首页。' },
-      { icon: '📂', title: '分类整理', body: '打开左侧「寻迹」，可以按状态或物品分类筛选，也能在分类页添加自定义分类。' },
-      { icon: '📶', title: '设备联动', body: '在联动页查看位置和设备，可自定义小动物图标，并用高德地图打开位置。' },
-      { icon: '🔔', title: '到期提醒', body: '在「我的 → 功能设置」里开启通知并选择提醒时间，到期和临期物品会更醒目。' }
+  function tutorialSteps() {
+    return [
+      { key: 'home', title: '首页 · 找到全部物品', body: '在首页搜索框输入关键词，右侧排序按钮可切换排序，一键收起可压缩卡片高度。' },
+      { key: 'search', title: '搜索 · 语音输入', body: '点击搜索框后点按麦克风，说出物品名称即可自动填入搜索框。' },
+      { key: 'add', title: '新增 · 建立物品档案', body: '点底部绿色加号，填写名称、分类、数量、日期，拍照可选，右上角保存。' },
+      { key: 'link', title: '联动 · 地图与设备', body: '查看实时位置，展开地图，或用高德地图打开；设备图标可换成喜欢的小动物。' },
+      { key: 'me', title: '我的 · 个性化设置', body: '修改昵称头像、字体颜色语言，单独开启老年模式，设置提醒时间与通知时间。' },
+      { key: 'sidebar', title: '侧栏 · 分类与状态', body: '左滑或点菜单打开侧栏，可按最佳、临期、过期、已开封、库存和回收站筛选。' },
+      { key: 'achievement', title: '成就 · 等级与装扮', body: '等级横向一排展示，解锁卡面、头像框和动物头像框后点按即可更换。' },
+      { key: 'prefs', title: '设置 · 偏好与语言', body: '显示偏好里可切换列表样式、日期格式和语言；所有本机设置都会自动保存。' }
     ];
-    var i = Math.min(state.tutorialStep, steps.length - 1);
+  }
+  function guideArt(key) {
+    var frame = '<rect x="46" y="4" width="68" height="112" rx="10" class="g-frame"/>';
+    var nav = '<path d="M56 108h48" class="g-line"/><circle cx="62" cy="108" r="2" class="g-accent"/><circle cx="80" cy="108" r="2" class="g-line"/><circle cx="98" cy="108" r="2" class="g-line"/>';
+    var art = {
+      home: frame + '<rect x="53" y="12" width="54" height="10" rx="3" class="g-soft"/><path d="M58 30h40M58 42h40M58 54h40M58 66h40" class="g-line"/><circle cx="97" cy="24" r="6" class="g-accent"/><path d="m101 28 4 4" class="g-accent"/>' + nav,
+      search: frame + '<rect x="53" y="12" width="54" height="12" rx="6" class="g-soft"/><circle cx="62" cy="18" r="3" class="g-line"/><path d="M58 34h42M58 46h34" class="g-line"/><path d="M64 58a10 10 0 1 0 14 14" class="g-accent"/><path d="m77 71 8 8" class="g-accent"/>' + nav,
+      add: frame + '<path d="M53 14h54" class="g-line"/><path d="M53 30h54M53 44h54M53 58h54" class="g-line"/><circle cx="80" cy="76" r="9" class="g-accent"/><path d="M80 71v10M75 76h10" class="g-white"/>' + nav,
+      link: frame + '<path d="M55 18h50v38H55z" class="g-soft"/><circle cx="80" cy="36" r="5" class="g-accent"/><path d="M80 43v8" class="g-accent"/><path d="M60 66h40M60 76h30" class="g-line"/><circle cx="98" cy="88" r="6" class="g-accent"/>' + nav,
+      me: frame + '<circle cx="80" cy="22" r="8" class="g-accent"/><path d="M58 40h44M58 52h44M58 64h44M58 76h44" class="g-line"/><rect x="94" y="70" width="10" height="6" rx="3" class="g-accent"/>' + nav,
+      sidebar: frame + '<path d="M46 10h32v94H46z" class="g-soft"/><path d="M54 24h20M54 38h20M54 52h20M54 66h20M54 80h20" class="g-line"/><rect x="56" y="46" width="16" height="8" rx="3" class="g-accent"/><path d="M84 28h26M84 42h20M84 56h26" class="g-line"/>' + nav,
+      achievement: frame + '<circle cx="62" cy="26" r="6" class="g-accent"/><circle cx="80" cy="26" r="6" class="g-accent"/><circle cx="98" cy="26" r="6" class="g-accent"/><path d="M54 40h52" class="g-line"/><rect x="56" y="52" width="17" height="17" rx="4" class="g-soft"/><rect x="76" y="52" width="17" height="17" rx="4" class="g-accent"/><rect x="96" y="52" width="12" height="17" rx="4" class="g-soft"/>' + nav,
+      prefs: frame + '<path d="M58 22h44M58 36h44M58 50h44M58 64h44" class="g-line"/><circle cx="90" cy="22" r="4" class="g-accent"/><circle cx="72" cy="36" r="4" class="g-accent"/><circle cx="96" cy="50" r="4" class="g-accent"/><rect x="86" y="61" width="12" height="6" rx="3" class="g-accent"/>' + nav
+    };
+    return '<svg class="guide-svg" viewBox="0 0 160 120" fill="none" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">' + (art[key] || art.home) + '</svg>';
+  }
+  function tutorialHTML() {
+    var steps = tutorialSteps();
+    var i = Math.max(0, Math.min(state.tutorialStep, steps.length - 1));
     var s = steps[i];
+    var last = i === steps.length - 1;
     return '<div class="page tutorial-page">' +
       '<div class="tutorial-progress">' + steps.map(function (_, n) {
         return '<span class="' + (n <= i ? 'on' : '') + '"></span>';
       }).join('') + '</div>' +
-      '<div class="tutorial-card"><div class="tutorial-icon">' + s.icon + '</div><div class="tutorial-title">' + s.title + '</div><p>' + s.body + '</p></div>' +
-      '<button class="btn btn-primary" data-action="tutorial-next">' + (i === steps.length - 1 ? '开始使用' : '下一步') + '</button>' +
+      '<div class="tutorial-head"><span>' + tr('使用指南 · 一步一步学会寻迹') + '</span><span>' + tr('第 ' + (i + 1) + ' 步 / 共 ' + steps.length + ' 步') + '</span></div>' +
+      '<div class="tutorial-card"><div class="guide-illus">' + guideArt(s.key) + '</div>' +
+        '<div class="guide-copy"><div class="tutorial-title">' + tr(s.title) + '</div><p>' + tr(s.body) + '</p></div></div>' +
+      '<div class="tutorial-actions">' +
+        '<button class="btn" data-action="tutorial-prev"' + (i === 0 ? ' disabled' : '') + '>' + tr('上一步') + '</button>' +
+        '<button class="btn btn-primary" data-action="tutorial-next">' + tr(last ? '开始使用' : '下一步') + '</button>' +
+      '</div>' +
     '</div>';
   }
 
@@ -901,25 +1165,59 @@
   }
 
   /* ---------------- 成就等级 ---------------- */
+  function achievementAvatarHTML(lv, selected) {
+    var avatar = String(state.pref.avatar || '');
+    var inner = avatar.indexOf('data:') === 0
+      ? '<img src="' + escapeHTML(avatar) + '" alt="">'
+      : escapeHTML(state.link.icon || '🐾');
+    var frameClass = 'frame-' + lv;
+    var badge = '';
+    if (selected) {
+      var frameIdx = AVATAR_FRAMES.indexOf(state.pref.avatarFrame);
+      if (frameIdx >= 0) frameClass = 'frame-' + (frameIdx + 1);
+      var animal = ANIMAL_FRAMES.filter(function (a) { return a.name === state.pref.animalFrame; })[0];
+      if (animal) badge = '<i class="animal-badge">' + escapeHTML(animal.animal) + '</i>';
+    }
+    return '<span class="achv-avatar ' + frameClass + '">' + inner + badge + '</span>';
+  }
   function achievementHTML() {
     var level = getLevel();
     var count = getItems().filter(function (it) { return !it.trashed; }).length;
     var next = ACHIEVEMENT_LEVELS.filter(function (l) { return l.need > count; })[0];
     var percent = next ? Math.min(100, Math.round(count / next.need * 100)) : 100;
-    var frames = ACHIEVEMENT_LEVELS.map(function (l) {
+    var levels = ACHIEVEMENT_LEVELS.map(function (l) {
       var unlocked = count >= l.need;
-      return '<button class="frame-card' + (state.pref.frame === l.frame ? ' active' : '') + (unlocked ? '' : ' locked') + '" data-action="set-frame" data-frame="' + escapeHTML(l.frame) + '"' + (unlocked ? '' : ' disabled') + '>' +
-        '<span class="frame-preview frame-' + l.level + '">我</span><span>' + l.frame + '</span>' +
-        (unlocked ? '' : '<small>Lv.' + l.level + ' 解锁</small>') + '</button>';
+      return '<div class="level-chip' + (l.level === level.level ? ' current' : '') + (unlocked ? '' : ' locked') + '">' +
+        '<span class="level-no">Lv.' + l.level + '</span>' + achievementAvatarHTML(l.level) +
+        '<span class="level-name">' + tr(l.name) + '</span><span class="level-need">' + (unlocked ? tr('已解锁') : l.need + tr('件')) + '</span></div>';
     }).join('');
+    function skinButtons(list, kind, value) {
+      return list.map(function (item, i) {
+        var name = typeof item === 'string' ? item : item.name;
+        var need = typeof item === 'string' ? ACHIEVEMENT_LEVELS[i].need : item.need;
+        var unlocked = count >= need;
+        var active = value === name;
+        var preview = kind === 'animal'
+          ? '<span class="animal-chip">' + (item.animal || '🐾') + '</span>'
+          : '<span class="mini-preview frame-' + (i + 1) + '"></span>';
+        return '<button class="dress-chip' + (active ? ' active' : '') + (unlocked ? '' : ' locked') + '" data-action="set-frame" data-kind="' + kind + '" data-frame="' + escapeHTML(name) + '"' + (unlocked ? '' : ' disabled') + '>' +
+          preview + '<span>' + tr(name) + '</span>' + (unlocked ? '' : '<small>Lv.' + (kind === 'animal' ? item.level : i + 1) + '</small>') + '</button>';
+      }).join('');
+    }
     return '<div class="page achievement-page">' +
-      '<div class="achievement-hero"><div class="frame-preview frame-' + level.level + '">我</div>' +
-        '<div class="achievement-name">第 ' + level.level + ' 级 · ' + level.name + '</div>' +
-        '<div class="muted small">已收纳 ' + count + ' 件物品</div>' +
-        '<div class="progress"><i style="width:' + percent + '%"></i></div>' +
-        '<div class="muted small">' + (next ? '距离下一级还需 ' + (next.need - count) + ' 件' : '已达最高等级') + '</div></div>' +
-      '<div class="section-title">装扮管理<span class="muted small">头像框与卡面</span></div>' +
-      '<div class="frame-grid">' + frames + '</div>' +
+      '<div class="achievement-hero">' + achievementAvatarHTML(level.level, true) +
+        '<div class="achievement-info"><div class="achievement-name">' + tr('第 ' + level.level + ' 级 · ' + level.name) + '</div>' +
+          '<div class="muted small">' + tr('已收纳') + ' ' + count + ' ' + tr('件物品') + ' · ' + tr('卡面') + '：' + tr(state.pref.frame || level.card) + '</div>' +
+          '<div class="progress"><i style="width:' + percent + '%"></i></div>' +
+          '<div class="muted small">' + (next ? tr('距离下一级还需') + ' ' + (next.need - count) + ' ' + tr('件') : tr('已达最高等级')) + '</div>' +
+        '</div></div>' +
+      '<div class="section-title achv-title">' + tr('等级') + '<span class="muted small">' + tr('已解锁') + ' ' + ACHIEVEMENT_LEVELS.filter(function (l) { return count >= l.need; }).length + '/' + ACHIEVEMENT_LEVELS.length + '</span></div>' +
+      '<div class="level-row">' + levels + '</div>' +
+      '<div class="achv-groups">' +
+        '<div class="achv-group"><div class="achv-label">' + tr('卡面') + '</div><div class="dress-row">' + skinButtons(CARD_SKINS, 'card', state.pref.frame) + '</div></div>' +
+        '<div class="achv-group"><div class="achv-label">' + tr('头像框') + '</div><div class="dress-row">' + skinButtons(AVATAR_FRAMES, 'frame', state.pref.avatarFrame) + '</div></div>' +
+        '<div class="achv-group"><div class="achv-label">' + tr('动物头像框') + '</div><div class="dress-row animal-row">' + skinButtons(ANIMAL_FRAMES, 'animal', state.pref.animalFrame) + '</div></div>' +
+      '</div>' +
     '</div>';
   }
 
@@ -962,7 +1260,7 @@
       : '<div class="item-list" style="gap:6px"><div class="item-card" style="padding:8px"><div class="item-thumb" style="width:42px;height:42px;font-size:22px">🐄</div>' +
         '<div class="item-main"><div class="item-name">纯牛奶</div><div class="item-meta">' + (p.layout === 'detail' ? '冷藏 · 食品 · 6 件' : '冷藏') + '</div></div>' +
         '<div class="item-right"><div class="item-days soon">剩 3 天</div></div></div></div>';
-    return '<div class="page">' +
+    return '<div class="page prefs-page">' +
       '<div class="pref-preview"><div class="pref-preview-label">当前预览 · ' + layoutName + '</div>' + preview + '</div>' +
       '<div class="pref-block"><div class="pref-title">列表布局</div>' +
         prefSegment('layout', [{ value: 'simple', label: '简洁' }, { value: 'detail', label: '详细' }, { value: 'gallery', label: '画廊' }]) + '</div>' +
@@ -1056,34 +1354,41 @@
   /* ---------------- 物品详情 ---------------- */
   function itemDetailHTML() {
     var it = findItem(state.currentId);
-    if (!it) return '<div class="empty"><div class="empty-emoji">🗂️</div><div class="empty-text">物品不存在或已删除</div></div>';
+    if (!it) return '<div class="empty"><div class="empty-emoji">🗂️</div><div class="empty-text">' + tr('物品不存在或已删除') + '</div></div>';
     var d = daysUntil(it.expiry);
-    var status = d == null ? '未设置日期' : (d < 0 ? '已过期 ' + Math.abs(d) + ' 天' : (d === 0 ? '今天到期' : '剩 ' + d + ' 天'));
+    var status = d == null ? tr('未设置日期') : (d < 0 ? tr('已过期 ') + Math.abs(d) + tr(' 天') : (d === 0 ? tr('今天到期') : tr('剩 ') + d + tr(' 天')));
     var dayClass = d != null && d <= 7 ? (d < 0 ? 'expired' : 'soon') : '';
     var thumb = it.image ? '<div class="item-thumb" style="width:76px;height:76px"><img src="' + escapeHTML(it.image) + '" alt=""></div>'
-      : '<div class="item-thumb" style="width:76px;height:76px;font-size:40px">' + escapeHTML(it.emoji || '🐱') + '</div>';
+      : '<div class="item-thumb art-thumb" style="width:76px;height:76px">' + itemArtHTML(it) + '</div>';
     var actions = it.trashed
-      ? '<button class="btn" data-action="delete-item" data-id="' + it.id + '">彻底删除</button>' +
-        '<button class="btn btn-primary" data-action="restore-item" data-id="' + it.id + '">恢复</button>'
-      : '<button class="btn" data-action="toggle-item-opened" data-id="' + it.id + '">' + (it.opened ? '取消开封' : '标记开封') + '</button>' +
-        '<button class="btn" data-action="trash-item" data-id="' + it.id + '">移入回收站</button>' +
-        '<button class="btn btn-primary" data-action="edit-item" data-id="' + it.id + '">编辑</button>';
-    return '<div class="page">' +
-      '<div class="link-card center">' + thumb +
+      ? '<button class="btn" data-action="delete-item" data-id="' + it.id + '">' + tr('彻底删除') + '</button>' +
+        '<button class="btn btn-primary" data-action="restore-item" data-id="' + it.id + '">' + tr('恢复') + '</button>'
+      : '<button class="btn" data-action="toggle-item-opened" data-id="' + it.id + '">' + tr(it.opened ? '取消开封' : '标记开封') + '</button>' +
+        '<button class="btn" data-action="trash-item" data-id="' + it.id + '">' + tr('移入回收站') + '</button>' +
+        '<button class="btn btn-primary" data-action="edit-item" data-id="' + it.id + '">' + tr('编辑') + '</button>';
+    var info = '';
+    if (!state.detailCollapsed) {
+      info = '<div class="link-card detail-info">' +
+        '<div class="link-row"><span>' + tr('保质期至') + '</span><span class="bold">' + escapeHTML(formatDate(it.expiry)) + '</span></div>' +
+        '<div class="link-row"><span>' + tr('生产日期') + '</span><span>' + escapeHTML(formatDate(it.production)) + '</span></div>' +
+        '<div class="link-row"><span>' + tr('过期提醒') + '</span><span>' + (it.reminder != null ? it.reminder + ' ' + tr('天前') : '—') + '</span></div>' +
+        '<div class="link-row"><span>' + tr('数量') + '</span><span>' + (it.quantity || 1) + ' ' + escapeHTML(tr(it.unit || '件')) + '</span></div>' +
+        '<div class="link-row"><span>' + tr('分类') + '</span><span>' + escapeHTML(tr(it.folder || '—')) + '</span></div>' +
+        '<div class="link-row"><span>' + tr('位置') + '</span><span>' + escapeHTML(it.location || '—') + '</span></div>' +
+        '<div class="link-row"><span>' + tr('状态') + '</span><span>' + tr(it.opened ? '已开封' : '未开封') + '</span></div>' +
+        '<div class="link-row"><span>' + tr('备注') + '</span><span style="max-width:62%;text-align:right">' + escapeHTML(it.note || '—') + '</span></div>' +
+      '</div>';
+    }
+    return '<div class="page detail-page">' +
+      '<div class="link-card center detail-hero">' + thumb +
         '<div class="item-name" style="justify-content:center;margin-top:10px">' + escapeHTML(it.name) + '</div>' +
         '<div class="item-days ' + dayClass + '" style="margin-top:4px">' + escapeHTML(status) + '</div>' +
+      '</div>' + info +
+      '<div class="detail-actions"><div class="detail-btns">' + actions + '</div>' +
+        '<button class="detail-collapse" data-action="toggle-detail-collapse" aria-label="' + tr('一键收起') + '" title="' + tr('一键收起') + '">' +
+          '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>' +
+        '</button>' +
       '</div>' +
-      '<div class="link-card">' +
-        '<div class="link-row"><span>保质期至</span><span class="bold">' + escapeHTML(formatDate(it.expiry)) + '</span></div>' +
-        '<div class="link-row"><span>生产日期</span><span>' + escapeHTML(formatDate(it.production)) + '</span></div>' +
-        '<div class="link-row"><span>过期提醒</span><span>' + (it.reminder != null ? it.reminder + ' 天前' : '—') + '</span></div>' +
-        '<div class="link-row"><span>数量</span><span>' + (it.quantity || 1) + ' ' + escapeHTML(it.unit || '件') + '</span></div>' +
-        '<div class="link-row"><span>分类</span><span>' + escapeHTML(it.folder || '—') + '</span></div>' +
-        '<div class="link-row"><span>位置</span><span>' + escapeHTML(it.location || '—') + '</span></div>' +
-        '<div class="link-row"><span>状态</span><span>' + (it.opened ? '已开封' : '未开封') + '</span></div>' +
-        '<div class="link-row"><span>备注</span><span style="max-width:62%;text-align:right">' + escapeHTML(it.note || '—') + '</span></div>' +
-      '</div>' +
-      '<div class="form-actions" style="flex-wrap:wrap">' + actions + '</div>' +
     '</div>';
   }
 
@@ -1493,7 +1798,6 @@
       case 'me-info': openInfo(el.getAttribute('data-title') || '提示', el.getAttribute('data-body') || ''); break;
       case 'toggle-me-setting':
         state.pref.meSettings[key] = !state.pref.meSettings[key];
-        if (key === 'elder') state.pref.fontSize = state.pref.meSettings.elder ? 'elder' : 'standard';
         savePref(); render(); break;
       case 'logout-hint': toast('本机版无需登录'); break;
       case 'save-profile-input':
@@ -1511,11 +1815,21 @@
         if (newPw.value !== confirmPw.value) { toast('两次新密码不一致'); break; }
         toast('密码已更新'); state.view = 'me'; render(); break;
       case 'tutorial-next':
-        if (state.tutorialStep < 3) { state.tutorialStep++; render(); }
-        else { state.view = 'home'; render(); }
+        if (state.tutorialStep < tutorialSteps().length - 1) { state.tutorialStep++; render(); }
+        else { state.tutorialStep = 0; state.view = 'home'; render(); toast('准备就绪，开始记录吧'); }
         break;
+      case 'tutorial-prev':
+        if (state.tutorialStep > 0) { state.tutorialStep--; render(); }
+        break;
+      case 'toggle-compact': state.compact = !state.compact; render(); break;
+      case 'toggle-detail-collapse': state.detailCollapsed = !state.detailCollapsed; render(); break;
       case 'set-frame':
-        state.pref.frame = el.getAttribute('data-frame'); savePref(); render(); toast('卡面已更新'); break;
+        var kind = el.getAttribute('data-kind') || 'card';
+        var frameName = el.getAttribute('data-frame');
+        if (kind === 'frame') { state.pref.avatarFrame = frameName; toast('头像框已更新'); }
+        else if (kind === 'animal') { state.pref.animalFrame = frameName; toast('动物头像框已更新'); }
+        else { state.pref.frame = frameName; toast('卡面已更新'); }
+        savePref(); render(); break;
       case 'register-submit':
         toast('注册信息已保存'); state.view = 'home'; render(); break;
       case 'open-item': openItem(id); break;
@@ -1601,7 +1915,6 @@
         if (key && key.indexOf('pref:') === 0) {
           var prefKey = key.slice(5);
           state.pref[prefKey] = value;
-          if (prefKey === 'fontSize') state.pref.meSettings.elder = value === 'elder';
           savePref(); applyTheme(); state.overlay = null; render(); break;
         }
         if (key === 'deviceIcon') {
@@ -1628,6 +1941,15 @@
       case 'close-overlay': state.overlay = null; renderOverlay(); break;
       case 'clear-search': state.searchQuery = ''; render(); break;
       case 'clear-search-history': state.searchHistory = []; saveSearchHistory(); render(); toast('已清空搜索历史'); break;
+      case 'toggle-search-history': state.searchHistoryExpanded = !state.searchHistoryExpanded; render(); break;
+      case 'go-alerts':
+        var alerts = getAlerts();
+        state.category = alerts.expired.length ? 'expired' : 'soon';
+        state.view = 'home'; state.multiSelect = false; render(); break;
+      case 'dismiss-alert':
+        state.alertDismissed = alertKey(getAlerts());
+        try { localStorage.setItem(ALERT_KEY, state.alertDismissed); } catch (e) {}
+        render(); break;
       case 'search-term': state.searchQuery = el.getAttribute('data-term') || el.textContent; state.searchFocused = true; render(); break;
       case 'set-pref': setPref(key, value); render(); break;
       case 'toggle-pref': setPref(key, !state.pref[key]); render(); break;
@@ -1705,6 +2027,7 @@
       saveDB(db);
     }
     state.searchHistory = loadSearchHistory();
+    try { state.alertDismissed = localStorage.getItem(ALERT_KEY) || ''; } catch (e) {}
     if (typeof window !== 'undefined' && window.location && window.location.hash === '#register') state.view = 'register';
     bindEvents();
     applyTheme();
