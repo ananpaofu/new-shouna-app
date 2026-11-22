@@ -1,35 +1,33 @@
 /* =========================================================
-   过期啦 · 收纳保质期记录（单机本地版）
+   寻迹 · 收纳保质期记录（单机本地版）
    纯前端：localStorage 存储，无任何后端 / 社交 / 云端功能
    ========================================================= */
 (function () {
   'use strict';
 
   /* ---------------- 常量 ---------------- */
-  var APP_VERSION = '2.3';
+  var APP_VERSION = '2.04';
   var DB_KEY = 'organizer_local_v2';
   var PREF_KEY = 'organizer_pref_v2';
   var HISTORY_KEY = 'organizer_search_history_v2';
 
   var APP_VERSION_CHANGELOG = [
-    { version: '2.3', date: '2026-11-22', title: '表单与分类页面重做', items: [
-      '移除模拟状态栏、二维码图标与温度标签',
-      '日期选择器改为日历弹层，表单改为旧版布局',
-      '新增物品分类页面、数量单位选择与存放位置预设'
+    { version: '2.04', date: '2026-11-22', title: '设置页与多语言', items: [
+      '字体大小 / 粗细 / 颜色可调节，支持简中 / 繁中 / 英文',
+      '我的页各项可编辑，保留隐藏注册页与新手教程',
+      '联动设备支持自定义动物图标，应用更名为寻迹'
     ] },
-    { version: '2.2', date: '2026-11-22', title: '恢复联动与旧版我的页', items: [
-      '底部改为首页 / 搜索 / 加号 / 联动 / 我的',
+    { version: '2.03', date: '2026-11-22', title: '表单与分类页面重做', items: [
+      '日期选择器改为日历弹层，生产日期与保质期同排',
+      '新增物品分类页面、数量单位与存放位置预设'
+    ] },
+    { version: '2.02', date: '2026-11-22', title: '联动与旧版我的页', items: [
       '恢复设备联动页与高德地图打开按钮',
-      '加号直接进入新建，支持多张拍照且不限尺寸'
+      '加号直接进入新建，支持多张拍照'
     ] },
-    { version: '2.1', date: '2026-11-22', title: '界面按截图重做', items: [
-      '搜索页与首页按截图重做',
-      '首页新增排序规则弹层与多选删除',
-      '整体字号与按钮形状统一'
-    ] },
-    { version: '2.0', date: '2026-11-22', title: '重制版 · 极简收纳', items: [
+    { version: '2.01', date: '2026-11-22', title: '寻迹本地版', items: [
       '彻底移除好友 / 聊天 / 云端，纯单机本地记录',
-      '全新分类侧栏「寻迹」与显示偏好设置'
+      '黑白极简界面与分类侧栏'
     ] }
   ];
 
@@ -73,7 +71,149 @@
     showArchived: false,
     includeProduceDay: true,
     avatar: '我',
+    nickname: '我的收纳',
+    contact: '',
+    signature: '',
+    notifyTime: '09:00',
+    frame: '经典卡面',
+    fontSize: 'standard',
+    fontWeight: 'standard',
+    theme: 'mono',
+    language: 'system',
     meSettings: { elder: false, notification: true, sound: true, security: true }
+  };
+
+  var LANG_OPTIONS = [
+    { value: 'system', label: '跟随系统' },
+    { value: 'zh-CN', label: '简体中文' },
+    { value: 'zh-TW', label: '繁體中文' },
+    { value: 'en', label: 'English' }
+  ];
+  var THEME_OPTIONS = [
+    { value: 'mono', label: '黑白' },
+    { value: 'warm', label: '暖白' },
+    { value: 'green', label: '浅绿' },
+    { value: 'dark', label: '夜间' }
+  ];
+  var FONT_SIZE_OPTIONS = [
+    { value: 'standard', label: '标准' },
+    { value: 'large', label: '大字' },
+    { value: 'elder', label: '老年模式' }
+  ];
+  var FONT_WEIGHT_OPTIONS = [
+    { value: 'standard', label: '标准' },
+    { value: 'medium', label: '半粗' },
+    { value: 'bold', label: '加粗' }
+  ];
+  var ACHIEVEMENT_LEVELS = [
+    { level: 1, name: '初出茅庐', need: 0, frame: '经典卡面' },
+    { level: 2, name: '小有收获', need: 5, frame: '绿叶卡面' },
+    { level: 3, name: '收纳能手', need: 15, frame: '暖黄卡面' },
+    { level: 4, name: '整理达人', need: 30, frame: '星蓝卡面' },
+    { level: 5, name: '寻迹大师', need: 60, frame: '金边卡面' }
+  ];
+
+  var I18N = {
+    'zh-TW': {
+      '全部': '全部', '最佳': '最佳', '临近过期': '臨近過期', '已过期': '已過期', '已开封': '已開封',
+      '活动历史': '活動歷史', '库存总览': '庫存總覽', '回收站': '回收站', '我的': '我的', '首页': '首頁',
+      '搜索': '搜尋', '联动': '聯動', '设备联动': '設備聯動', '新增物品': '新增物品', '编辑物品': '編輯物品',
+      '物品详情': '物品詳情', '显示偏好': '顯示偏好', '分类管理': '分類管理', '寻迹': '尋跡',
+      '物品名称': '物品名稱', '请输入名称': '請輸入名稱', '图片': '圖片', '拍照/选图': '拍照/選圖',
+      '分类': '分類', '数量': '數量', '单位': '單位', '生产日期': '生產日期', '保质期至': '保質期至',
+      '请选择日期': '請選擇日期', '过期提醒': '過期提醒', '到期当天': '到期當天', '天前': '天前',
+      '自定义分类': '自訂分類', '自定义': '自訂', '自定义单位': '自訂單位', '存放位置': '存放位置',
+      '例如：冰箱第二层': '例如：冰箱第二層', '冰箱': '冰箱', '厨房': '廚房', '药箱': '藥箱',
+      '抽屉': '抽屜', '柜子': '櫃子', '衣柜': '衣櫃', '备注': '備註', '补充说明（选填）': '補充說明（選填）',
+      '再加一次': '再加一次', '保存并继续': '儲存並繼續', '保存': '儲存', '添加': '新增',
+      '取消开封': '取消開封', '标记开封': '標記開封', '移入回收站': '移入回收站', '彻底删除': '徹底刪除',
+      '恢复': '恢復', '编辑': '編輯', '返回': '返回', '全选': '全選', '完成': '完成',
+      '退出多选': '退出多選', '删除': '刪除', '已选择': '已選擇', '项': '項', '名称 A-Z': '名稱 A-Z',
+      '剩余库存': '剩餘庫存', '最近生产': '最近生產', '最近过期': '最近過期', '最近临期': '最近臨期',
+      '最近添加': '最近新增', '最近更新': '最近更新', '排序规则': '排序規則', '快速搜索': '快速搜尋',
+      '暂无搜索历史': '暫無搜尋歷史', '输入任何内容或扫一扫开始搜索': '輸入任何內容或掃一掃開始搜尋',
+      '按住语音搜索': '按住語音搜尋', '取消': '取消', '没有找到相关物品': '沒有找到相關物品',
+      '这里还没有物品': '這裡還沒有物品', '还没有记录': '還沒有記錄', '轻点 + 添加第一条记录吧': '輕點 + 新增第一筆記錄吧',
+      '个人信息': '個人資訊', '界面设置': '介面設定', '功能设置': '功能設定', '昵称': '暱稱',
+      '我的收纳': '我的收納', '联系方式': '聯絡方式', '未填写': '未填寫', '个性签名': '個性簽名',
+      '成就等级': '成就等級', '装扮管理': '裝扮管理', '字体大小': '字體大小', '标准': '標準',
+      '字体粗细': '字體粗細', '标准（半粗）': '標準（半粗）', '界面颜色': '介面顏色', '黑白': '黑白',
+      '语言': '語言', '跟随系统': '跟隨系統', '简体中文': '簡體中文', '繁体中文': '繁體中文',
+      '英文': '英文', '老年模式': '老年模式', '超大字体 · 高对比 · 简化功能': '超大字體 · 高對比 · 簡化功能',
+      '消息通知': '訊息通知', '接收提醒与聊天消息': '接收提醒與聊天訊息', '通知时间': '通知時間',
+      '提示音': '提示音', '查找标签时播放声音': '查找標籤時播放聲音', '账号安全': '帳號安全',
+      '登录验证与密码保护': '登入驗證與密碼保護', '修改密码': '修改密碼', '更新登录密码': '更新登入密碼',
+      '使用指南': '使用指南', '操作步骤与颜色说明': '操作步驟與顏色說明', '版本与更新': '版本與更新',
+      '查看历史更新内容': '查看歷史更新內容', '注册于': '註冊於', '已收纳': '已收納', '件物品': '件物品',
+      '退出登录': '登出', '新手教程': '新手教學', '隐藏注册页': '隱註冊頁', '原密码': '原密碼',
+      '新密码': '新密碼', '确认密码': '確認密碼', '下一步': '下一步', '开始使用': '開始使用',
+      '我的实时位置': '我的即時位置', '下拉展开地图 ›': '下拉展開地圖 ›', '收起地图 ›': '收起地圖 ›',
+      '你在这里': '你在這裡', '用高德地图打开': '用高德地圖開啟', '地图方案': '地圖方案',
+      '设备': '設備', '添加设备': '新增設備', '在线': '線上', '电量': '電量', '信号强度': '訊號強度',
+      '播放声音': '播放聲音', '自定义标签': '自訂標籤', '绑定物品': '綁定物品', '离位提醒': '離位提醒',
+      '开': '開', '联动能力': '聯動能力', '设备 + App': '設備 + App', '一键查找': '一鍵查找',
+      '自动记录收纳': '自動記錄收納', '低电量提醒': '低電量提醒', '设备联动说明': '設備聯動說明',
+      '查看真实中国地图接入方案': '查看真實中國地圖接入方案', '请选择': '請選擇', '提示': '提示',
+      '清除': '清除', '设置': '設定', '今天': '今天', '周一': '週一', '周二': '週二', '周三': '週三',
+      '周四': '週四', '周五': '週五', '周六': '週六', '周日': '週日', '一': '一', '二': '二', '三': '三',
+      '四': '四', '五': '五', '六': '六', '日': '日', '年': '年', '月': '月', '剩余': '剩餘',
+      '件': '件', '瓶': '瓶', '盒': '盒', '包': '包', '袋': '袋', '个': '個', '已保存': '已儲存',
+      '请输入物品名称': '請輸入物品名稱', '已添加': '已新增', '已删除': '已刪除', '更新说明': '更新說明',
+      '搜索物品记录、分类、位置等': '搜尋物品記錄、分類、位置等', '过期日期': '過期日期',
+      '食品': '食品', '药品': '藥品', '化妆品': '化妝品', '衣物': '衣物', '文档证件': '文件證件',
+      '电子产品': '電子產品', '文具书籍': '文具書籍', '钥匙锁具': '鑰匙鎖具', '清洁用品': '清潔用品',
+      '运动用品': '運動用品', '母婴用品': '母嬰用品', '工具五金': '工具五金', '其他': '其他'
+    },
+    'en': {
+      '全部': 'All', '最佳': 'Best', '临近过期': 'Expiring', '已过期': 'Expired', '已开封': 'Opened',
+      '活动历史': 'History', '库存总览': 'Stock', '回收站': 'Trash', '我的': 'Me', '首页': 'Home',
+      '搜索': 'Search', '联动': 'Link', '设备联动': 'Device Link', '新增物品': 'New Item', '编辑物品': 'Edit Item',
+      '物品详情': 'Item Details', '显示偏好': 'Preferences', '分类管理': 'Categories', '寻迹': 'Xunji',
+      '物品名称': 'Item Name', '请输入名称': 'Enter name', '图片': 'Photos', '拍照/选图': 'Take or choose',
+      '分类': 'Category', '数量': 'Quantity', '单位': 'Unit', '生产日期': 'Produced', '保质期至': 'Expiry',
+      '请选择日期': 'Select date', '过期提醒': 'Reminder', '到期当天': 'On due date', '天前': 'days before',
+      '自定义分类': 'Custom category', '自定义': 'Custom', '自定义单位': 'Custom unit', '存放位置': 'Location',
+      '例如：冰箱第二层': 'e.g. Fridge shelf 2', '冰箱': 'Fridge', '厨房': 'Kitchen', '药箱': 'Medicine box',
+      '抽屉': 'Drawer', '柜子': 'Cabinet', '衣柜': 'Wardrobe', '备注': 'Notes', '补充说明（选填）': 'Optional notes',
+      '再加一次': 'Add another', '保存并继续': 'Save and continue', '保存': 'Save', '添加': 'Add',
+      '取消开封': 'Mark unopened', '标记开封': 'Mark opened', '移入回收站': 'Move to trash', '彻底删除': 'Delete forever',
+      '恢复': 'Restore', '编辑': 'Edit', '返回': 'Back', '全选': 'Select all', '完成': 'Done',
+      '退出多选': 'Exit selection', '删除': 'Delete', '已选择': 'Selected', '项': 'items', '名称 A-Z': 'Name A-Z',
+      '剩余库存': 'Stock', '最近生产': 'Recently produced', '最近过期': 'Recently expired', '最近临期': 'Soonest',
+      '最近添加': 'Recently added', '最近更新': 'Recently updated', '排序规则': 'Sort by', '快速搜索': 'Quick search',
+      '暂无搜索历史': 'No search history', '输入任何内容或扫一扫开始搜索': 'Type anything or scan to search',
+      '按住语音搜索': 'Hold to voice search', '取消': 'Cancel', '没有找到相关物品': 'No items found',
+      '这里还没有物品': 'No items here', '还没有记录': 'No records', '轻点 + 添加第一条记录吧': 'Tap + to add your first record',
+      '个人信息': 'Profile', '界面设置': 'Appearance', '功能设置': 'Features', '昵称': 'Nickname',
+      '我的收纳': 'My Storage', '联系方式': 'Contact', '未填写': 'Not set', '个性签名': 'Signature',
+      '成就等级': 'Level', '装扮管理': 'Skins', '字体大小': 'Font size', '标准': 'Standard',
+      '字体粗细': 'Font weight', '标准（半粗）': 'Regular / Medium', '界面颜色': 'Theme', '黑白': 'Mono',
+      '语言': 'Language', '跟随系统': 'System', '简体中文': 'Simplified Chinese', '繁体中文': 'Traditional Chinese',
+      '英文': 'English', '老年模式': 'Elder mode', '超大字体 · 高对比 · 简化功能': 'Larger text, higher contrast, simpler UI',
+      '消息通知': 'Notifications', '接收提醒与聊天消息': 'Receive reminders', '通知时间': 'Notify time',
+      '提示音': 'Sound', '查找标签时播放声音': 'Play sound when finding tag', '账号安全': 'Account security',
+      '登录验证与密码保护': 'Sign-in and password protection', '修改密码': 'Change password', '更新登录密码': 'Update password',
+      '使用指南': 'Guide', '操作步骤与颜色说明': 'Steps and colors', '版本与更新': 'Version and updates',
+      '查看历史更新内容': 'View changelog', '注册于': 'Joined', '已收纳': 'Stored', '件物品': 'items',
+      '退出登录': 'Sign out', '新手教程': 'Tutorial', '隐藏注册页': 'Hidden signup', '原密码': 'Old password',
+      '新密码': 'New password', '确认密码': 'Confirm password', '下一步': 'Next', '开始使用': 'Get started',
+      '我的实时位置': 'My location', '下拉展开地图 ›': 'Expand map ›', '收起地图 ›': 'Collapse map ›',
+      '你在这里': 'You are here', '用高德地图打开': 'Open in Amap', '地图方案': 'Map options',
+      '设备': 'Devices', '添加设备': 'Add device', '在线': 'Online', '电量': 'Battery', '信号强度': 'Signal',
+      '播放声音': 'Play sound', '自定义标签': 'Custom tag', '绑定物品': 'Bind item', '离位提醒': 'Away alert',
+      '开': 'On', '联动能力': 'Features', '设备 + App': 'Device + App', '一键查找': 'Find tag',
+      '自动记录收纳': 'Auto record', '低电量提醒': 'Low battery alert', '设备联动说明': 'Device link notes',
+      '查看真实中国地图接入方案': 'View map integration guide', '请选择': 'Select', '提示': 'Tip',
+      '清除': 'Clear', '设置': 'Set', '今天': 'Today', '周一': 'Mon', '周二': 'Tue', '周三': 'Wed',
+      '周四': 'Thu', '周五': 'Fri', '周六': 'Sat', '周日': 'Sun', '一': 'M', '二': 'T', '三': 'W',
+      '四': 'T', '五': 'F', '六': 'S', '日': 'S', '年': '', '月': '/', '剩余': 'Left',
+      '件': 'pc', '瓶': 'bottle', '盒': 'box', '包': 'pack', '袋': 'bag', '个': 'pcs', '已保存': 'Saved',
+      '请输入物品名称': 'Enter item name', '已添加': 'Added', '已删除': 'Deleted', '更新说明': 'What is new',
+      '搜索物品记录、分类、位置等': 'Search records, categories, locations', '过期日期': 'Expiry',
+      '食品': 'Food', '药品': 'Medicine', '化妆品': 'Cosmetics', '衣物': 'Clothes', '文档证件': 'Documents',
+      '电子产品': 'Electronics', '文具书籍': 'Stationery', '钥匙锁具': 'Keys', '清洁用品': 'Cleaning',
+      '运动用品': 'Sports', '母婴用品': 'Baby', '工具五金': 'Tools', '其他': 'Other'
+    }
   };
 
   /* ---------------- 状态 ---------------- */
@@ -93,7 +233,8 @@
     compact: false,
     multiSelect: false,
     selectedIds: [],
-    link: { mapExpanded: false },
+    link: { mapExpanded: false, icon: '🐱' },
+    tutorialStep: 0,
     pref: null,
     folders: []
   };
@@ -151,6 +292,59 @@
     setTimeout(function () { el.remove(); }, 1800);
   }
   function vibrate() { try { navigator.vibrate && navigator.vibrate(12); } catch (e) {} }
+  function currentLang() {
+    var lang = (state.pref && state.pref.language) || 'system';
+    if (lang !== 'system') return I18N[lang] ? lang : 'zh-CN';
+    var nav = (navigator.language || 'zh-CN').toLowerCase();
+    if (nav.indexOf('zh-tw') >= 0 || nav.indexOf('zh-hk') >= 0) return 'zh-TW';
+    if (nav.indexOf('en') === 0) return 'en';
+    return 'zh-CN';
+  }
+  function tr(text) {
+    var lang = currentLang();
+    if (lang === 'zh-CN') return text;
+    var dict = I18N[lang] || {};
+    var value = String(text);
+    if (dict[value]) return dict[value];
+    Object.keys(dict).forEach(function (k) {
+      if (k.length > 1) value = value.split(k).join(dict[k]);
+    });
+    return value;
+  }
+  function applyI18n(root) {
+    var lang = currentLang();
+    if (!root || lang === 'zh-CN' || !document.createTreeWalker || !window.NodeFilter) return;
+    var walker = document.createTreeWalker(root, window.NodeFilter.SHOW_TEXT, null, false);
+    var nodes = [];
+    while (walker.nextNode()) nodes.push(walker.currentNode);
+    nodes.forEach(function (n) {
+      var original = String(n.nodeValue || '');
+      if (!original.trim()) return;
+      var converted = tr(original.trim());
+      if (converted !== original.trim()) n.nodeValue = original.replace(original.trim(), converted);
+    });
+    var els = root.querySelectorAll ? root.querySelectorAll('[placeholder], [title], [aria-label]') : [];
+    Array.prototype.forEach.call(els, function (el) {
+      ['placeholder', 'title', 'aria-label'].forEach(function (attr) {
+        var v = el.getAttribute && el.getAttribute(attr);
+        if (v) el.setAttribute(attr, tr(v));
+      });
+    });
+  }
+  function applyTheme() {
+    var root = document.documentElement;
+    if (!root || !state.pref) return;
+    root.setAttribute('data-theme', state.pref.theme || 'mono');
+    root.setAttribute('data-font', state.pref.fontSize || 'standard');
+    root.setAttribute('data-weight', state.pref.fontWeight || 'standard');
+    root.setAttribute('data-elder', state.pref.meSettings && state.pref.meSettings.elder ? '1' : '0');
+  }
+  function getLevel() {
+    var count = getItems().filter(function (it) { return !it.trashed; }).length;
+    var level = ACHIEVEMENT_LEVELS[0];
+    ACHIEVEMENT_LEVELS.forEach(function (l) { if (count >= l.need) level = l; });
+    return level;
+  }
 
   /* ---------------- 数据层（本地存储） ---------------- */
   function loadDB() {
@@ -167,7 +361,12 @@
   function loadPref() {
     try {
       var raw = localStorage.getItem(PREF_KEY);
-      if (raw) { var p = JSON.parse(raw); return Object.assign({}, DEFAULT_PREF, p); }
+      if (raw) {
+        var p = JSON.parse(raw);
+        var merged = Object.assign({}, DEFAULT_PREF, p);
+        merged.meSettings = Object.assign({}, DEFAULT_PREF.meSettings, p.meSettings || {});
+        return merged;
+      }
     } catch (e) {}
     return Object.assign({}, DEFAULT_PREF);
   }
@@ -277,16 +476,20 @@
     if (state.view === 'link') {
       header.innerHTML = status +
         '<div class="header-row link-header">' +
-          '<span class="link-wave">((·))</span><div class="header-title">设备联动</div>' +
+          '<span class="link-wave">' + navSVG('link') + '</span><div class="header-title">设备联动</div>' +
           '<div class="header-actions" style="margin-left:auto"><button class="icon-btn" data-action="add-device-hint" aria-label="添加设备">＋</button></div>' +
         '</div>';
       return;
     }
 
-    var titles = { me: '我的', prefs: '显示偏好', categoryManage: '分类管理', form: state.editingId ? '编辑物品' : '新增物品', itemDetail: '物品详情' };
-    var title = titles[state.view] || '过期啦';
+    var titles = {
+      me: '我的', prefs: '显示偏好', categoryManage: '分类管理',
+      form: state.editingId ? '编辑物品' : '新增物品', itemDetail: '物品详情',
+      tutorial: '新手教程', password: '修改密码', achievement: '成就等级', register: '注册'
+    };
+    var title = titles[state.view] || '寻迹';
     var showMenu = state.view === 'me';
-    var showBack = ['prefs', 'categoryManage', 'form', 'itemDetail'].indexOf(state.view) >= 0;
+    var showBack = ['prefs', 'categoryManage', 'form', 'itemDetail', 'tutorial', 'password', 'achievement', 'register'].indexOf(state.view) >= 0;
     header.innerHTML = status +
       '<div class="header-row">' +
         (showBack ? '<button class="icon-btn" data-action="go-back" aria-label="返回">‹</button>' : '') +
@@ -352,7 +555,7 @@
     var thumb = it.image
       ? '<div class="item-thumb"><img src="' + escapeHTML(it.image) + '" alt=""></div>'
       : '<div class="item-thumb">' + escapeHTML(it.emoji || '🐱') + '</div>';
-    var tags = '<span class="tag-yellow">' + escapeHTML(it.folder || '通用') + '</span>' +
+    var tags = '<span class="tag-yellow">' + escapeHTML(it.folder || '未分类') + '</span>' +
       '<span class="tag-gray">剩余 ' + (it.quantity || 1) + ' ' + escapeHTML(it.unit || '件') + '</span>';
     var time = timeAgo(it.updatedAt || it.createdAt);
     return '<div class="item-card' + (selected ? ' selected' : '') + (state.compact ? ' compact' : '') + '" data-action="' + (state.multiSelect ? 'toggle-select' : 'open-item') + '" data-id="' + it.id + '">' +
@@ -480,6 +683,7 @@
 
   /* ---------------- 通用渲染入口 ---------------- */
   function render() {
+    applyTheme();
     renderHeader();
     renderNav();
     var view = $('#app-view');
@@ -491,9 +695,15 @@
     else if (state.view === 'prefs') view.innerHTML = prefsHTML();
     else if (state.view === 'categoryManage') view.innerHTML = categoryManageHTML();
     else if (state.view === 'itemDetail') view.innerHTML = itemDetailHTML();
+    else if (state.view === 'tutorial') view.innerHTML = tutorialHTML();
+    else if (state.view === 'password') view.innerHTML = passwordHTML();
+    else if (state.view === 'achievement') view.innerHTML = achievementHTML();
+    else if (state.view === 'register') view.innerHTML = registerHTML();
     renderSheet();
     renderSidebar();
     renderOverlay();
+    ['#app-header', '#app-view', '#bottom-nav', '#sheet-root', '#overlay-root'].forEach(function (sel) { applyI18n($(sel)); });
+    applyI18n(document.querySelector('.sidebar-wrap'));
   }
   function sortSheetHTML() {
     var opts = [
@@ -516,6 +726,7 @@
     if (!root) return;
     if (state.sheet === 'sort') root.innerHTML = sortSheetHTML();
     else root.innerHTML = '';
+    applyI18n(root);
   }
   function renderSidebar() {
     var old = document.querySelector('.sidebar-wrap'); if (old) old.remove();
@@ -572,11 +783,21 @@
   }
 
   /* ---------------- 我的（旧版样式） ---------------- */
+  function labelOf(list, value) {
+    var found = list.filter(function (o) { return o.value === value; })[0];
+    return found ? found.label : (list[0] ? list[0].label : '');
+  }
   function meHTML() {
-    var s = state.pref.meSettings || { elder: false, notification: true, sound: true, security: true };
-    function info(icon, title, sub, body) {
-      return '<div class="me-row" data-action="me-info" data-title="' + escapeHTML(title) + '" data-body="' + escapeHTML(body || sub) + '">' +
-        '<span class="me-icon">' + icon + '</span><div class="me-row-main"><div class="me-row-title">' + title + '</div><div class="me-row-sub">' + sub + '</div></div><span class="me-arrow">›</span></div>';
+    var p = state.pref;
+    var s = p.meSettings || { elder: false, notification: true, sound: true, security: true };
+    var level = getLevel();
+    function editRow(key, icon, title, value) {
+      return '<div class="me-row" data-action="edit-profile" data-key="' + key + '" data-title="' + escapeHTML(title) + '" data-value="' + escapeHTML(value || '') + '">' +
+        '<span class="me-icon">' + icon + '</span><div class="me-row-main"><div class="me-row-title">' + title + '</div><div class="me-row-sub">' + escapeHTML(value || '未填写') + '</div></div><span class="me-arrow">›</span></div>';
+    }
+    function optionRow(action, icon, title, sub, extra) {
+      return '<div class="me-row" data-action="' + action + '"' + (extra || '') + '>' +
+        '<span class="me-icon">' + icon + '</span><div class="me-row-main"><div class="me-row-title">' + title + '</div><div class="me-row-sub">' + escapeHTML(sub) + '</div></div><span class="me-arrow">›</span></div>';
     }
     function toggle(key, icon, title, sub) {
       return '<div class="me-row"><span class="me-icon">' + icon + '</span><div class="me-row-main"><div class="me-row-title">' + title + '</div><div class="me-row-sub">' + sub + '</div></div>' +
@@ -584,31 +805,98 @@
     }
     var count = getItems().filter(function (it) { return !it.trashed; }).length;
     return '<div class="page me-page">' +
-      '<div class="me-hero"><div class="me-avatar">我<span class="me-edit">✎</span></div><div class="me-name">我的收纳</div><div class="me-id">@local_user · ID 963221</div></div>' +
+      '<div class="me-hero"><div class="me-avatar">我<span class="me-edit" data-action="edit-profile" data-key="avatar" data-title="头像文字" data-value="' + escapeHTML(p.avatar || '我') + '">✎</span></div>' +
+        '<div class="me-name">' + escapeHTML(p.nickname || '我的收纳') + '</div><div class="me-id">@local_user · ID 963221</div></div>' +
       '<div class="me-card"><div class="me-card-title">个人信息<span>⌃</span></div>' +
-        info('👤', '昵称', '我的收纳', '本机版固定为「我的收纳」。') +
-        info('💬', '联系方式', '未填写', '本机版不需要手机号或邮箱。') +
-        info('📝', '个性签名', '未填写', '暂时没有签名。') +
-        info('🏆', '成就等级', '第 1 级 · 初出茅庐 · 装扮管理', '当前为第 1 级 · 初出茅庐。') +
+        editRow('nickname', '👤', '昵称', p.nickname || '我的收纳') +
+        editRow('contact', '💬', '联系方式', p.contact || '未填写') +
+        editRow('signature', '📝', '个性签名', p.signature || '未填写') +
+        optionRow('go-achievement', '🏆', '成就等级', '第 ' + level.level + ' 级 · ' + level.name + ' · 装扮管理') +
       '</div>' +
       '<div class="me-card"><div class="me-card-title">界面设置<span>⌃</span></div>' +
-        info('▦', '字体大小', '标准', '当前字体大小：标准。') +
-        info('✏️', '字体粗细', '标准（半粗）', '当前字体粗细：标准（半粗）。') +
-        info('✨', '界面颜色', '黑白', '当前界面颜色：黑白。') +
-        info('🌐', '语言', '跟随系统', '当前语言：跟随系统。') +
+        optionRow('pref-list', '▦', '字体大小', labelOf(FONT_SIZE_OPTIONS, p.fontSize), ' data-key="fontSize" data-title="字体大小"') +
+        optionRow('pref-list', '✏️', '字体粗细', labelOf(FONT_WEIGHT_OPTIONS, p.fontWeight), ' data-key="fontWeight" data-title="字体粗细"') +
+        optionRow('pref-list', '✨', '界面颜色', labelOf(THEME_OPTIONS, p.theme), ' data-key="theme" data-title="界面颜色"') +
+        optionRow('pref-list', '🌐', '语言', labelOf(LANG_OPTIONS, p.language), ' data-key="language" data-title="语言"') +
       '</div>' +
       '<div class="me-card"><div class="me-card-title">功能设置<span>⌃</span></div>' +
         toggle('elder', '🧓', '老年模式', '超大字体 · 高对比 · 简化功能') +
         toggle('notification', '🔔', '消息通知', '接收提醒与聊天消息') +
-        info('🕘', '通知时间', '09:00 · 到期与临期提醒', '每天 09:00 提醒到期与临期物品。') +
+        optionRow('edit-time', '🕘', '通知时间', (p.notifyTime || '09:00') + ' · 到期与临期提醒') +
         toggle('sound', '🔔', '提示音', '查找标签时播放声音') +
         toggle('security', '🛡️', '账号安全', '登录验证与密码保护') +
-        info('🔒', '修改密码', '更新登录密码', '本机版没有账号，无需密码。') +
-        info('📖', '使用指南', '操作步骤与颜色说明', '点击底部绿色加号新增物品，左侧菜单切换分类。') +
+        optionRow('go-password', '🔒', '修改密码', '更新登录密码') +
+        optionRow('go-tutorial', '📖', '使用指南', '操作步骤与颜色说明') +
       '</div>' +
       '<div class="me-card me-version" data-action="show-version"><span class="me-icon">📄</span><div class="me-row-main"><div class="me-row-title">版本与更新</div><div class="me-row-sub">查看历史更新内容</div></div><span class="me-badge">v' + APP_VERSION + '</span><span class="me-arrow">›</span></div>' +
       '<div class="me-foot">注册于 2026-11-19 · 已收纳 ' + count + ' 件物品</div>' +
       '<button class="me-logout" data-action="logout-hint">退出登录</button>' +
+    '</div>';
+  }
+
+  /* ---------------- 新手教程 ---------------- */
+  function tutorialHTML() {
+    var steps = [
+      { icon: '📦', title: '记录物品', body: '点击底部绿色加号，填写名称、分类、日期和数量，保存后物品会出现在首页。' },
+      { icon: '📂', title: '分类整理', body: '打开左侧「寻迹」，可以按状态或物品分类筛选，也能在分类页添加自定义分类。' },
+      { icon: '📶', title: '设备联动', body: '在联动页查看位置和设备，可自定义小动物图标，并用高德地图打开位置。' },
+      { icon: '🔔', title: '到期提醒', body: '在「我的 → 功能设置」里开启通知并选择提醒时间，到期和临期物品会更醒目。' }
+    ];
+    var i = Math.min(state.tutorialStep, steps.length - 1);
+    var s = steps[i];
+    return '<div class="page tutorial-page">' +
+      '<div class="tutorial-progress">' + steps.map(function (_, n) {
+        return '<span class="' + (n <= i ? 'on' : '') + '"></span>';
+      }).join('') + '</div>' +
+      '<div class="tutorial-card"><div class="tutorial-icon">' + s.icon + '</div><div class="tutorial-title">' + s.title + '</div><p>' + s.body + '</p></div>' +
+      '<button class="btn btn-primary" data-action="tutorial-next">' + (i === steps.length - 1 ? '开始使用' : '下一步') + '</button>' +
+    '</div>';
+  }
+
+  /* ---------------- 修改密码 ---------------- */
+  function passwordHTML() {
+    return '<div class="page">' +
+      '<div class="form-group">' +
+        '<div class="form-row"><div class="form-label">原密码</div><input class="form-input" id="pw-old" type="password" placeholder="请输入原密码"></div>' +
+        '<div class="form-row"><div class="form-label">新密码</div><input class="form-input" id="pw-new" type="password" placeholder="请输入新密码"></div>' +
+        '<div class="form-row"><div class="form-label">确认密码</div><input class="form-input" id="pw-confirm" type="password" placeholder="请再次输入新密码"></div>' +
+      '</div>' +
+      '<div class="form-actions"><button class="btn btn-primary" data-action="save-password">保存</button></div>' +
+    '</div>';
+  }
+
+  /* ---------------- 成就等级 ---------------- */
+  function achievementHTML() {
+    var level = getLevel();
+    var count = getItems().filter(function (it) { return !it.trashed; }).length;
+    var next = ACHIEVEMENT_LEVELS.filter(function (l) { return l.need > count; })[0];
+    var percent = next ? Math.min(100, Math.round(count / next.need * 100)) : 100;
+    var frames = ACHIEVEMENT_LEVELS.map(function (l) {
+      var unlocked = count >= l.need;
+      return '<button class="frame-card' + (state.pref.frame === l.frame ? ' active' : '') + (unlocked ? '' : ' locked') + '" data-action="set-frame" data-frame="' + escapeHTML(l.frame) + '"' + (unlocked ? '' : ' disabled') + '>' +
+        '<span class="frame-preview frame-' + l.level + '">我</span><span>' + l.frame + '</span>' +
+        (unlocked ? '' : '<small>Lv.' + l.level + ' 解锁</small>') + '</button>';
+    }).join('');
+    return '<div class="page achievement-page">' +
+      '<div class="achievement-hero"><div class="frame-preview frame-' + level.level + '">我</div>' +
+        '<div class="achievement-name">第 ' + level.level + ' 级 · ' + level.name + '</div>' +
+        '<div class="muted small">已收纳 ' + count + ' 件物品</div>' +
+        '<div class="progress"><i style="width:' + percent + '%"></i></div>' +
+        '<div class="muted small">' + (next ? '距离下一级还需 ' + (next.need - count) + ' 件' : '已达最高等级') + '</div></div>' +
+      '<div class="section-title">装扮管理<span class="muted small">头像框与卡面</span></div>' +
+      '<div class="frame-grid">' + frames + '</div>' +
+    '</div>';
+  }
+
+  /* ---------------- 隐藏注册页（#register 访问） ---------------- */
+  function registerHTML() {
+    return '<div class="page">' +
+      '<div class="form-group">' +
+        '<div class="form-row"><div class="form-label">账号</div><input class="form-input" id="reg-user" placeholder="请输入账号"></div>' +
+        '<div class="form-row"><div class="form-label">密码</div><input class="form-input" id="reg-pass" type="password" placeholder="请输入密码"></div>' +
+        '<div class="form-row"><div class="form-label">确认密码</div><input class="form-input" id="reg-pass2" type="password" placeholder="请再次输入密码"></div>' +
+      '</div>' +
+      '<div class="form-actions"><button class="btn btn-primary" data-action="register-submit">注册</button></div>' +
     '</div>';
   }
 
@@ -687,12 +975,12 @@
       '</div>' +
       '<div class="section-title">设备<button class="add-device" data-action="add-device-hint">＋ 添加设备</button></div>' +
       '<div class="link-card device-card">' +
-        '<div class="device-top"><div class="device-icon">🐱</div><div class="device-main"><div class="bold">收纳箱 A 标签</div><div class="muted small">尚未绑定物品 · 储物间 · 未连接</div></div><span class="online">在线</span></div>' +
+        '<div class="device-top"><div class="device-icon" data-action="pick-device-icon">' + escapeHTML(state.link.icon || '🐱') + '</div><div class="device-main"><div class="bold">收纳箱 A 标签</div><div class="muted small">尚未绑定物品 · 储物间 · 未连接</div></div><span class="online">在线</span></div>' +
         '<div class="device-stats"><div><span>电量 82%</span><div class="battery"><i></i></div></div>' +
           '<div><span>信号强度</span><div class="signal"><i></i><i></i><i></i></div></div></div>' +
         '<div class="device-actions">' +
           '<button data-action="device-hint" data-name="播放声音">播放声音</button>' +
-          '<button data-action="device-hint" data-name="自定义标签">自定义标签</button>' +
+          '<button data-action="pick-device-icon">自定义标签</button>' +
           '<button data-action="device-hint" data-name="绑定物品">绑定物品</button>' +
           '<button data-action="device-hint" data-name="离位提醒">离位提醒<br>开</button>' +
         '</div>' +
@@ -801,6 +1089,16 @@
       return '<div class="sheet-mask show" data-action="cancel-date"></div>' +
         '<div class="sheet show date-sheet">' + calendarPickerHTML(o) + '</div>';
     }
+    if (o.type === 'input') {
+      return sheetShell(o.title || '编辑',
+        '<div class="input-sheet"><input id="me-input" value="' + escapeHTML(o.value || '') + '" placeholder="' + escapeHTML(o.title || '') + '">' +
+        '<button class="btn btn-primary" data-action="save-profile-input">保存</button></div>');
+    }
+    if (o.type === 'time') {
+      return sheetShell(o.title || '通知时间',
+        '<div class="input-sheet"><input id="me-time" type="time" value="' + escapeHTML(o.value || '09:00') + '">' +
+        '<button class="btn btn-primary" data-action="save-notify-time">保存</button></div>');
+    }
     if (o.type === 'list') {
       var rows = o.options.map(function (op) {
         var value = op.value;
@@ -818,7 +1116,7 @@
   }
   function renderOverlay() {
     var root = $('#overlay-root');
-    if (root) root.innerHTML = overlayHTML();
+    if (root) { root.innerHTML = overlayHTML(); applyI18n(root); }
   }
   function openInfo(title, body) { state.overlay = { type: 'info', title: title, body: body }; renderOverlay(); }
   function openList(title, key, options, value) {
@@ -1027,15 +1325,14 @@
     toast('文件夹已添加');
   }
   function deleteFolder(folder) {
-    if (folder === '通用') { toast('默认文件夹不能删除'); return; }
     var db = loadDB();
-    db.items.forEach(function (it) { if (it.folder === folder) it.folder = '通用'; });
+    db.items.forEach(function (it) { if (it.folder === folder) it.folder = '其他'; });
     saveDB(db);
     state.folders = state.folders.filter(function (f) { return f !== folder; });
     saveFolders();
     if (state.category === folder) state.category = 'all';
     render();
-    toast('已删除，物品已移入通用');
+    toast('已删除，物品已移入其他');
   }
   function setPref(key, value) {
     if (value === 'true' || value === 'false') state.pref[key] = value === 'true';
@@ -1091,6 +1388,25 @@
       case 'open-prefs': case 'go-prefs': openView('prefs'); break;
       case 'go-me': openView('me'); break;
       case 'go-link': openView('link'); break;
+      case 'go-tutorial': state.tutorialStep = 0; openView('tutorial'); break;
+      case 'go-password': openView('password'); break;
+      case 'go-achievement': openView('achievement'); break;
+      case 'edit-profile':
+        state.overlay = { type: 'input', title: el.getAttribute('data-title'), field: el.getAttribute('data-key'), value: el.getAttribute('data-value') || '' };
+        renderOverlay(); break;
+      case 'pref-list':
+        var pkey = el.getAttribute('data-key');
+        var popts = pkey === 'fontSize' ? FONT_SIZE_OPTIONS : pkey === 'fontWeight' ? FONT_WEIGHT_OPTIONS : pkey === 'theme' ? THEME_OPTIONS : LANG_OPTIONS;
+        openList(el.getAttribute('data-title') || '请选择', 'pref:' + pkey, popts, state.pref[pkey]);
+        break;
+      case 'edit-time':
+        state.overlay = { type: 'time', title: '通知时间', value: state.pref.notifyTime || '09:00' };
+        renderOverlay(); break;
+      case 'pick-device-icon':
+        openList('选择图标', 'deviceIcon', ANIMAL_ICONS.map(function (a) {
+          return { value: a, label: a };
+        }), state.link.icon);
+        break;
       case 'go-trash': setCategory('trash'); break;
       case 'manage-categories': openView('categoryManage'); break;
       case 'add-new': openForm(null); break;
@@ -1109,8 +1425,31 @@
       case 'me-info': openInfo(el.getAttribute('data-title') || '提示', el.getAttribute('data-body') || ''); break;
       case 'toggle-me-setting':
         state.pref.meSettings[key] = !state.pref.meSettings[key];
+        if (key === 'elder') state.pref.fontSize = state.pref.meSettings.elder ? 'elder' : 'standard';
         savePref(); render(); break;
       case 'logout-hint': toast('本机版无需登录'); break;
+      case 'save-profile-input':
+        var inp = $('#me-input');
+        var field = state.overlay ? state.overlay.field : null;
+        if (inp && field) { state.pref[field] = inp.value; savePref(); }
+        state.overlay = null; render(); toast('已保存'); break;
+      case 'save-notify-time':
+        var timeInput = $('#me-time');
+        if (timeInput && timeInput.value) { state.pref.notifyTime = timeInput.value; savePref(); }
+        state.overlay = null; render(); toast('已保存'); break;
+      case 'save-password':
+        var oldPw = $('#pw-old'), newPw = $('#pw-new'), confirmPw = $('#pw-confirm');
+        if (!oldPw || !newPw || !confirmPw || !newPw.value) { toast('请填写新密码'); break; }
+        if (newPw.value !== confirmPw.value) { toast('两次新密码不一致'); break; }
+        toast('密码已更新'); state.view = 'me'; render(); break;
+      case 'tutorial-next':
+        if (state.tutorialStep < 3) { state.tutorialStep++; render(); }
+        else { state.view = 'home'; render(); }
+        break;
+      case 'set-frame':
+        state.pref.frame = el.getAttribute('data-frame'); savePref(); render(); toast('卡面已更新'); break;
+      case 'register-submit':
+        toast('注册信息已保存'); state.view = 'home'; render(); break;
       case 'open-item': openItem(id); break;
       case 'edit-item': editItem(id); break;
       case 'toggle-item-opened': toggleOpened(id); break;
@@ -1190,6 +1529,15 @@
         }), state.formDraft.unitCustom ? '自定义' : state.formDraft.unit);
         break;
       case 'pick-option':
+        if (key && key.indexOf('pref:') === 0) {
+          var prefKey = key.slice(5);
+          state.pref[prefKey] = value;
+          if (prefKey === 'fontSize') state.pref.meSettings.elder = value === 'elder';
+          savePref(); applyTheme(); state.overlay = null; render(); break;
+        }
+        if (key === 'deviceIcon') {
+          state.link.icon = value; state.overlay = null; render(); break;
+        }
         syncFormDraft();
         if (key === 'folder' && value === '自定义分类') {
           state.formDraft.categoryCustom = true; state.formDraft.folder = '';
@@ -1265,7 +1613,9 @@
       saveDB(db);
     }
     state.searchHistory = loadSearchHistory();
+    if (typeof window !== 'undefined' && window.location && window.location.hash === '#register') state.view = 'register';
     bindEvents();
+    applyTheme();
     render();
   }
 
