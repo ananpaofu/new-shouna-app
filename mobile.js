@@ -6,16 +6,21 @@
   'use strict';
 
   /* ---------------- 常量 ---------------- */
-  var APP_VERSION = '2.1';
+  var APP_VERSION = '2.2';
   var DB_KEY = 'organizer_local_v2';
   var PREF_KEY = 'organizer_pref_v2';
   var HISTORY_KEY = 'organizer_search_history_v2';
 
   var APP_VERSION_CHANGELOG = [
+    { version: '2.2', date: '2026-11-22', title: '恢复联动与旧版我的页', items: [
+      '底部改为首页 / 搜索 / 加号 / 联动 / 我的',
+      '恢复设备联动页与高德地图打开按钮',
+      '加号直接进入新建，支持多张拍照且不限尺寸'
+    ] },
     { version: '2.1', date: '2026-11-22', title: '界面按截图重做', items: [
-      '删除联动页，搜索页与首页按截图重做',
+      '搜索页与首页按截图重做',
       '首页新增排序规则弹层与多选删除',
-      '整体字号、红色强调按钮统一'
+      '整体字号与按钮形状统一'
     ] },
     { version: '2.0', date: '2026-11-22', title: '重制版 · 极简收纳', items: [
       '彻底移除好友 / 聊天 / 云端，纯单机本地记录',
@@ -44,14 +49,6 @@
     { key: '食品', label: '食品', emoji: '🥫' },
     { key: '化妆品', label: '化妆品', emoji: '🧴' }
   ];
-  var NEW_OPTIONS = [
-    { key: 'batch', label: '查批号', emoji: '🔢' },
-    { key: 'manual', label: '手动输入', emoji: '✏️' },
-    { key: 'scan', label: '扫一扫', emoji: '📷' },
-    { key: 'link', label: '商品链接', emoji: '🔗' },
-    { key: 'medicine', label: '查药品', emoji: '💊' },
-    { key: 'ai', label: '拍照识物', emoji: '🤖' }
-  ];
   var ANIMAL_ICONS = ['🐱', '🐶', '🐰', '🐻', '🐼', '🦊', '🐨', '🐯', '🦁', '🐮', '🐷', '🐸', '🐵', '🐔', '🐧', '🦆', '🐝', '🦋'];
   var DEFAULT_ITEMS = [
     { id: 'demo-1', name: '纯牛奶 250ml', emoji: '🐄', folder: '食品', temp: '冷藏', expiry: '2026-11-25', production: '2026-11-18', reminder: 2, quantity: 6, opened: false, note: '', createdAt: Date.now() - 86400000 },
@@ -68,12 +65,13 @@
     includeChildren: true,
     showArchived: false,
     includeProduceDay: true,
-    avatar: '🐱'
+    avatar: '我',
+    meSettings: { elder: false, notification: true, sound: true, security: true }
   };
 
   /* ---------------- 状态 ---------------- */
   var state = {
-    view: 'home',            // home / search / me / form / prefs / calendar / categoryManage / itemDetail
+    view: 'home',            // home / search / link / me / form / prefs / categoryManage / itemDetail
     category: 'all',
     searchQuery: '',
     searchHistory: [],
@@ -88,9 +86,9 @@
     compact: false,
     multiSelect: false,
     selectedIds: [],
+    link: { mapExpanded: false },
     pref: null,
-    folders: [],
-    calendarMonth: null
+    folders: []
   };
 
   /* ---------------- 工具 ---------------- */
@@ -269,10 +267,19 @@
       return;
     }
 
-    var titles = { me: '我的', prefs: '显示偏好', calendar: '到期日历', categoryManage: '分类管理', form: state.editingId ? '编辑物品' : '新增物品', itemDetail: '物品详情' };
+    if (state.view === 'link') {
+      header.innerHTML = status +
+        '<div class="header-row link-header">' +
+          '<span class="link-wave">((·))</span><div class="header-title">设备联动</div>' +
+          '<div class="header-actions" style="margin-left:auto"><button class="icon-btn" data-action="add-device-hint" aria-label="添加设备">＋</button></div>' +
+        '</div>';
+      return;
+    }
+
+    var titles = { me: '我的', prefs: '显示偏好', categoryManage: '分类管理', form: state.editingId ? '编辑物品' : '新增物品', itemDetail: '物品详情' };
     var title = titles[state.view] || '过期啦';
     var showMenu = state.view === 'me';
-    var showBack = ['prefs', 'calendar', 'categoryManage', 'form', 'itemDetail'].indexOf(state.view) >= 0;
+    var showBack = ['prefs', 'categoryManage', 'form', 'itemDetail'].indexOf(state.view) >= 0;
     header.innerHTML = status +
       '<div class="header-row">' +
         (showBack ? '<button class="icon-btn" data-action="go-back" aria-label="返回">‹</button>' : '') +
@@ -286,24 +293,29 @@
     var m = {
       home: '<rect x="4" y="6" width="16" height="14" rx="2.5"/><path d="M4 10h16M8 6V4.5h8V6"/>',
       search: '<circle cx="11" cy="11" r="6.5"/><path d="m16 16 4 4"/>',
+      link: '<circle cx="12" cy="12" r="2"/><path d="M8.5 8.5a5 5 0 0 0 0 7M15.5 8.5a5 5 0 0 1 0 7M5.5 5.5a9 9 0 0 0 0 13M18.5 5.5a9 9 0 0 1 0 13"/>',
       me: '<circle cx="12" cy="8" r="3.6"/><path d="M5 20a7 7 0 0 1 14 0"/>'
     };
     return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">' + (m[key] || '') + '</svg>';
   }
   function renderNav() {
-    var tabs = ['home', 'search', 'add', 'calendar', 'me'];
-    $('#bottom-nav').innerHTML = tabs.map(function (key) {
+    var tabs = [
+      { key: 'home', label: '首页' },
+      { key: 'search', label: '搜索' },
+      { key: 'add', label: '' },
+      { key: 'link', label: '联动' },
+      { key: 'me', label: '我的' }
+    ];
+    $('#bottom-nav').innerHTML = tabs.map(function (t) {
+      var key = t.key;
       if (key === 'add') {
-        return '<button class="nav-item nav-add" data-action="open-add-sheet" aria-label="新增"><span class="add-circle"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span></button>';
-      }
-      if (key === 'calendar') {
-        return '<button class="nav-item' + (state.view === 'calendar' ? ' active' : '') + '" data-action="nav" data-view="calendar" aria-label="日历"><span class="nav-cal">' + new Date().getDate() + '</span></button>';
+        return '<button class="nav-item nav-add" data-action="add-new" aria-label="新增"><span class="add-circle"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span></button>';
       }
       if (key === 'home' && state.multiSelect) {
-        return '<button class="nav-item nav-select-all" data-action="select-all" aria-label="全选"><span class="select-all-icon">✓</span></button>';
+        return '<button class="nav-item nav-select-all" data-action="select-all"><span class="select-all-icon">✓</span><span class="nav-label">首页</span></button>';
       }
       var active = state.view === key ? ' active' : '';
-      return '<button class="nav-item' + active + '" data-action="nav" data-view="' + key + '" aria-label="' + key + '">' + navSVG(key) + '</button>';
+      return '<button class="nav-item' + active + '" data-action="nav" data-view="' + key + '">' + navSVG(key) + '<span class="nav-label">' + t.label + '</span></button>';
     }).join('');
   }
 
@@ -413,7 +425,7 @@
           '<div class="sidebar-title-row"><div><div class="sidebar-title">寻迹</div><span class="sidebar-badge">基础</span></div></div>' +
           '<div class="sidebar-icons">' +
             '<span data-action="go-prefs" title="设置"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-2.9 1.2V21a2 2 0 1 1-4 0v-.1A1.7 1.7 0 0 0 7 19.4a1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1A1.7 1.7 0 0 0 3.1 14a2 2 0 1 1 0-4 1.7 1.7 0 0 0 1.2-2.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1A1.7 1.7 0 0 0 10 3.1a2 2 0 1 1 4 0 1.7 1.7 0 0 0 2.9 1.2l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1A1.7 1.7 0 0 0 20.9 10a2 2 0 1 1 0 4 1.7 1.7 0 0 0-1.5 1z"/></svg></span>' +
-            '<span data-action="open-calendar" title="日历"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg></span>' +
+            '<span data-action="go-link" title="联动"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle cx="12" cy="12" r="2"/><path d="M8.5 8.5a5 5 0 0 0 0 7M15.5 8.5a5 5 0 0 1 0 7M5.5 5.5a9 9 0 0 0 0 13M18.5 5.5a9 9 0 0 1 0 13"/></svg></span>' +
           '</div>' +
         '</div>' +
         '<div class="sidebar-body">' +
@@ -428,29 +440,17 @@
       '</aside>';
   }
 
-  /* ---------------- 新增方式弹窗 ---------------- */
-  function addSheetHTML() {
-    var opts = NEW_OPTIONS.map(function (o) {
-      return '<button class="option-cell" data-action="pick-new" data-key="' + o.key + '"><span class="opt-icon">' + o.emoji + '</span><span>' + o.label + '</span></button>';
-    }).join('');
-    return '<div class="sheet-mask show" data-action="close-sheet"></div>' +
-      '<div class="sheet show"><div class="sheet-handle"></div>' +
-        '<div class="sheet-head"><h2>新增记录</h2><button class="sheet-close" data-action="close-sheet">✕</button></div>' +
-        '<div class="option-grid">' + opts + '</div>' +
-        '<button class="sheet-cancel" data-action="close-sheet">取消</button>' +
-      '</div>';
-  }
-
   /* ---------------- 表单页 ---------------- */
   function formHTML() {
     var d = state.formDraft || {};
-    var photo = d.image
-      ? '<div class="photo-upload"><img src="' + escapeHTML(d.image) + '" alt=""></div>'
-      : '<div class="photo-upload" data-action="pick-image"><span style="font-size:22px">＋</span><span>上传图片</span></div>';
+    var images = d.images || (d.image ? [d.image] : []);
+    var photoHTML = images.map(function (src, i) {
+      return '<div class="photo-thumb"><img src="' + escapeHTML(src) + '" alt=""><span class="photo-del" data-action="remove-photo" data-index="' + i + '">✕</span></div>';
+    }).join('') + '<div class="photo-upload" data-action="pick-image"><span>＋</span><span>拍照/选图</span></div>';
     return '<div class="page form-page">' +
       '<div class="form-group">' +
         '<div class="form-row"><div class="form-label">物品名称</div><input class="form-input" id="f-name" placeholder="请输入名称" value="' + escapeHTML(d.name || '') + '"></div>' +
-        '<div class="form-row"><div class="form-label">图片</div><div style="flex:1">' + photo + '</div></div>' +
+        '<div class="form-row"><div class="form-label">图片</div><div class="photo-grid">' + photoHTML + '</div></div>' +
         '<div class="form-row"><div class="form-label">保质期至</div><span class="form-value' + (d.expiry ? '' : ' placeholder') + '" data-action="pick-date" data-field="expiry">' + (d.expiry ? escapeHTML(formatDate(d.expiry)) : '请选择日期') + '</span><span class="form-arrow">›</span></div>' +
         '<div class="form-row"><div class="form-label">生产日期</div><span class="form-value' + (d.production ? '' : ' placeholder') + '" data-action="pick-date" data-field="production">' + (d.production ? escapeHTML(formatDate(d.production)) : '请选择日期') + '</span><span class="form-arrow">›</span></div>' +
         '<div class="form-row"><div class="form-label">过期提醒</div><span class="form-value" data-action="pick-reminder">' + (d.reminder != null ? d.reminder + ' 天前' : '7 天前') + '<span class="form-arrow">›</span></span></div>' +
@@ -466,7 +466,7 @@
         '<button class="btn" data-action="save-form" data-again="1">' + (state.editingId ? '保存并继续' : '再加一次') + '</button>' +
         '<button class="btn btn-primary" data-action="save-form">' + (state.editingId ? '保存' : '添加') + '</button>' +
       '</div>' +
-      '<input type="file" id="f-image-file" accept="image/*" style="display:none">' +
+      '<input type="file" id="f-image-file" accept="image/*" multiple style="display:none">' +
     '</div>';
   }
 
@@ -477,10 +477,10 @@
     var view = $('#app-view');
     if (state.view === 'home') view.innerHTML = homeHTML();
     else if (state.view === 'search') view.innerHTML = searchHTML();
+    else if (state.view === 'link') view.innerHTML = linkHTML();
     else if (state.view === 'me') view.innerHTML = meHTML();
     else if (state.view === 'form') view.innerHTML = formHTML();
     else if (state.view === 'prefs') view.innerHTML = prefsHTML();
-    else if (state.view === 'calendar') view.innerHTML = calendarHTML();
     else if (state.view === 'categoryManage') view.innerHTML = categoryManageHTML();
     else if (state.view === 'itemDetail') view.innerHTML = itemDetailHTML();
     renderSheet();
@@ -507,7 +507,6 @@
     var root = $('#sheet-root');
     if (!root) return;
     if (state.sheet === 'sort') root.innerHTML = sortSheetHTML();
-    else if (state.sheet === 'add') root.innerHTML = addSheetHTML();
     else root.innerHTML = '';
   }
   function renderSidebar() {
@@ -564,32 +563,44 @@
       '</div>' + body + '</div>';
   }
 
-  /* ---------------- 我的 ---------------- */
+  /* ---------------- 我的（旧版样式） ---------------- */
   function meHTML() {
-    var p = state.pref;
-    var trashCount = getItems().filter(function (it) { return !!it.trashed; }).length;
-    function row(action, emoji, title, sub, extra) {
-      return '<div class="setting-row" data-action="' + action + '">' +
-        '<span class="s-emoji">' + emoji + '</span>' +
-        '<div class="s-main"><div class="s-title">' + title + '</div><div class="s-sub">' + sub + '</div></div>' +
-        (extra || '') + '<span class="s-arrow">›</span></div>';
+    var s = state.pref.meSettings || { elder: false, notification: true, sound: true, security: true };
+    function info(icon, title, sub, body) {
+      return '<div class="me-row" data-action="me-info" data-title="' + escapeHTML(title) + '" data-body="' + escapeHTML(body || sub) + '">' +
+        '<span class="me-icon">' + icon + '</span><div class="me-row-main"><div class="me-row-title">' + title + '</div><div class="me-row-sub">' + sub + '</div></div><span class="me-arrow">›</span></div>';
     }
-    return '<div class="page">' +
-      '<div class="profile-card" data-action="change-avatar">' +
-        '<div class="profile-avatar">' + escapeHTML(p.avatar || '🐱') + '</div>' +
-        '<div><div class="profile-name">本地收纳</div><div class="profile-sub">数据仅保存在这台设备 · 点击头像更换</div></div>' +
+    function toggle(key, icon, title, sub) {
+      return '<div class="me-row"><span class="me-icon">' + icon + '</span><div class="me-row-main"><div class="me-row-title">' + title + '</div><div class="me-row-sub">' + sub + '</div></div>' +
+        '<span class="switch' + (s[key] ? ' on' : '') + '" data-action="toggle-me-setting" data-key="' + key + '"></span></div>';
+    }
+    var count = getItems().filter(function (it) { return !it.trashed; }).length;
+    return '<div class="page me-page">' +
+      '<div class="me-hero"><div class="me-avatar">我<span class="me-edit">✎</span></div><div class="me-name">我的收纳</div><div class="me-id">@local_user · ID 963221</div></div>' +
+      '<div class="me-card"><div class="me-card-title">个人信息<span>⌃</span></div>' +
+        info('👤', '昵称', '我的收纳', '本机版固定为「我的收纳」。') +
+        info('💬', '联系方式', '未填写', '本机版不需要手机号或邮箱。') +
+        info('📝', '个性签名', '未填写', '暂时没有签名。') +
+        info('🏆', '成就等级', '第 1 级 · 初出茅庐 · 装扮管理', '当前为第 1 级 · 初出茅庐。') +
       '</div>' +
-      '<div class="setting-group">' +
-        row('open-prefs', '🎨', '显示偏好', '布局、日期、统计规则') +
-        row('open-calendar', '📅', '到期日历', '按月份查看到期物品') +
-        row('manage-categories', '📁', '分类管理', '添加 / 删除文件夹') +
-        row('go-trash', '🗑️', '回收站', trashCount + ' 件待处理') +
+      '<div class="me-card"><div class="me-card-title">界面设置<span>⌃</span></div>' +
+        info('▦', '字体大小', '标准', '当前字体大小：标准。') +
+        info('✏️', '字体粗细', '标准（半粗）', '当前字体粗细：标准（半粗）。') +
+        info('✨', '界面颜色', '黑白', '当前界面颜色：黑白。') +
+        info('🌐', '语言', '跟随系统', '当前语言：跟随系统。') +
       '</div>' +
-      '<div class="setting-group">' +
-        '<div class="setting-row"><span class="s-emoji">ℹ️</span><div class="s-main"><div class="s-title">版本</div>' +
-          '<div class="s-sub">v' + APP_VERSION + ' · 单机本地版</div></div>' +
-          '<button class="link-btn ghost" style="width:auto;padding:8px 12px;margin:0" data-action="show-version">更新说明</button></div>' +
+      '<div class="me-card"><div class="me-card-title">功能设置<span>⌃</span></div>' +
+        toggle('elder', '🧓', '老年模式', '超大字体 · 高对比 · 简化功能') +
+        toggle('notification', '🔔', '消息通知', '接收提醒与聊天消息') +
+        info('🕘', '通知时间', '09:00 · 到期与临期提醒', '每天 09:00 提醒到期与临期物品。') +
+        toggle('sound', '🔔', '提示音', '查找标签时播放声音') +
+        toggle('security', '🛡️', '账号安全', '登录验证与密码保护') +
+        info('🔒', '修改密码', '更新登录密码', '本机版没有账号，无需密码。') +
+        info('📖', '使用指南', '操作步骤与颜色说明', '点击底部绿色加号新增物品，左侧菜单切换分类。') +
       '</div>' +
+      '<div class="me-card me-version" data-action="show-version"><span class="me-icon">📄</span><div class="me-row-main"><div class="me-row-title">版本与更新</div><div class="me-row-sub">查看历史更新内容</div></div><span class="me-badge">v' + APP_VERSION + '</span><span class="me-arrow">›</span></div>' +
+      '<div class="me-foot">注册于 2026-11-19 · 已收纳 ' + count + ' 件物品</div>' +
+      '<button class="me-logout" data-action="logout-hint">退出登录</button>' +
     '</div>';
   }
 
@@ -642,35 +653,51 @@
     '</div>';
   }
 
-  /* ---------------- 到期日历 ---------------- */
-  function calendarHTML() {
-    var m = state.calendarMonth || new Date();
-    var y = m.getFullYear();
-    var mo = m.getMonth();
-    var days = new Date(y, mo + 1, 0).getDate();
-    var start = (new Date(y, mo, 1).getDay() + 6) % 7;
-    var counts = {};
-    getItems().filter(function (it) { return !it.trashed && it.expiry; }).forEach(function (it) {
-      counts[it.expiry] = (counts[it.expiry] || 0) + 1;
-    });
-    var cells = ['一', '二', '三', '四', '五', '六', '日'].map(function (w) {
-      return '<div class="cal-week">' + w + '</div>';
-    }).join('');
-    for (var i = 0; i < start; i++) cells += '<div class="cal-cell"></div>';
-    for (var d = 1; d <= days; d++) {
-      var ds = y + '-' + pad(mo + 1) + '-' + pad(d);
-      var count = counts[ds] || 0;
-      cells += '<div class="cal-cell' + (ds === todayStr() ? ' today' : '') + '" data-action="cal-day" data-date="' + ds + '">' +
-        d + (count ? '<span class="dot"></span>' : '') + '</div>';
-    }
-    return '<div class="page">' +
+  /* ---------------- 联动页 ---------------- */
+  function linkHTML() {
+    var expanded = state.link.mapExpanded;
+    var abilities = [
+      { icon: '🔔', title: '一键查找', body: 'App 呼叫标签，标签发声发光，按信号强弱找到物品。' },
+      { icon: '🏠', title: '离位提醒', body: '物品离开设定区域时自动提醒，防止遗忘或丢失。' },
+      { icon: '📅', title: '自动记录收纳', body: '标签回到收纳区域时，自动更新收纳时间。' },
+      { icon: '🔋', title: '低电量提醒', body: '标签电量不足时提示更换，避免关键时刻失联。' }
+    ];
+    return '<div class="page link-page">' +
       '<div class="link-card">' +
-        '<div class="cal-head"><button class="icon-btn" data-action="cal-prev">‹</button>' +
-          '<div class="bold">' + y + ' 年 ' + (mo + 1) + ' 月</div>' +
-          '<button class="icon-btn" data-action="cal-next">›</button></div>' +
-        '<div class="calendar-grid">' + cells + '</div>' +
-        '<div class="muted small center" style="margin-top:10px">绿点表示当天有到期物品，点击日期查看</div>' +
-      '</div></div>';
+        '<div class="link-card-head"><div><div class="bold">我的实时位置</div><div class="muted small">6栋学生宿舍 · 2层 · 101</div></div>' +
+          '<button class="map-toggle" data-action="toggle-map">' + (expanded ? '收起地图 ›' : '下拉展开地图 ›') + '</button></div>' +
+        '<div class="map-box' + (expanded ? ' expanded' : '') + '">' +
+          '<div class="map-blob blob-a"></div><div class="map-blob blob-b"></div><div class="map-blob blob-c"></div>' +
+          '<div class="map-road road-a"></div><div class="map-road road-b"></div>' +
+          '<div class="map-pin"></div><div class="map-bubble">你在这里</div>' +
+        '</div>' +
+        '<div class="map-address">6栋学生宿舍 · 2层 · 101</div>' +
+        '<div class="map-actions">' +
+          '<button class="map-primary" data-action="open-amap"><span>📍</span> 用高德地图打开</button>' +
+          '<button class="map-ghost" data-action="map-plan">地图方案</button>' +
+        '</div>' +
+      '</div>' +
+      '<div class="section-title">设备<button class="add-device" data-action="add-device-hint">＋ 添加设备</button></div>' +
+      '<div class="link-card device-card">' +
+        '<div class="device-top"><div class="device-icon">🐱</div><div class="device-main"><div class="bold">收纳箱 A 标签</div><div class="muted small">尚未绑定物品 · 储物间 · 未连接</div></div><span class="online">在线</span></div>' +
+        '<div class="device-stats"><div><span>电量 82%</span><div class="battery"><i></i></div></div>' +
+          '<div><span>信号强度</span><div class="signal"><i></i><i></i><i></i></div></div></div>' +
+        '<div class="device-actions">' +
+          '<button data-action="device-hint" data-name="播放声音">播放声音</button>' +
+          '<button data-action="device-hint" data-name="自定义标签">自定义标签</button>' +
+          '<button data-action="device-hint" data-name="绑定物品">绑定物品</button>' +
+          '<button data-action="device-hint" data-name="离位提醒">离位提醒<br>开</button>' +
+        '</div>' +
+      '</div>' +
+      '<div class="section-title">联动能力<span class="muted small">设备 + App</span></div>' +
+      '<div class="ability-grid">' + abilities.map(function (a) {
+        return '<div class="ability-card"><div class="ability-icon">' + a.icon + '</div><div class="bold">' + a.title + '</div><p>' + a.body + '</p></div>';
+      }).join('') + '</div>' +
+      '<div class="link-card"><div class="bold">设备联动说明</div>' +
+        '<p class="desc">当前为交互演示：标签状态在 App 内模拟。开启蓝牙后可搜索附近标签并模拟连接；接入真实硬件时，标签通过蓝牙广播 ID 与信号强度，App 接收后实现查找、离位判定与自动记录。</p>' +
+        '<button class="wide-ghost" data-action="map-plan">查看真实中国地图接入方案</button>' +
+      '</div>' +
+    '</div>';
   }
 
   /* ---------------- 分类管理 ---------------- */
@@ -789,13 +816,16 @@
       name: '', expiry: '', production: '', reminder: 7, quantity: 1,
       temp: keep && old.temp ? old.temp : '常温',
       folder: keep && old.folder ? old.folder : (state.folders[0] || '通用'),
-      location: '', note: '', emoji: randomAnimal(), opened: false
+      location: '', note: '', emoji: randomAnimal(), opened: false, images: []
     };
   }
   function openForm(id) {
     state.editingId = id || null;
     var it = id ? findItem(id) : null;
     state.formDraft = it ? Object.assign({}, it) : blankDraft(false);
+    if (state.formDraft && !state.formDraft.images) {
+      state.formDraft.images = state.formDraft.image ? [state.formDraft.image] : [];
+    }
     state.view = 'form';
     state.sheet = null;
     state.overlay = null;
@@ -811,7 +841,8 @@
       id: state.editingId || uid(),
       name: name,
       emoji: d.emoji || randomAnimal(),
-      image: d.image || '',
+      images: (d.images || []).slice(),
+      image: (d.images && d.images[0]) || d.image || '',
       expiry: d.expiry || '',
       production: d.production || '',
       reminder: Number(d.reminder) || 0,
@@ -837,18 +868,25 @@
       toast('已保存');
     }
   }
-  function readImage(file) {
-    if (!file) return;
-    if (!/^image\//.test(file.type)) { toast('请选择图片文件'); return; }
-    if (file.size > 2 * 1024 * 1024) { toast('图片请小于 2MB'); return; }
-    var reader = new FileReader();
-    reader.onload = function () {
-      syncFormDraft();
-      state.formDraft.image = String(reader.result);
-      render();
-      toast('图片已添加');
-    };
-    reader.readAsDataURL(file);
+  function readImages(files) {
+    var arr = Array.prototype.slice.call(files || []).filter(function (f) { return /^image\//.test(f.type); });
+    if (!arr.length) return;
+    var images = state.formDraft && state.formDraft.images ? state.formDraft.images.slice() : [];
+    var total = 0;
+    arr.forEach(function (file) {
+      var reader = new FileReader();
+      reader.onload = function () {
+        images.push(String(reader.result));
+        total++;
+        if (total === arr.length) {
+          syncFormDraft();
+          state.formDraft.images = images;
+          render();
+          toast('已添加 ' + total + ' 张图片');
+        }
+      };
+      reader.readAsDataURL(file);
+    });
   }
 
   /* ---------------- 操作集合 ---------------- */
@@ -977,19 +1015,6 @@
     else state.pref[key] = value;
     savePref();
   }
-  function pickNew(key) {
-    if (key === 'manual') { openForm(null); return; }
-    var tips = {
-      batch: '查批号需要联网查询商品数据库，本机版未启用。\n请用「手动输入」填写保质期。',
-      scan: '扫一扫需要调用摄像头识别条码，本机版未启用。\n请用「手动输入」填写信息。',
-      link: '商品链接解析需要联网，本机版未启用。\n请用「手动输入」填写信息。',
-      medicine: '药品批号查询需要联网，本机版未启用。\n请用「手动输入」填写信息。',
-      ai: '拍照识物需要模型服务，本机版未启用。\n请用「手动输入」填写信息。'
-    };
-    state.sheet = null;
-    renderSheet();
-    openInfo('本地版说明', tips[key] || '该功能在本机版中未启用。');
-  }
   function updateSearchView() {
     var input = $('#search-input');
     if (!input) return;
@@ -1037,14 +1062,29 @@
       case 'select-all': selectAll(); break;
       case 'delete-selected': deleteSelected(); break;
       case 'set-category': setCategory(el.getAttribute('data-cat')); break;
-      case 'open-calendar': openView('calendar'); break;
       case 'open-prefs': case 'go-prefs': openView('prefs'); break;
       case 'go-me': openView('me'); break;
+      case 'go-link': openView('link'); break;
       case 'go-trash': setCategory('trash'); break;
       case 'manage-categories': openView('categoryManage'); break;
-      case 'open-add-sheet': state.sheet = 'add'; renderSheet(); break;
+      case 'add-new': openForm(null); break;
       case 'close-sheet': state.sheet = null; renderSheet(); break;
-      case 'pick-new': pickNew(el.getAttribute('data-key')); break;
+      case 'toggle-map': state.link.mapExpanded = !state.link.mapExpanded; render(); break;
+      case 'open-amap':
+        var amap = 'https://uri.amap.com/marker?position=116.397428,39.90923&name=' +
+          encodeURIComponent('6栋学生宿舍 · 2层 · 101') + '&src=organizer&callnative=1';
+        if (typeof window !== 'undefined' && window.location) window.location.href = amap;
+        break;
+      case 'map-plan':
+        openInfo('地图方案', '当前使用高德地图 URI 直接唤起本机高德 App；未安装时自动回退到网页版。本机版无需申请 Key。');
+        break;
+      case 'add-device-hint': toast('添加设备在本机版为演示'); break;
+      case 'device-hint': toast((el.getAttribute('data-name') || '该功能') + '在本机版为演示'); break;
+      case 'me-info': openInfo(el.getAttribute('data-title') || '提示', el.getAttribute('data-body') || ''); break;
+      case 'toggle-me-setting':
+        state.pref.meSettings[key] = !state.pref.meSettings[key];
+        savePref(); render(); break;
+      case 'logout-hint': toast('本机版无需登录'); break;
       case 'open-item': openItem(id); break;
       case 'edit-item': editItem(id); break;
       case 'toggle-item-opened': toggleOpened(id); break;
@@ -1052,6 +1092,13 @@
       case 'delete-item': deleteItem(id); break;
       case 'restore-item': restoreExistingItem(id); break;
       case 'pick-image': var fileInput = $('#f-image-file'); if (fileInput) fileInput.click(); break;
+      case 'remove-photo':
+        syncFormDraft();
+        if (state.formDraft && state.formDraft.images) {
+          state.formDraft.images.splice(Number(el.getAttribute('data-index')), 1);
+          render();
+        }
+        break;
       case 'pick-date':
         syncFormDraft();
         state.overlay = { type: 'date', field: el.getAttribute('data-field'), value: (state.formDraft || {})[el.getAttribute('data-field')] || '' };
@@ -1096,21 +1143,8 @@
       case 'search-term': state.searchQuery = el.getAttribute('data-term') || el.textContent; state.searchFocused = true; render(); break;
       case 'set-pref': setPref(key, value); render(); break;
       case 'toggle-pref': setPref(key, !state.pref[key]); render(); break;
-      case 'cal-prev':
-        state.calendarMonth = new Date(state.calendarMonth.getFullYear(), state.calendarMonth.getMonth() - 1, 1);
-        render(); break;
-      case 'cal-next':
-        state.calendarMonth = new Date(state.calendarMonth.getFullYear(), state.calendarMonth.getMonth() + 1, 1);
-        render(); break;
-      case 'cal-day':
-        var date = el.getAttribute('data-date');
-        var matches = getItems().filter(function (it) { return !it.trashed && it.expiry === date; });
-        var body = matches.length ? matches.map(function (it) { return '· ' + it.name + '（' + (it.quantity || 1) + ' 件）'; }).join('\n') : '当天没有到期物品';
-        openInfo(formatDate(date), body);
-        break;
       case 'add-folder': addFolder(); break;
       case 'delete-folder': deleteFolder(el.getAttribute('data-folder')); break;
-      case 'change-avatar': state.pref.avatar = randomAnimal(); savePref(); render(); break;
       case 'show-version':
         var text = APP_VERSION_CHANGELOG.map(function (c) {
           return 'v' + c.version + ' · ' + c.date + '\n' + c.title + '\n- ' + c.items.join('\n- ');
@@ -1147,7 +1181,7 @@
       }
     });
     document.addEventListener('change', function (e) {
-      if (e.target && e.target.id === 'f-image-file') readImage(e.target.files && e.target.files[0]);
+      if (e.target && e.target.id === 'f-image-file') readImages(e.target.files);
     });
   }
 
@@ -1159,7 +1193,6 @@
       ? db.folders.slice()
       : DEFAULT_FOLDERS.map(function (f) { return f.key; });
     state.searchHistory = loadSearchHistory();
-    state.calendarMonth = new Date();
     bindEvents();
     render();
   }
