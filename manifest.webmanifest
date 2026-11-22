@@ -1,6 +1,6 @@
 {
-  "name": "过期啦 · 收纳保质期记录",
-  "short_name": "过期啦",
+  "name": "寻迹 · 收纳保质期记录",
+  "short_name": "寻迹",
   "description": "黑白极简的单机收纳保质期记录",
   "start_url": "./index.html",
   "scope": "./",
