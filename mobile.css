@@ -638,13 +638,18 @@ input[type='time'], input[type='date'] { accent-color: var(--green); color-schem
 .me-page .me-hero { padding: 8px 0 18px; }
 .me-page .me-avatar { width: 64px; height: 64px; font-size: 22px; margin-bottom: 10px; }
 .me-page .me-foot { margin: 14px 0; }
-.link-page .link-card { margin-bottom: 8px; padding: 11px; }
-.link-page .map-box { height: 104px; }
-.link-page .map-box.expanded { height: 168px; }
-.link-page .ability-card { padding: 9px; }
-.link-page .ability-card p { line-height: 1.45; margin-top: 5px; }
-.link-page .desc { line-height: 1.5; margin: 6px 0; }
-.link-page .device-stats { margin: 8px 0; }
+/* 联动页与我的页均可自然下滑，首页 / 搜索页保持不滚动 */
+.link-page { display: block; overflow-y: auto; overflow-x: hidden; scrollbar-width: none;
+  -ms-overflow-style: none; -webkit-overflow-scrolling: touch; padding-bottom: 26px; }
+.link-page::-webkit-scrollbar { display: none; }
+.link-page > * { flex-shrink: 0; }
+.link-page .link-card { margin-bottom: 12px; padding: 14px; }
+.link-page .map-box { height: 150px; }
+.link-page .map-box.expanded { height: 230px; }
+.link-page .ability-card { padding: 14px; }
+.link-page .ability-card p { line-height: 1.6; margin-top: 10px; }
+.link-page .desc { line-height: 1.7; margin: 10px 0; }
+.link-page .device-stats { margin: 14px 0; }
 .prefs-page .pref-block { margin-bottom: 10px; }
 .prefs-page .pref-radio-row { padding: 7px 2px; }
 .prefs-page .pref-preview { padding: 10px; margin-bottom: 10px; }
