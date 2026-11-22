@@ -6,13 +6,19 @@
   'use strict';
 
   /* ---------------- 常量 ---------------- */
-  var APP_VERSION = '2.10';
+  var APP_VERSION = '2.12';
   var DB_KEY = 'organizer_local_v2';
   var PREF_KEY = 'organizer_pref_v2';
   var HISTORY_KEY = 'organizer_search_history_v2';
   var ALERT_KEY = 'organizer_alert_read_v2';
 
   var APP_VERSION_CHANGELOG = [
+    { version: '2.12', date: '2026-11-23', title: '我的页滚动修复', items: [
+      '修复分组全部展开后界面设置 / 功能设置无法下滑和点击的问题'
+    ] },
+    { version: '2.11', date: '2026-11-23', title: '底部加号对齐', items: [
+      '底部绿色加号取消上移，和旁边导航图标水平对齐'
+    ] },
     { version: '2.10', date: '2026-11-23', title: '库存标签位置调整', items: [
       '库存方框移到物品标签右侧，改为与标签同排的绿色小胶囊'
     ] },
