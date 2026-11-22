@@ -6,13 +6,16 @@
   'use strict';
 
   /* ---------------- 常量 ---------------- */
-  var APP_VERSION = '2.12';
+  var APP_VERSION = '2.13';
   var DB_KEY = 'organizer_local_v2';
   var PREF_KEY = 'organizer_pref_v2';
   var HISTORY_KEY = 'organizer_search_history_v2';
   var ALERT_KEY = 'organizer_alert_read_v2';
 
   var APP_VERSION_CHANGELOG = [
+    { version: '2.13', date: '2026-11-23', title: '加号位置再微调', items: [
+      '底部加号略微下移并缩小，顶部与相邻导航图标对齐'
+    ] },
     { version: '2.12', date: '2026-11-23', title: '我的页滚动修复', items: [
       '修复分组全部展开后界面设置 / 功能设置无法下滑和点击的问题'
     ] },
