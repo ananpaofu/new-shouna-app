@@ -6,13 +6,21 @@
   'use strict';
 
   /* ---------------- 常量 ---------------- */
-  var APP_VERSION = '2.08';
+  var APP_VERSION = '2.10';
   var DB_KEY = 'organizer_local_v2';
   var PREF_KEY = 'organizer_pref_v2';
   var HISTORY_KEY = 'organizer_search_history_v2';
   var ALERT_KEY = 'organizer_alert_read_v2';
 
   var APP_VERSION_CHANGELOG = [
+    { version: '2.10', date: '2026-11-23', title: '库存标签位置调整', items: [
+      '库存方框移到物品标签右侧，改为与标签同排的绿色小胶囊'
+    ] },
+    { version: '2.09', date: '2026-11-23', title: '通知中心与表单微调', items: [
+      '新增通知中心：过期 / 临期 / 库存 / 系统分类与分组展示',
+      '我的页可滚动、分组标题可点击收起；新增页字体间距微调',
+      '通知时间改为主题色自定义选择器，成功提示改绿色胶囊并延长停留'
+    ] },
     { version: '2.08', date: '2026-11-23', title: '氛围背景与实体图标', items: [
       '首页 / 搜索页增加淡绿渐变与气泡装饰，不再冷清',
       '侧栏分类换回实体图标，已开封换成不同样式',
@@ -292,7 +300,10 @@
       '另有': '另有', '件临近过期': '件臨近過期', '查看': '查看', '已读': '已讀',
       '展开': '展開', '收起': '收起',
       '鸡蛋': '雞蛋', '全脂牛奶': '全脂牛奶', '纯牛奶 250ml': '純牛奶 250ml',
-      '维生素C片': '維生素C片', '防晒霜': '防曬霜', '全麦面包': '全麥麵包'
+      '维生素C片': '維生素C片', '防晒霜': '防曬霜', '全麦面包': '全麥麵包',
+      '通知中心': '通知中心', '查看过期与系统消息': '查看過期與系統訊息',
+      '距离过期还有': '距離過期還有', '库存不足，仅剩': '庫存不足，僅剩', '昨天': '昨天',
+      '暂无通知': '暫無通知', '系统': '系統', '过期': '過期', '时': '時', '分': '分', '上午': '上午', '下午': '下午'
     },
     'en': {
       '全部': 'All', '最佳': 'Best', '临近过期': 'Expiring', '已过期': 'Expired', '已开封': 'Opened',
@@ -410,7 +421,11 @@
       '鸡蛋': 'Eggs', '全脂牛奶': 'Whole milk', '纯牛奶 250ml': 'Milk 250ml',
       '维生素C片': 'Vitamin C tablets', '防晒霜': 'Sunscreen', '全麦面包': 'Whole wheat bread',
       '枚': 'pc', '支': 'tube', '卷': 'roll', '块': 'piece', '罐': 'can',
-      '杯': 'cup', '桶': 'bucket', '节': 'section', '粒': 'capsule'
+      '杯': 'cup', '桶': 'bucket', '节': 'section', '粒': 'capsule',
+      '通知中心': 'Notification center', '查看过期与系统消息': 'View expiry and system messages',
+      '距离过期还有': 'Expires in', '库存不足，仅剩': 'Low stock, only', '昨天': 'Yesterday',
+      '暂无通知': 'No notifications', '系统': 'System', '过期': 'Expired', '天': 'days',
+      '时': 'Hour', '分': 'Minute', '上午': 'AM', '下午': 'PM'
     }
   };
 
@@ -491,10 +506,13 @@
   function randomAnimal() { return ANIMAL_ICONS[Math.floor(Math.random() * ANIMAL_ICONS.length)]; }
   function toast(msg) {
     var root = $('#toast-root'); if (!root) return;
-    var el = document.createElement('div'); el.className = 'toast'; el.textContent = msg;
-    el.textContent = tr(msg);
+    var text = tr(msg);
+    var isError = /失败|不支持|无法|不一致|请输入|请填写/.test(msg);
+    var el = document.createElement('div');
+    el.className = 'toast' + (isError ? ' toast-error' : '');
+    el.textContent = (isError ? '' : '✓ ') + text;
     root.appendChild(el);
-    setTimeout(function () { el.remove(); }, 1800);
+    setTimeout(function () { el.remove(); }, isError ? 2600 : 3600);
   }
   function vibrate() { try { navigator.vibrate && navigator.vibrate(12); } catch (e) {} }
   function currentLang() {
@@ -828,12 +846,12 @@
     var thumb = it.image
       ? '<div class="item-thumb"><img src="' + escapeHTML(it.image) + '" alt=""></div>'
       : '<div class="item-thumb art-thumb">' + itemArtHTML(it) + '</div>';
+    var stock = '<span class="stock-chip">' + tr('库存') + ' ' + (Number(it.quantity) || 1) + ' ' + escapeHTML(tr(it.unit || '件')) + '</span>';
     var tags = '<span class="tag-yellow">' + escapeHTML(it.folder || '未分类') + '</span>' +
-      '<span class="tag-gray">' + tr('剩余') + ' ' + (it.quantity || 1) + ' ' + escapeHTML(tr(it.unit || '件')) + '</span>';
+      '<span class="tag-gray">' + tr('剩余') + ' ' + (it.quantity || 1) + ' ' + escapeHTML(tr(it.unit || '件')) + '</span>' + stock;
     var time = timeAgo(it.updatedAt || it.createdAt);
-    var stock = '<div class="stock-box"><span>' + tr('库存') + '</span><b>' + (Number(it.quantity) || 1) + '</b><small>' + escapeHTML(tr(it.unit || '件')) + '</small></div>';
     return '<div class="item-card' + (selected ? ' selected' : '') + (state.compact ? ' compact' : '') + '" data-action="' + (state.multiSelect ? 'toggle-select' : 'open-item') + '" data-id="' + it.id + '">' +
-      circle + stock + thumb +
+      circle + thumb +
       '<div class="item-main"><div class="item-name">' + escapeHTML(it.name) + '</div>' +
         '<div class="item-tags">' + tags + '</div>' +
         '<div class="item-expiry">' + tr('过期日期') + ' ' + escapeHTML(formatDotDate(it.expiry)) + '</div>' +
@@ -1102,7 +1120,7 @@
     var diff = Math.round((now - t) / 86400000);
     if (diff === 0) return tr('今天');
     if (diff === 1) return tr('昨天');
-    return d.getFullYear() + tr('年') + pad(d.getMonth() + 1) + tr('月') + pad(d.getDate()) + tr('日');
+    return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
   }
   function notificationHTML() {
     var all = buildNotifications();
@@ -1147,33 +1165,36 @@
       return '<div class="me-row"><span class="me-icon">' + icon + '</span><div class="me-row-main"><div class="me-row-title">' + title + '</div><div class="me-row-sub">' + sub + '</div></div>' +
         '<span class="switch' + (s[key] ? ' on' : '') + '" data-action="toggle-me-setting" data-key="' + key + '"></span></div>';
     }
+    function meCard(title, key, rows) {
+      var c = !!state.meCollapsed[key];
+      return '<div class="me-card"><div class="me-card-title" data-action="toggle-me-card" data-card="' + key + '">' +
+        '<span>' + title + '</span><span class="me-collapse">' + (c ? '⌄' : '⌃') + '</span></div>' + (c ? '' : rows) + '</div>';
+    }
     var count = getItems().filter(function (it) { return !it.trashed; }).length;
     return '<div class="page me-page">' +
       '<div class="me-hero"><div class="me-avatar" data-action="pick-avatar">' +
         (String(p.avatar || '').indexOf('data:') === 0 ? '<img src="' + escapeHTML(p.avatar) + '" alt="">' : escapeHTML(p.avatar || '我')) +
         '<span class="me-edit">✎</span></div>' +
         '<div class="me-name">' + escapeHTML(p.nickname || '我的收纳') + '</div><div class="me-id">@local_user · ID 963221</div></div>' +
-      '<div class="me-card"><div class="me-card-title">个人信息<span>⌃</span></div>' +
+      meCard('个人信息', 'personal',
         editRow('nickname', '👤', '昵称', p.nickname || '我的收纳') +
         editRow('contact', '💬', '联系方式', p.contact || '未填写') +
         editRow('signature', '📝', '个性签名', p.signature || '未填写') +
-        optionRow('go-achievement', '🏆', '成就等级', tr('第 ' + level.level + ' 级 · ' + level.name) + ' · ' + tr('装扮管理')) +
-      '</div>' +
-      '<div class="me-card"><div class="me-card-title">界面设置<span>⌃</span></div>' +
+        optionRow('go-achievement', '🏆', '成就等级', tr('第 ' + level.level + ' 级 · ' + level.name) + ' · ' + tr('装扮管理'))) +
+      meCard('界面设置', 'ui',
         optionRow('pref-list', '▦', '字体大小', labelOf(FONT_SIZE_OPTIONS, p.fontSize), ' data-key="fontSize" data-title="字体大小"') +
         optionRow('pref-list', '✏️', '字体粗细', labelOf(FONT_WEIGHT_OPTIONS, p.fontWeight), ' data-key="fontWeight" data-title="字体粗细"') +
         optionRow('pref-list', '✨', '界面颜色', labelOf(THEME_OPTIONS, p.theme), ' data-key="theme" data-title="界面颜色"') +
-        optionRow('pref-list', '🌐', '语言', labelOf(LANG_OPTIONS, p.language), ' data-key="language" data-title="语言"') +
-      '</div>' +
-      '<div class="me-card"><div class="me-card-title">功能设置<span>⌃</span></div>' +
+        optionRow('pref-list', '🌐', '语言', labelOf(LANG_OPTIONS, p.language), ' data-key="language" data-title="语言"')) +
+      meCard('功能设置', 'features',
         toggle('elder', '🧓', '老年模式', '超大字体 · 高对比 · 简化功能') +
         toggle('notification', '🔔', '消息通知', '接收提醒与聊天消息') +
+        optionRow('go-notifications', '🔔', '通知中心', '查看过期与系统消息') +
         optionRow('edit-time', '🕘', '通知时间', (p.notifyTime || '09:00') + ' · 到期与临期提醒') +
         toggle('sound', '🔔', '提示音', '查找标签时播放声音') +
         toggle('security', '🛡️', '账号安全', '登录验证与密码保护') +
         optionRow('go-password', '🔒', '修改密码', '更新登录密码') +
-        optionRow('go-tutorial', '📖', '使用指南', '操作步骤与颜色说明') +
-      '</div>' +
+        optionRow('go-tutorial', '📖', '使用指南', '操作步骤与颜色说明')) +
       '<div class="me-card me-version" data-action="show-version"><span class="me-icon">📄</span><div class="me-row-main"><div class="me-row-title">版本与更新</div><div class="me-row-sub">查看历史更新内容</div></div><span class="me-badge">v' + APP_VERSION + '</span><span class="me-arrow">›</span></div>' +
       '<div class="me-foot">注册于 2026-11-19 · 已收纳 ' + count + ' 件物品</div>' +
       '<button class="me-logout" data-action="logout-hint">退出登录</button>' +
@@ -1498,6 +1519,25 @@
       '<div class="date-picker-foot"><button data-action="clear-date">清除</button><button data-action="cancel-date">取消</button><button data-action="confirm-date">设置</button></div>' +
     '</div>';
   }
+  function timePickerHTML(o) {
+    var v = String(o.value || '09:00').split(':');
+    var h = parseInt(v[0], 10) || 0;
+    var m = parseInt(v[1], 10) || 0;
+    var ampm = h < 12 ? 'am' : 'pm';
+    function two(n) { return pad(n); }
+    return '<div class="time-picker">' +
+      '<div class="time-picker-head"><span>' + tr(o.title || '通知时间') + '</span><b>' + two(h) + ':' + two(m) + '</b></div>' +
+      '<div class="time-picker-body">' +
+        '<div class="time-col"><button data-action="time-step" data-part="hour" data-delta="1">＋</button><b>' + two(h) + '</b><button data-action="time-step" data-part="hour" data-delta="-1">−</button><small>' + tr('时') + '</small></div>' +
+        '<span class="time-colon">:</span>' +
+        '<div class="time-col"><button data-action="time-step" data-part="minute" data-delta="5">＋</button><b>' + two(m) + '</b><button data-action="time-step" data-part="minute" data-delta="-5">−</button><small>' + tr('分') + '</small></div>' +
+        '<div class="time-ampm"><button class="' + (ampm === 'am' ? 'active' : '') + '" data-action="time-ampm" data-ampm="am">' + tr('上午') + '</button>' +
+          '<button class="' + (ampm === 'pm' ? 'active' : '') + '" data-action="time-ampm" data-ampm="pm">' + tr('下午') + '</button></div>' +
+      '</div>' +
+      '<div class="time-picker-foot"><button class="btn" data-action="close-overlay">' + tr('取消') + '</button>' +
+        '<button class="btn btn-primary" data-action="save-notify-time">' + tr('保存') + '</button></div>' +
+    '</div>';
+  }
   function overlayHTML() {
     var o = state.overlay;
     if (!o) return '';
@@ -1510,11 +1550,7 @@
         '<div class="input-sheet"><input id="me-input" value="' + escapeHTML(o.value || '') + '" placeholder="' + escapeHTML(o.title || '') + '">' +
         '<button class="btn btn-primary" data-action="save-profile-input">保存</button></div>');
     }
-    if (o.type === 'time') {
-      return sheetShell(o.title || '通知时间',
-        '<div class="input-sheet"><input id="me-time" type="time" value="' + escapeHTML(o.value || '09:00') + '">' +
-        '<button class="btn btn-primary" data-action="save-notify-time">保存</button></div>');
-    }
+    if (o.type === 'time') { return '<div class="sheet-mask show" data-action="close-overlay"></div><div class="sheet show">' + timePickerHTML(o) + '</div>'; }
     if (o.type === 'list') {
       var rows = o.options.map(function (op) {
         var value = op.value;
@@ -1849,6 +1885,24 @@
       case 'edit-time':
         state.overlay = { type: 'time', title: '通知时间', value: state.pref.notifyTime || '09:00' };
         renderOverlay(); break;
+      case 'time-step':
+        if (state.overlay && state.overlay.type === 'time') {
+          var tp = String(state.overlay.value || '09:00').split(':');
+          var th = parseInt(tp[0], 10) || 0, tm = parseInt(tp[1], 10) || 0;
+          var step = Number(el.getAttribute('data-delta')) || 0;
+          if (el.getAttribute('data-part') === 'hour') th = (th + step + 24) % 24;
+          else tm = (tm + step + 60) % 60;
+          state.overlay.value = pad(th) + ':' + pad(tm); renderOverlay();
+        }
+        break;
+      case 'time-ampm':
+        if (state.overlay && state.overlay.type === 'time') {
+          var ap = String(state.overlay.value || '09:00').split(':');
+          var ah = parseInt(ap[0], 10) || 0, am = parseInt(ap[1], 10) || 0;
+          ah = el.getAttribute('data-ampm') === 'pm' ? (ah % 12) + 12 : (ah % 12);
+          state.overlay.value = pad(ah) + ':' + pad(am); renderOverlay();
+        }
+        break;
       case 'pick-device-icon':
         openList('选择图标', 'deviceIcon', ANIMAL_ICONS.map(function (a) {
           return { value: a, label: a };
@@ -1883,8 +1937,7 @@
         if (inp && field) { state.pref[field] = inp.value; savePref(); }
         state.overlay = null; render(); toast('已保存'); break;
       case 'save-notify-time':
-        var timeInput = $('#me-time');
-        if (timeInput && timeInput.value) { state.pref.notifyTime = timeInput.value; savePref(); }
+        if (state.overlay && state.overlay.value) { state.pref.notifyTime = state.overlay.value; savePref(); }
         state.overlay = null; render(); toast('已保存'); break;
       case 'save-password':
         var oldPw = $('#pw-old'), newPw = $('#pw-new'), confirmPw = $('#pw-confirm');
@@ -2019,6 +2072,10 @@
       case 'clear-search': state.searchQuery = ''; render(); break;
       case 'clear-search-history': state.searchHistory = []; saveSearchHistory(); render(); toast('已清空搜索历史'); break;
       case 'toggle-search-history': state.searchHistoryExpanded = !state.searchHistoryExpanded; render(); break;
+      case 'toggle-me-card':
+        var cardKey = el.getAttribute('data-card');
+        if (cardKey) { state.meCollapsed[cardKey] = !state.meCollapsed[cardKey]; render(); }
+        break;
       case 'back-to-all': state.category = 'all'; state.multiSelect = false; state.selectedIds = []; render(); break;
       case 'go-alerts':
         var alerts = getAlerts();
