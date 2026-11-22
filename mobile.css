@@ -326,8 +326,8 @@ a { color: inherit; text-decoration: none; }
 .nav-label { font-size: 10px; line-height: 1; }
 .nav-add { position: relative; gap: 0; }
 .nav-add .add-circle {
-  width: 44px; height: 40px; border-radius: 11px; background: var(--green);
-  display: flex; align-items: center; justify-content: center; margin-top: -12px;
+  width: 40px; height: 40px; border-radius: 11px; background: var(--green);
+  display: flex; align-items: center; justify-content: center; margin-top: 0;
   box-shadow: 0 3px 8px rgba(22,163,74,.24); border: 3px solid var(--bg);
 }
 .nav-add .add-circle:active { background: var(--green-dark); }
@@ -628,8 +628,10 @@ input[type='time'], input[type='date'] { accent-color: var(--green); color-schem
 .form-input:focus, .input-sheet input:focus { border-color: var(--green); box-shadow: 0 0 0 2px var(--green-soft); }
 
 /* 我的页可滚动、分组可收起 */
-.me-page { overflow-y: auto; scrollbar-width: none; -ms-overflow-style: none; }
+.me-page { display: block; overflow-y: auto; overflow-x: hidden; scrollbar-width: none;
+  -ms-overflow-style: none; -webkit-overflow-scrolling: touch; padding-bottom: 26px; }
 .me-page::-webkit-scrollbar { display: none; }
+.me-page > * { flex-shrink: 0; }
 .me-page .me-row { padding: 12px 14px; }
 .me-page .me-card-title { padding: 12px 14px 8px; cursor: pointer; display: flex; justify-content: space-between; }
 .me-page .me-collapse { color: var(--green); font-size: 14px; }
