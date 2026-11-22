@@ -326,8 +326,8 @@ a { color: inherit; text-decoration: none; }
 .nav-label { font-size: 10px; line-height: 1; }
 .nav-add { position: relative; gap: 0; }
 .nav-add .add-circle {
-  width: 40px; height: 40px; border-radius: 11px; background: var(--green);
-  display: flex; align-items: center; justify-content: center; margin-top: 0;
+  width: 38px; height: 38px; border-radius: 11px; background: var(--green);
+  display: flex; align-items: center; justify-content: center; margin-top: 4px;
   box-shadow: 0 3px 8px rgba(22,163,74,.24); border: 3px solid var(--bg);
 }
 .nav-add .add-circle:active { background: var(--green-dark); }
