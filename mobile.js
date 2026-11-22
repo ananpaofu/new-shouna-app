@@ -421,6 +421,8 @@
     searchQuery: '',
     searchHistory: [],
     searchHistoryExpanded: false,
+    notificationTab: 'all',
+    meCollapsed: { personal: false, ui: false, features: false },
     searchFocused: false,
     recognizing: false,
     sidebarOpen: false,
@@ -701,7 +703,7 @@
       header.innerHTML = status +
         '<div class="header-row home-header">' +
           (filtered
-            ? '<button class="icon-btn" data-action="back-to-all" aria-label="返回" title="返回">‹</button>'
+            ? '<button class="icon-btn back-home" data-action="back-to-all" aria-label="返回" title="返回"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m14 5-7 7 7 7"/></svg></button>'
             : '<button class="icon-btn" data-action="open-sidebar" aria-label="菜单"><span class="menu-lines"><i></i><i></i><i></i></span></button>') +
           '<div class="home-title">' + escapeHTML(categoryLabel()) + '</div>' +
           '<div class="header-actions"></div>' +
@@ -731,10 +733,11 @@
     var titles = {
       me: '我的', prefs: '显示偏好', categoryManage: '分类管理',
       form: state.editingId ? '编辑物品' : '新增物品', itemDetail: '物品详情',
-      tutorial: '新手教程', password: '修改密码', achievement: '成就等级', register: '注册'
+      tutorial: '新手教程', password: '修改密码', achievement: '成就等级', register: '注册',
+      notifications: '通知'
     };
     var title = titles[state.view] || '寻迹';
-    var showBack = ['prefs', 'categoryManage', 'itemDetail', 'tutorial', 'password', 'achievement', 'register'].indexOf(state.view) >= 0;
+    var showBack = ['prefs', 'categoryManage', 'itemDetail', 'tutorial', 'password', 'achievement', 'register', 'notifications'].indexOf(state.view) >= 0;
     var headerClass = state.view === 'me' ? 'header-row me-header' : 'header-row';
     header.innerHTML = status +
       '<div class="' + headerClass + '">' +
@@ -964,6 +967,7 @@
     var view = $('#app-view');
     if (state.view === 'home') view.innerHTML = homeHTML();
     else if (state.view === 'search') view.innerHTML = searchHTML();
+    else if (state.view === 'notifications') view.innerHTML = notificationHTML();
     else if (state.view === 'link') view.innerHTML = linkHTML();
     else if (state.view === 'me') view.innerHTML = meHTML();
     else if (state.view === 'form') view.innerHTML = formHTML();
@@ -1056,6 +1060,70 @@
         '</div>' +
         (state.searchFocused ? '<button class="search-cancel" data-action="cancel-search">取消</button>' : '') +
       '</div>' + body + '</div>';
+  }
+
+  /* ---------------- 通知中心 ---------------- */
+  var NOTIF_TABS = [
+    { key: 'all', label: '全部' },
+    { key: 'expired', label: '过期' },
+    { key: 'soon', label: '临近过期' },
+    { key: 'stock', label: '库存' },
+    { key: 'system', label: '系统' },
+    { key: 'other', label: '其他' }
+  ];
+  function buildNotifications() {
+    var list = [];
+    function push(n) { list.push(n); }
+    getItems().forEach(function (it) {
+      if (it.trashed) return;
+      var d = daysUntil(it.expiry);
+      var ts = Number(it.updatedAt || it.createdAt || Date.now());
+      if (d != null && d < 0) push({ type: 'expired', icon: '🔴', kind: 'expired', name: it.name, n: Math.abs(d), time: ts, it: it });
+      else if (d === 0) push({ type: 'soon', icon: '🔴', kind: 'today', name: it.name, n: 0, time: ts, it: it });
+      else if (d > 0 && d <= 7) push({ type: 'soon', icon: '🟠', kind: 'soon', name: it.name, n: d, time: ts, it: it });
+      var qty = Number(it.quantity) || 1;
+      if (qty <= 2) push({ type: 'stock', icon: '🔵', kind: 'stock', name: it.name, n: qty, unit: it.unit || '件', time: ts, it: it });
+    });
+    push({ type: 'system', icon: '🔔', kind: 'system', time: Date.now() - 86400000 });
+    return list.sort(function (a, b) { return b.time - a.time; });
+  }
+  function notifText(n) {
+    var name = escapeHTML(tr(n.name || ''));
+    if (n.kind === 'expired') return name + ' ' + tr('已过期') + ' ' + n.n + ' ' + tr('天');
+    if (n.kind === 'today') return name + ' ' + tr('今天到期');
+    if (n.kind === 'soon') return name + ' ' + tr('距离过期还有') + ' ' + n.n + ' ' + tr('天');
+    if (n.kind === 'stock') return name + ' ' + tr('库存不足，仅剩') + ' ' + n.n + ' ' + escapeHTML(tr(n.unit));
+    return tr('欢迎使用寻迹，所有数据仅保存在本机');
+  }
+  function notifGroup(ts) {
+    var d = new Date(Number(ts));
+    var now = new Date(); now.setHours(0, 0, 0, 0);
+    var t = new Date(d); t.setHours(0, 0, 0, 0);
+    var diff = Math.round((now - t) / 86400000);
+    if (diff === 0) return tr('今天');
+    if (diff === 1) return tr('昨天');
+    return d.getFullYear() + tr('年') + pad(d.getMonth() + 1) + tr('月') + pad(d.getDate()) + tr('日');
+  }
+  function notificationHTML() {
+    var all = buildNotifications();
+    var list = state.notificationTab === 'all' ? all : all.filter(function (n) { return n.type === state.notificationTab; });
+    var groups = {};
+    list.forEach(function (n) { var g = notifGroup(n.time); (groups[g] = groups[g] || []).push(n); });
+    var body = Object.keys(groups).map(function (g) {
+      return '<div class="section-title notif-date">' + escapeHTML(g) + '</div>' + groups[g].map(function (n) {
+        var thumb = n.it ? '<span class="notif-thumb">' + itemArtHTML(n.it) + '</span>' : '<span class="notif-thumb">' + n.icon + '</span>';
+        return '<div class="notif-row"' + (n.it ? ' data-action="open-item" data-id="' + escapeHTML(n.it.id) + '"' : '') + '>' +
+          '<span class="notif-icon notif-' + n.type + '">' + n.icon + '</span>' +
+          '<span class="notif-main"><span class="notif-text">' + notifText(n) + '</span>' +
+            '<span class="notif-time">' + escapeHTML(timeAgo(n.time)) + '</span></span>' + thumb + '</div>';
+      }).join('');
+    }).join('');
+    return '<div class="page notif-page">' +
+      '<div class="notif-tabs">' + NOTIF_TABS.map(function (t) {
+        return '<button class="chip' + (state.notificationTab === t.key ? ' active' : '') + '" data-action="notification-tab" data-tab="' + t.key + '">' + tr(t.label) + '</button>';
+      }).join('') + '</div>' +
+      (list.length ? body : '<div class="empty"><div class="empty-emoji">🔔</div><div class="empty-text">' + tr('暂无通知') + '</div></div>') +
+    '</div>';
   }
 
   /* ---------------- 我的（旧版样式） ---------------- */
@@ -1753,7 +1821,8 @@
       case 'focus-search': focusSearch(); break;
       case 'cancel-search': cancelSearch(); break;
       case 'voice-search': startVoiceSearch(); break;
-      case 'notification-hint': toast('通知提醒在本机版为演示'); break;
+      case 'notification-hint': case 'go-notifications': openView('notifications'); break;
+      case 'notification-tab': state.notificationTab = el.getAttribute('data-tab') || 'all'; render(); break;
       case 'open-sort-sheet': state.sheet = 'sort'; renderSheet(); break;
       case 'set-sort': state.sortRule = key; state.sheet = null; render(); break;
       case 'enter-multiselect': enterMultiSelect(); break;
