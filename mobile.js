@@ -6,13 +6,17 @@
   'use strict';
 
   /* ---------------- 常量 ---------------- */
-  var APP_VERSION = '2.19';
+  var APP_VERSION = '2.20';
   var DB_KEY = 'organizer_local_v2';
   var PREF_KEY = 'organizer_pref_v2';
   var HISTORY_KEY = 'organizer_search_history_v2';
   var ALERT_KEY = 'organizer_alert_deleted_v2';
 
   var APP_VERSION_CHANGELOG = [
+    { version: '2.20', date: '2026-11-23', title: '删除侧栏与标题调整', items: [
+      '删除左侧抽屉和首页左上角三条横线按钮，首页顶部标题改为“寻迹”',
+      '通知铃铛移到分类页右上角，分类图标左对齐，分类标题与图标样式对齐设备联动'
+    ] },
     { version: '2.19', date: '2026-11-23', title: '第二页改为分类导航', items: [
       '第二个标签由“搜索”改为“分类”，图标换成九宫格；页面放全部/最佳/临期/过期/已开封/库存/回收站/物品分类图标，点按直达',
       '分类页左上角有页面小标题和图标；首页搜索框灰色加深；搜索仍用首页搜索框'
@@ -850,8 +854,8 @@
     return '<div class="header-row home-header">' +
       (filtered
         ? '<button class="icon-btn back-home" data-action="' + (state.categoryFrom === 'categoryManage' || state.categoryFrom === 'quick' ? 'go-back' : 'back-to-all') + '" aria-label="返回" title="返回"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m14 5-7 7 7 7"/></svg></button>'
-        : '<button class="icon-btn" data-action="open-sidebar" aria-label="菜单"><span class="menu-lines"><i></i><i></i><i></i></span></button>') +
-      '<div class="home-title">' + escapeHTML(categoryLabel()) + '</div>' +
+        : '<span class="header-placeholder"></span>') +
+      '<div class="home-title">' + escapeHTML(filtered ? categoryLabel() : '寻迹') + '</div>' +
       '<div class="header-actions"></div>' +
     '</div>';
   }
@@ -1114,7 +1118,6 @@
     renderSidebar();
     renderOverlay();
     ['#app-header', '#app-view', '#bottom-nav', '#sheet-root', '#overlay-root'].forEach(function (sel) { applyI18n($(sel)); });
-    applyI18n(document.querySelector('.sidebar-wrap'));
   }
   function sortSheetHTML() {
     var opts = [
@@ -1141,14 +1144,9 @@
   }
   function renderSidebar() {
     var old = document.querySelector('.sidebar-wrap'); if (old) old.remove();
-    if (!state.sidebarOpen) {
-      var mask = document.querySelector('.side-mask'); if (mask) mask.remove();
-      var sb = document.querySelector('.sidebar'); if (sb) sb.remove();
-      return;
-    }
-    var wrap = document.createElement('div'); wrap.className = 'sidebar-wrap';
-    wrap.innerHTML = sidebarHTML();
-    document.querySelector('.device-screen').appendChild(wrap);
+    var mask = document.querySelector('.side-mask'); if (mask) mask.remove();
+    var sb = document.querySelector('.sidebar'); if (sb) sb.remove();
+    state.sidebarOpen = false;
   }
 
   /* ---------------- 分类导航页（原搜索页） ---------------- */
@@ -1175,7 +1173,9 @@
     }).join('') + tile('#️⃣', '物品分类', null, 'manage-categories', '');
     return '<div class="page quick-page">' +
       '<div class="quick-head"><span class="quick-head-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="4" y="4" width="7" height="7" rx="1.6"/><rect x="13" y="4" width="7" height="7" rx="1.6"/><rect x="4" y="13" width="7" height="7" rx="1.6"/><rect x="13" y="13" width="7" height="7" rx="1.6"/></svg></span>' +
-        '<span class="quick-head-title">' + tr('分类') + '</span></div>' +
+        '<span class="quick-head-title">' + tr('分类') + '</span>' +
+        '<button class="quick-bell" data-action="open-notifications" aria-label="' + tr('通知中心') + '"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 9a6 6 0 0 0-12 0c0 7-3 8-3 8h18s-3-1-3-8"/><path d="M10.5 20a2 2 0 0 0 3 0"/></svg></button>' +
+      '</div>' +
       '<div class="quick-grid">' + tiles + '</div>' +
       '<div class="quick-foot">' + tr('按状态快速查看物品，直接搜索请用首页搜索框') + '</div>' +
     '</div>';
@@ -2131,6 +2131,7 @@
       case 'cancel-search': cancelSearch(); break;
       case 'voice-search': startVoiceSearch(); break;
       case 'notification-hint': case 'go-notifications': openFromMe('notifications'); break;
+      case 'open-notifications': openView('notifications'); break;
       case 'notification-tab': state.notificationTab = el.getAttribute('data-tab') || 'all'; render(); break;
       case 'open-sort-sheet': state.sheet = 'sort'; renderSheet(); break;
       case 'set-sort': state.sortRule = key; state.sheet = null; render(); break;
@@ -2385,7 +2386,7 @@
         var cardKey = el.getAttribute('data-card');
         if (cardKey) { state.meCollapsed[cardKey] = !state.meCollapsed[cardKey]; render(); }
         break;
-      case 'back-to-all': state.category = 'all'; state.categoryFrom = ''; state.sidebarOpen = true; state.multiSelect = false; state.selectedIds = []; render(); break;
+      case 'back-to-all': state.category = 'all'; state.categoryFrom = ''; state.sidebarOpen = false; state.multiSelect = false; state.selectedIds = []; render(); break;
       case 'go-alerts': case 'open-alerts': openView('alerts'); break;
       case 'delete-alert':
         var aid = el.getAttribute('data-id');
