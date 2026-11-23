@@ -107,6 +107,7 @@ a { color: inherit; text-decoration: none; }
 .home-header { display: grid; grid-template-columns: 34px 1fr 34px; gap: 0; }
 .home-title { text-align: center; font-size: 15px; font-weight: 600; }
 .home-header .header-actions { justify-content: flex-end; }
+.home-header .header-placeholder { display: block; width: 34px; height: 34px; }
 .back-home { color: var(--green); }
 .back-home svg { width: 24px; height: 24px; }
 .ms-bar { display: flex; align-items: center; justify-content: space-between; margin-top: 4px; min-height: 38px; font-size: 14px; }
@@ -555,13 +556,14 @@ a { color: inherit; text-decoration: none; }
 .quick-page { display: block; overflow-y: auto; scrollbar-width: none;
   padding-top: calc(8px + env(safe-area-inset-top)); }
 .quick-page::-webkit-scrollbar { display: none; }
-.quick-head { display: flex; align-items: center; gap: 10px; margin: 4px 2px 18px; }
-.quick-head-icon { width: 34px; height: 34px; border-radius: 10px; background: var(--green); color: #fff;
-  display: flex; align-items: center; justify-content: center; flex: 0 0 auto; }
+.quick-head { display: flex; align-items: center; gap: 8px; margin: 4px 2px 18px; }
+.quick-head-icon { display: flex; align-items: center; color: var(--ink-2); flex: 0 0 auto; }
 .quick-head-icon svg { width: 20px; height: 20px; }
-.quick-head-title { font-size: 20px; font-weight: 700; letter-spacing: .5px; }
+.quick-head-title { font-size: 16px; font-weight: 600; color: var(--ink); letter-spacing: .3px; }
+.quick-bell { margin-left: auto; color: var(--green); display: flex; align-items: center; padding: 4px; }
+.quick-bell svg { width: 20px; height: 20px; }
 .quick-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px 6px; }
-.quick-tile { display: flex; flex-direction: column; align-items: center; gap: 7px; }
+.quick-tile { display: flex; flex-direction: column; align-items: flex-start; text-align: left; gap: 7px; }
 .quick-icon { position: relative; width: 56px; height: 56px; border-radius: 16px; background: var(--green-soft);
   border: 1px solid var(--line); display: flex; align-items: center; justify-content: center; }
 .quick-tile:active .quick-icon { transform: scale(.96); }
