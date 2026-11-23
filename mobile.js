@@ -6,13 +6,24 @@
   'use strict';
 
   /* ---------------- 常量 ---------------- */
-  var APP_VERSION = '2.16';
+  var APP_VERSION = '2.18';
   var DB_KEY = 'organizer_local_v2';
   var PREF_KEY = 'organizer_pref_v2';
   var HISTORY_KEY = 'organizer_search_history_v2';
-  var ALERT_KEY = 'organizer_alert_read_v2';
+  var ALERT_KEY = 'organizer_alert_deleted_v2';
 
   var APP_VERSION_CHANGELOG = [
+    { version: '2.18', date: '2026-11-23', title: '滚动与卡片细节补齐', items: [
+      '首页标题栏改为随内容一起滚动，只有底部五个图标固定；我的页/搜索页顶部空白收起，头像上移',
+      '照片裁剪入口明确为“自定义裁剪”，只保留自由裁剪一种方式；成就卡面增加等级标与纹理'
+    ] },
+    { version: '2.17', date: '2026-11-23', title: '搜索、提醒与界面细节', items: [
+      '首页搜索框可直接输入搜索，无需跳转第二页；到期提醒改为独立详情页，可返回或删除提醒',
+      '语音搜索使用手机麦克风并优化错误提示；新增照片自定义裁剪（直接使用 / 自定义裁剪）',
+      '高德地图按钮、我的页方块图标与选中态改为主题绿；成就卡面居中重做、寻迹标题加大',
+      '日历清除只取消日期圆圈、取消返回表单；通知时间支持任意分钟；分类按拼音首字母排序',
+      '设置与筛选返回上级、编辑页独立无底栏；老年模式图标缩小、字体分档按比例放大'
+    ] },
     { version: '2.16', date: '2026-11-23', title: '底部图标加大', items: [
       '五个底部图标和文字加大，当前页高亮为主题色；首页图标下方圆点删除'
     ] },
@@ -83,7 +94,7 @@
   // 侧边栏分类
   var MAIN_CATEGORIES = [
     { key: 'all', label: '全部', icon: 'box', emoji: '📦', color: '#a9782f' },
-    { key: 'best', label: '最佳', icon: 'leaf', emoji: '🌿', color: '#2f9c60' },
+    { key: 'best', label: '最佳', icon: 'star', emoji: '⭐', color: '#2f9c60' },
     { key: 'soon', label: '临近过期', icon: 'clock', emoji: '🕐', color: '#2479c4' },
     { key: 'expired', label: '已过期', icon: 'warn', emoji: '⚠️', color: '#e04b44' },
     { key: 'opened', label: '已开封', icon: 'drop', emoji: '📂', color: '#d98b2b' },
@@ -98,7 +109,8 @@
     drop: '<path d="M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11z"/><path d="M9 14a3 3 0 0 0 3 3"/>',
     layers: '<path d="m12 3 9 5-9 5-9-5z"/><path d="m3 13 9 5 9-5M3 17l9 5 9-5"/>',
     trash: '<path d="M4 7h16M9 7V4h6v3M6 7l1 14h10l1-14"/><path d="M10 11v6M14 11v6"/>',
-    hash: '<path d="M5 9h14M5 15h14M10 3 8 21M16 3l-2 18"/>'
+    hash: '<path d="M5 9h14M5 15h14M10 3 8 21M16 3l-2 18"/>',
+    star: '<path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2-5.6-3-5.6 3 1.1-6.2L3 9.6l6.2-.9z"/>'
   };
   function categoryIconHTML(c) {
     if (c.emoji) return '<span class="side-emoji side-emoji-solid">' + c.emoji + '</span>';
@@ -115,6 +127,37 @@
     '电子产品': 'D', '文具书籍': 'W', '钥匙锁具': 'Y', '清洁用品': 'Q',
     '运动用品': 'Y', '母婴用品': 'M', '工具五金': 'G', '其他': 'Q'
   };
+  // 常用汉字拼音首字母：自定义分类按拼音排序（如「水果」→ S）
+  var PINYIN_INITIALS = {
+    '阿':'A','爱':'A','安':'A','八':'B','白':'B','保':'B','贝':'B','本':'B','冰':'B','饼':'B','笔':'B',
+    '菜':'C','餐':'C','茶':'C','产':'C','宠':'C','出':'C','厨':'C','春':'C','词':'C','存':'C',
+    '大':'D','蛋':'D','档':'D','电':'D','豆':'D','多':'D','低':'D',
+    '儿':'E','耳':'E','二':'E','饭':'F','方':'F','房':'F','服':'F','父':'F','附':'F','翻':'F','粉':'F',
+    '盖':'G','感':'G','高':'G','工':'G','公':'G','购':'G','固':'G','关':'G','光':'G','果':'G','膏':'G',
+    '海':'H','孩':'H','盒':'H','护':'H','花':'H','化':'H','黄':'H','会':'H','货':'H',
+    '机':'J','家':'J','价':'J','键':'J','件':'J','教':'J','金':'J','进':'J','酒':'J','具':'J','记':'J',
+    '咖':'K','卡':'K','考':'K','课':'K','口':'K','裤':'K','快':'K','矿':'K',
+    '拉':'L','蓝':'L','冷':'L','离':'L','里':'L','零':'L','领':'L','脸':'L','粮':'L','料':'L','林':'L','旅':'L','绿':'L',
+    '妈':'M','猫':'M','毛':'M','美':'M','门':'M','面':'M','母':'M','木':'M','目':'M','米':'M','民':'M',
+    '奶':'N','男':'N','内':'N','能':'N','农':'N','女':'N','牛':'N',
+    '欧':'O','偶':'O','盘':'P','皮':'P','啤':'P','票':'P','品':'P','评':'P','苹':'P','朋':'P',
+    '期':'Q','其':'Q','清':'Q','情':'Q','球':'Q','全':'Q','钱':'Q','签':'Q','铅':'Q','切':'Q','亲':'Q','勤':'Q',
+    '日':'R','肉':'R','如':'R','软':'R','入':'R','润':'R',
+    '三':'S','商':'S','烧':'S','身':'S','食':'S','水':'S','书':'S','睡':'S','随':'S','碎':'S','酸':'S','素':'S','速':'S','塑':'S','衫':'S','设':'S',
+    '台':'T','糖':'T','陶':'T','体':'T','天':'T','调':'T','铁':'T','停':'T','通':'T','桶':'T','套':'T',
+    '外':'W','玩':'W','晚':'W','网':'W','文':'W','物':'W','舞':'W','味':'W','卫':'W','未':'W','五':'W',
+    '西':'X','洗':'X','夏':'X','箱':'X','鞋':'X','心':'X','新':'X','信':'X','星':'X','行':'X','学':'X','雪':'X','小':'X',
+    '牙':'Y','烟':'Y','药':'Y','衣':'Y','饮':'Y','游':'Y','有':'Y','油':'Y','鱼':'Y','语':'Y','元':'Y','运':'Y',
+    '杂':'Z','纸':'Z','指':'Z','中':'Z','周':'Z','主':'Z','住':'Z','专':'Z','自':'Z','总':'Z'
+  };
+  function categoryLetter(name) {
+    var f = String(name || '').trim();
+    if (!f) return '#';
+    if (CATEGORY_LETTERS[f]) return CATEGORY_LETTERS[f];
+    var ch = f.charAt(0);
+    if (PINYIN_INITIALS[ch]) return PINYIN_INITIALS[ch];
+    return /[a-z]/i.test(ch) ? ch.toUpperCase() : ch;
+  }
   var CATEGORY_COLORS = ['#e07a5f', '#8ab17d', '#d9a441', '#7a9cc6', '#a98cc6', '#6fb1a8'];
   var UNITS = ['件', '卷', '包', '盒', '瓶', '块', '支', '罐', '袋', '个', '双', '片', '颗', '杯', '桶', '节', '粒', '自定义'];
   var LOCATION_PRESETS = ['冰箱', '厨房', '药箱', '抽屉', '柜子', '衣柜'];
@@ -475,7 +518,13 @@
     tutorialStep: 0,
     pref: null,
     folders: [],
-    alertDismissed: ''
+    alertDismissed: '',
+    alertDeletedIds: [],
+    viewStack: [],
+    homeQuery: '',
+    homeFocused: false,
+    categoryFrom: '',
+    crop: null
   };
 
   /* ---------------- 工具 ---------------- */
@@ -686,8 +735,9 @@
   }
   function getAlerts() {
     var expired = [], soon = [];
+    var deleted = state.alertDeletedIds || [];
     getItems().forEach(function (it) {
-      if (it.trashed) return;
+      if (it.trashed || deleted.indexOf(it.id) >= 0) return;
       var d = daysUntil(it.expiry);
       if (d == null) return;
       if (d < 0) expired.push(it);
@@ -695,22 +745,43 @@
     });
     return { expired: expired, soon: soon, all: expired.concat(soon) };
   }
-  function alertKey(alerts) {
-    return alerts.all.map(function (it) {
-      return [it.id, it.name, it.expiry, it.quantity, it.updatedAt || it.createdAt || ''].join(':');
-    }).join('|');
+  function saveDeletedAlerts() {
+    try { localStorage.setItem(ALERT_KEY, JSON.stringify(state.alertDeletedIds || [])); } catch (e) {}
   }
   function alertBannerHTML() {
-    if (state.view !== 'home' || state.category !== 'all' || state.multiSelect) return '';
+    if (state.view !== 'home' || state.category !== 'all' || state.multiSelect || state.homeQuery) return '';
     var alerts = getAlerts();
-    if (!alerts.all.length || state.alertDismissed === alertKey(alerts)) return '';
+    if (!alerts.all.length) return '';
     var text = tr('有') + ' ' + alerts.expired.length + ' ' + tr('件物品已过期，请尽快处理');
     if (alerts.soon.length) text += ' · ' + tr('另有') + ' ' + alerts.soon.length + ' ' + tr('件临近过期');
-    return '<div class="alert-banner">' +
+    return '<div class="alert-banner" data-action="open-alerts">' +
       '<span class="alert-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 2 20h20z"/><path d="M12 9v5M12 17h.01"/></svg></span>' +
       '<div class="alert-copy"><b>' + tr('到期预警') + '</b><span>' + escapeHTML(text) + '</span></div>' +
-      '<button class="alert-arrow" data-action="go-alerts" aria-label="' + tr('查看') + '">›</button>' +
-      '<button class="alert-dismiss" data-action="dismiss-alert">' + tr('已读') + '</button>' +
+      '<span class="alert-view">' + tr('查看') + '</span>' +
+      '<span class="alert-arrow" aria-hidden="true">›</span>' +
+    '</div>';
+  }
+  function alertDetailHTML() {
+    var alerts = getAlerts();
+    function row(it, exp) {
+      var d = daysUntil(it.expiry);
+      var label = d < 0 ? tr('已过期 ') + Math.abs(d) + tr(' 天') : (d === 0 ? tr('今天到期') : tr('剩 ') + d + tr(' 天'));
+      return '<div class="alert-detail-row">' +
+        '<span class="alert-detail-thumb">' + itemArtHTML(it) + '</span>' +
+        '<div class="alert-detail-main"><div class="bold">' + escapeHTML(it.name) + '</div>' +
+          '<div class="muted small">' + escapeHTML(formatDotDate(it.expiry)) + ' · ' + escapeHTML(label) + '</div></div>' +
+        '<button class="alert-detail-del" data-action="delete-alert" data-id="' + escapeHTML(it.id) + '">' + tr('删除提醒') + '</button>' +
+      '</div>';
+    }
+    var body = '';
+    if (alerts.expired.length) body += '<div class="section-title">' + tr('已过期') + '</div>' +
+      '<div class="alert-detail-card">' + alerts.expired.map(function (it) { return row(it, true); }).join('') + '</div>';
+    if (alerts.soon.length) body += '<div class="section-title">' + tr('临近过期') + '</div>' +
+      '<div class="alert-detail-card">' + alerts.soon.map(function (it) { return row(it, false); }).join('') + '</div>';
+    return '<div class="page alert-page">' +
+      '<div class="alert-tip">' + tr('只删除提醒，不会删除物品；不点删除直接返回，提醒仍会保留在首页。') + '</div>' +
+      (body || '<div class="empty"><div class="empty-emoji">✅</div><div class="empty-text">' + tr('暂无到期提醒') + '</div></div>') +
+      '<button class="alert-back" data-action="go-back">' + tr('返回首页') + '</button>' +
     '</div>';
   }
   function categoryLabel() {
@@ -723,32 +794,9 @@
   function renderHeader() {
     var status = '';
     var header = $('#app-header');
-    if (state.view === 'search') { header.innerHTML = status; return; }
-
-    if (state.view === 'home' && state.multiSelect) {
-      var n = state.selectedIds.length;
-      header.innerHTML = status +
-        '<div class="ms-bar">' +
-          '<button data-action="select-all">全选</button>' +
-          '<div>已选择 ' + n + ' 项</div>' +
-          (n ? '<button class="danger" data-action="delete-selected">删除</button>' : '<button class="danger" data-action="exit-multiselect">完成</button>') +
-        '</div>' +
-        '<div class="ms-sub"><span>已选择 ' + n + ' 项</span><button data-action="exit-multiselect">退出多选</button></div>';
-      return;
-    }
-
-    if (state.view === 'home') {
-      var filtered = state.category !== 'all';
-      header.innerHTML = status +
-        '<div class="header-row home-header">' +
-          (filtered
-            ? '<button class="icon-btn back-home" data-action="back-to-all" aria-label="返回" title="返回"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m14 5-7 7 7 7"/></svg></button>'
-            : '<button class="icon-btn" data-action="open-sidebar" aria-label="菜单"><span class="menu-lines"><i></i><i></i><i></i></span></button>') +
-          '<div class="home-title">' + escapeHTML(categoryLabel()) + '</div>' +
-          '<div class="header-actions"></div>' +
-        '</div>';
-      return;
-    }
+    var embedded = state.view === 'home' || state.view === 'me' || state.view === 'search';
+    header.style.display = embedded ? 'none' : '';
+    if (embedded) { header.innerHTML = status; return; }
 
     if (state.view === 'form') {
       header.innerHTML = status +
@@ -773,16 +821,35 @@
       me: '我的', prefs: '显示偏好', categoryManage: '分类管理',
       form: state.editingId ? '编辑物品' : '新增物品', itemDetail: '物品详情',
       tutorial: '新手教程', password: '修改密码', achievement: '成就等级', register: '注册',
-      notifications: '通知'
+      notifications: '通知中心', alerts: '到期提醒'
     };
     var title = titles[state.view] || '寻迹';
-    var showBack = ['prefs', 'categoryManage', 'itemDetail', 'tutorial', 'password', 'achievement', 'register', 'notifications'].indexOf(state.view) >= 0;
+    var showBack = ['prefs', 'categoryManage', 'itemDetail', 'tutorial', 'password', 'achievement', 'register', 'notifications', 'alerts'].indexOf(state.view) >= 0;
     var headerClass = state.view === 'me' ? 'header-row me-header' : 'header-row';
     header.innerHTML = status +
       '<div class="' + headerClass + '">' +
         (showBack ? '<button class="icon-btn" data-action="go-back" aria-label="返回">‹</button>' : '') +
         '<div class="header-title">' + escapeHTML(title) + '</div>' +
       '</div>';
+  }
+  function homeHeaderHTML() {
+    if (state.multiSelect) {
+      var n = state.selectedIds.length;
+      return '<div class="ms-bar">' +
+          '<button data-action="select-all">全选</button>' +
+          '<div>已选择 ' + n + ' 项</div>' +
+          (n ? '<button class="danger" data-action="delete-selected">删除</button>' : '<button class="danger" data-action="exit-multiselect">完成</button>') +
+        '</div>' +
+        '<div class="ms-sub"><span>已选择 ' + n + ' 项</span><button data-action="exit-multiselect">退出多选</button></div>';
+    }
+    var filtered = state.category !== 'all';
+    return '<div class="header-row home-header">' +
+      (filtered
+        ? '<button class="icon-btn back-home" data-action="' + (state.categoryFrom === 'categoryManage' ? 'go-back' : 'back-to-all') + '" aria-label="返回" title="返回"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m14 5-7 7 7 7"/></svg></button>'
+        : '<button class="icon-btn" data-action="open-sidebar" aria-label="菜单"><span class="menu-lines"><i></i><i></i><i></i></span></button>') +
+      '<div class="home-title">' + escapeHTML(categoryLabel()) + '</div>' +
+      '<div class="header-actions"></div>' +
+    '</div>';
   }
 
   /* ---------------- 底部导航 ---------------- */
@@ -797,6 +864,7 @@
     return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="' + sw + '" stroke-linecap="round" stroke-linejoin="round">' + (m[key] || '') + '</svg>';
   }
   function renderNav() {
+    if (state.view === 'form') { $('#bottom-nav').innerHTML = ''; return; }
     var tabs = [
       { key: 'home', label: '首页' },
       { key: 'search', label: '搜索' },
@@ -880,8 +948,18 @@
       (time ? '<div class="item-time">' + escapeHTML(time) + '</div>' : '') +
     '</div>';
   }
+  function searchItemsByQuery(q) {
+    var kw = String(q || '').trim().toLowerCase();
+    if (!kw) return [];
+    return getItems().filter(function (it) {
+      if (it.trashed) return false;
+      var text = [it.name, it.folder, it.unit, it.location, it.note].join(' ').toLowerCase();
+      return text.indexOf(kw) >= 0;
+    });
+  }
   function homeHTML() {
-    var list = filterItems();
+    var q = state.homeQuery.trim();
+    var list = q ? searchItemsByQuery(q) : filterItems();
     var body;
     if (state.category === 'stock') {
       var groups = {};
@@ -901,10 +979,19 @@
         ? '<div class="item-list">' + sorted.map(itemCardHTML).join('') + '</div>'
         : '<div class="empty"><div class="empty-emoji">🗂️</div><div class="empty-text">这里还没有物品</div></div>';
     }
-    if (state.multiSelect) return '<div class="page home-page multi-page">' + body + '</div>';
-    if (state.compact) body = '<div class="folded-space"></div>';
+    if (state.multiSelect) return '<div class="page home-page multi-page">' + homeHeaderHTML() + body + '</div>';
+    if (state.compact && !q) body = '<div class="folded-space"></div>';
+    var searchBar = '<div class="home-search-bar' + (state.homeFocused ? ' focused' : '') + '">' +
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4 4"/></svg>' +
+      '<input id="home-search-input" type="search" autocomplete="off" placeholder="' + tr('直接搜索物品名称 / 分类 / 位置') + '" value="' + escapeHTML(state.homeQuery) + '">' +
+      (q ? '<button class="home-search-clear" data-action="clear-home-search" aria-label="' + tr('清除') + '">✕</button>' : '') +
+      (state.homeFocused ? '<button class="home-search-voice" data-action="voice-search" aria-label="' + tr('语音搜索') + '">🎤</button>' : '') +
+    '</div>';
+    var resultHint = q ? '<div class="home-result-hint">' + tr('找到') + ' ' + list.length + ' ' + tr('件物品') +
+      '<button data-action="clear-home-search">' + tr('清除搜索') + '</button></div>' : '';
     return '<div class="page home-page">' +
-      '<button class="home-search" data-action="go-search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4 4"/></svg><span>搜索</span></button>' +
+      homeHeaderHTML() +
+      searchBar +
       '<div class="sort-row">' +
         '<button class="sort-trigger" data-action="open-sort-sheet">' +
           '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M4 7h13M4 12h9M4 17h5"/><path d="m17 14 3 3 3-3"/></svg>' +
@@ -914,7 +1001,7 @@
           '<button class="icon-btn" data-action="enter-multiselect" aria-label="多选" title="多选"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><rect x="4" y="5" width="16" height="14" rx="2"/><path d="m8 12 3 3 5-6"/></svg></button>' +
           '<button class="icon-btn collapse-btn' + (state.compact ? ' folded' : '') + '" data-action="toggle-compact" aria-label="' + (state.compact ? tr('展开') : tr('一键收起')) + '" title="' + (state.compact ? tr('展开') : tr('一键收起')) + '"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></button>' +
         '</div>' +
-      '</div>' + alertBannerHTML() + body + '</div>';
+      '</div>' + resultHint + alertBannerHTML() + body + '</div>';
   }
 
   /* ---------------- 侧边栏 ---------------- */
@@ -938,7 +1025,7 @@
     return '<div class="side-mask' + (state.sidebarOpen ? ' show' : '') + '" data-action="close-sidebar"></div>' +
       '<aside class="sidebar' + (state.sidebarOpen ? ' show' : '') + '">' +
         '<div class="sidebar-head">' +
-          '<div class="sidebar-title-row"><div><div class="sidebar-title">寻迹</div><span class="sidebar-badge">基础</span></div>' +
+          '<div class="sidebar-title-row"><div><div class="sidebar-title">寻迹</div></div>' +
             '<span class="sidebar-icons" data-action="notification-hint" title="通知"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M18 9a6 6 0 0 0-12 0c0 7-3 8-3 8h18s-3-1-3-8"/><path d="M10.5 20a2 2 0 0 0 3 0"/></svg></span>' +
           '</div>' +
         '</div>' +
@@ -1007,6 +1094,7 @@
     var view = $('#app-view');
     if (state.view === 'home') view.innerHTML = homeHTML();
     else if (state.view === 'search') view.innerHTML = searchHTML();
+    else if (state.view === 'alerts') view.innerHTML = alertDetailHTML();
     else if (state.view === 'notifications') view.innerHTML = notificationHTML();
     else if (state.view === 'link') view.innerHTML = linkHTML();
     else if (state.view === 'me') view.innerHTML = meHTML();
@@ -1209,11 +1297,10 @@
         optionRow('pref-list', '✨', '界面颜色', labelOf(THEME_OPTIONS, p.theme), ' data-key="theme" data-title="界面颜色"') +
         optionRow('pref-list', '🌐', '语言', labelOf(LANG_OPTIONS, p.language), ' data-key="language" data-title="语言"')) +
       meCard('功能设置', 'features',
-        toggle('elder', '🧓', '老年模式', '超大字体 · 高对比 · 简化功能') +
-        toggle('notification', '🔔', '消息通知', '接收提醒与聊天消息') +
-        optionRow('go-notifications', '🔔', '通知中心', '查看过期与系统消息') +
+        toggle('elder', '🧓', '老年模式', '适中放大 · 高对比 · 简化功能') +
+        optionRow('go-notifications', '📬', '通知中心', '查看过期与系统消息') +
         optionRow('edit-time', '🕘', '通知时间', (p.notifyTime || '09:00') + ' · 到期与临期提醒') +
-        toggle('sound', '🔔', '提示音', '查找标签时播放声音') +
+        toggle('sound', '🔊', '提示音', '查找标签时播放声音') +
         toggle('security', '🛡️', '账号安全', '登录验证与密码保护') +
         optionRow('go-password', '🔒', '修改密码', '更新登录密码') +
         optionRow('go-tutorial', '📖', '使用指南', '操作步骤与颜色说明')) +
@@ -1324,7 +1411,10 @@
       }).join('');
     }
     return '<div class="page achievement-page">' +
-      '<div class="achievement-hero">' + achievementAvatarHTML(level.level, true) +
+      '<div class="achievement-hero">' +
+        '<span class="achv-spark s1">✦</span><span class="achv-spark s2">✧</span><span class="achv-spark s3">✦</span>' +
+        '<span class="achv-level-tag">Lv.' + level.level + '</span>' +
+        '<div class="achievement-card-art">' + achievementAvatarHTML(level.level, true) + '</div>' +
         '<div class="achievement-info"><div class="achievement-name">' + tr('第 ' + level.level + ' 级 · ' + level.name) + '</div>' +
           '<div class="muted small">' + tr('已收纳') + ' ' + count + ' ' + tr('件物品') + ' · ' + tr('卡面') + '：' + tr(state.pref.frame || level.card) + '</div>' +
           '<div class="progress"><i style="width:' + percent + '%"></i></div>' +
@@ -1414,16 +1504,16 @@
       '<div class="link-card">' +
         '<div class="link-card-head"><div><div class="bold">我的实时位置</div><div class="muted small">6栋学生宿舍 · 2层 · 101</div></div>' +
           '<button class="map-toggle" data-action="toggle-map">' + (expanded ? '收起地图 ›' : '下拉展开地图 ›') + '</button></div>' +
+        '<div class="map-actions">' +
+          '<button class="map-primary" data-action="open-amap"><span>📍</span> 用高德地图打开</button>' +
+          '<button class="map-ghost" data-action="toggle-map">' + (expanded ? '收起地图' : '展开地图') + '</button>' +
+        '</div>' +
         '<div class="map-box' + (expanded ? ' expanded' : '') + '">' +
           '<div class="map-blob blob-a"></div><div class="map-blob blob-b"></div><div class="map-blob blob-c"></div>' +
           '<div class="map-road road-a"></div><div class="map-road road-b"></div>' +
           '<div class="map-pin"></div><div class="map-bubble">你在这里</div>' +
         '</div>' +
         '<div class="map-address">6栋学生宿舍 · 2层 · 101</div>' +
-        '<div class="map-actions">' +
-          '<button class="map-primary" data-action="open-amap"><span>📍</span> 用高德地图打开</button>' +
-          '<button class="map-ghost" data-action="map-plan">地图方案</button>' +
-        '</div>' +
       '</div>' +
       '<div class="section-title">设备<button class="add-device" data-action="add-device-hint">＋ 添加设备</button></div>' +
       '<div class="link-card device-card">' +
@@ -1451,11 +1541,11 @@
   /* ---------------- 分类管理 ---------------- */
   function categoryManageHTML() {
     var items = getItems().filter(function (it) { return !it.trashed; });
-    function letterOf(f) { return CATEGORY_LETTERS[f] || f.charAt(0).toUpperCase(); }
+    function letterOf(f) { return categoryLetter(f); }
     var sorted = state.folders.slice().sort(function (a, b) { return letterOf(a).localeCompare(letterOf(b)); });
     var rows = sorted.map(function (f, i) {
       var cnt = items.filter(function (it) { return it.folder === f; }).length;
-      return '<div class="category-row" data-action="set-category" data-cat="' + escapeHTML(f) + '">' +
+      return '<div class="category-row" data-action="open-category-detail" data-cat="' + escapeHTML(f) + '">' +
         '<span class="cat-letter">' + letterOf(f) + '</span>' +
         '<span class="cat-dot" style="background:' + CATEGORY_COLORS[i % CATEGORY_COLORS.length] + '"></span>' +
         '<span class="cat-name">' + escapeHTML(f) + '</span>' +
@@ -1552,7 +1642,7 @@
       '<div class="time-picker-body">' +
         '<div class="time-col"><button data-action="time-step" data-part="hour" data-delta="1">＋</button><b>' + two(h) + '</b><button data-action="time-step" data-part="hour" data-delta="-1">−</button><small>' + tr('时') + '</small></div>' +
         '<span class="time-colon">:</span>' +
-        '<div class="time-col"><button data-action="time-step" data-part="minute" data-delta="5">＋</button><b>' + two(m) + '</b><button data-action="time-step" data-part="minute" data-delta="-5">−</button><small>' + tr('分') + '</small></div>' +
+        '<div class="time-col"><button data-action="time-step" data-part="minute" data-delta="1">＋</button><b>' + two(m) + '</b><button data-action="time-step" data-part="minute" data-delta="-1">−</button><small>' + tr('分') + '</small></div>' +
         '<div class="time-ampm"><button class="' + (ampm === 'am' ? 'active' : '') + '" data-action="time-ampm" data-ampm="am">' + tr('上午') + '</button>' +
           '<button class="' + (ampm === 'pm' ? 'active' : '') + '" data-action="time-ampm" data-ampm="pm">' + tr('下午') + '</button></div>' +
       '</div>' +
@@ -1573,6 +1663,30 @@
         '<button class="btn btn-primary" data-action="save-profile-input">保存</button></div>');
     }
     if (o.type === 'time') { return '<div class="sheet-mask show" data-action="close-overlay"></div><div class="sheet show">' + timePickerHTML(o) + '</div>'; }
+    if (o.type === 'photoChoice') {
+      return sheetShell('添加照片',
+        '<div class="photo-choice"><img src="' + escapeHTML(o.src) + '" alt="">' +
+        '<div class="photo-choice-tip">' + tr('直接使用原图，或自定义裁剪后添加') + '</div>' +
+        '<div class="photo-choice-btns">' +
+          '<button class="btn" data-action="use-photo-direct">' + tr('直接使用') + '</button>' +
+          '<button class="btn btn-primary" data-action="crop-photo">' + tr('自定义裁剪') + '</button>' +
+        '</div></div>');
+    }
+    if (o.type === 'photoCrop') {
+      var c = state.crop || { src: o.src, scale: 1, x: 0, y: 0 };
+      return '<div class="sheet-mask show" data-action="close-overlay"></div>' +
+        '<div class="sheet show crop-sheet"><div class="sheet-handle"></div>' +
+        '<div class="sheet-head"><h2>' + tr('自定义裁剪') + '</h2><button class="sheet-close" data-action="close-overlay">✕</button></div>' +
+        '<div class="crop-stage" id="crop-stage"><img id="crop-img" src="' + escapeHTML(c.src) + '" draggable="false" ' +
+          'style="transform:translate(' + c.x + 'px,' + c.y + 'px) scale(' + c.scale + ')"></div>' +
+        '<div class="crop-tools"><button data-action="crop-zoom" data-delta="-0.15">−</button>' +
+          '<input type="range" id="crop-scale" min="1" max="3" step="0.05" value="' + c.scale + '">' +
+          '<button data-action="crop-zoom" data-delta="0.15">＋</button>' +
+          '<button class="crop-reset" data-action="crop-reset">' + tr('重置') + '</button></div>' +
+        '<div class="crop-foot"><button class="btn" data-action="close-overlay">' + tr('取消') + '</button>' +
+          '<button class="btn btn-primary" data-action="crop-save">' + tr('完成裁剪') + '</button></div>' +
+      '</div>';
+    }
     if (o.type === 'list') {
       var rows = o.options.map(function (op) {
         var value = op.value;
@@ -1619,6 +1733,7 @@
     };
   }
   function openForm(id) {
+    if (state.view !== 'form') pushView();
     state.editingId = id || null;
     var it = id ? findItem(id) : null;
     state.formDraft = it ? Object.assign({}, it) : blankDraft(false);
@@ -1664,10 +1779,9 @@
     state.editingId = null;
     state.formDraft = null;
     state.view = 'home';
-    state.category = 'all';
     state.multiSelect = false;
     state.selectedIds = [];
-    render();
+    goBack();
     toast('已保存');
   }
   function readImages(files) {
@@ -1690,9 +1804,70 @@
       reader.readAsDataURL(file);
     });
   }
+  function addPhoto(src) {
+    syncFormDraft();
+    var d = state.formDraft || (state.formDraft = {});
+    d.images = (d.images || []).concat([src]);
+    d.image = d.images[0];
+    render();
+  }
+  function updateCropTransform() {
+    var c = state.crop; if (!c) return;
+    var img = $('#crop-img');
+    if (img) img.style.transform = 'translate(' + c.x + 'px,' + c.y + 'px) scale(' + c.scale + ')';
+    var range = $('#crop-scale'); if (range) range.value = c.scale;
+  }
+  function clampCropPan() {
+    var c = state.crop; if (!c) return;
+    var img = $('#crop-img'), stage = $('#crop-stage');
+    if (!img || !stage) return;
+    var rect = stage.getBoundingClientRect();
+    var nw = img.naturalWidth || img.width, nh = img.naturalHeight || img.height;
+    if (!nw || !nh || !rect.width) return;
+    var base = Math.max(rect.width / nw, rect.height / nh);
+    var maxX = Math.max(0, (nw * base * c.scale - rect.width) / 2);
+    var maxY = Math.max(0, (nh * base * c.scale - rect.height) / 2);
+    c.x = Math.max(-maxX, Math.min(maxX, c.x));
+    c.y = Math.max(-maxY, Math.min(maxY, c.y));
+  }
+  function setCropScale(value) {
+    if (!state.crop) return;
+    state.crop.scale = Math.max(1, Math.min(3, Number(value) || 1));
+    clampCropPan();
+    updateCropTransform();
+  }
+  function saveCrop() {
+    var img = $('#crop-img'), stage = $('#crop-stage');
+    if (!img || !stage || !state.crop) return;
+    var nw = img.naturalWidth || img.width, nh = img.naturalHeight || img.height;
+    var rect = stage.getBoundingClientRect();
+    if (!nw || !nh || !rect.width || !rect.height) { toast('图片加载中，请稍后重试'); return; }
+    var base = Math.max(rect.width / nw, rect.height / nh);
+    var k = 600 / rect.width;
+    var drawW = nw * base * state.crop.scale;
+    var drawH = nh * base * state.crop.scale;
+    var dx = (rect.width - drawW) / 2 + state.crop.x;
+    var dy = (rect.height - drawH) / 2 + state.crop.y;
+    var canvas = document.createElement('canvas');
+    canvas.width = 600; canvas.height = 600;
+    var ctx = canvas.getContext('2d');
+    if (!ctx) { toast('裁剪失败，请重试'); return; }
+    ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, 600, 600);
+    ctx.drawImage(img, -dx * k, -dy * k, drawW * k, drawH * k);
+    var data;
+    try { data = canvas.toDataURL('image/jpeg', 0.86); } catch (e) { toast('裁剪失败，请重试'); return; }
+    state.overlay = null; state.crop = null;
+    addPhoto(data);
+    toast('已裁剪并添加照片');
+  }
 
   /* ---------------- 操作集合 ---------------- */
+  function pushView() {
+    state.viewStack.push({ view: state.view, category: state.category, sidebarOpen: state.sidebarOpen });
+    if (state.viewStack.length > 20) state.viewStack.shift();
+  }
   function openView(view) {
+    if (view !== state.view) pushView();
     state.view = view;
     state.sheet = null;
     state.overlay = null;
@@ -1702,18 +1877,43 @@
     state.searchFocused = false;
     render();
   }
+  function openFromMe(view) {
+    if (state.view !== 'me') {
+      pushView();
+      state.view = 'me';
+      state.sidebarOpen = false;
+    }
+    pushView();
+    state.view = view;
+    state.sheet = null;
+    state.overlay = null;
+    state.multiSelect = false;
+    state.selectedIds = [];
+    render();
+  }
   function goBack() {
     if (state.overlay) { state.overlay = null; renderOverlay(); return; }
     if (state.sheet) { state.sheet = null; renderSheet(); return; }
     if (state.multiSelect) { exitMultiSelect(); return; }
     if (state.view === 'form') syncFormDraft();
-    state.view = 'home';
+    var prev = state.viewStack.pop();
+    if (prev) {
+      state.view = prev.view;
+      state.category = prev.category;
+      state.sidebarOpen = !!prev.sidebarOpen;
+    } else {
+      state.view = 'home';
+      state.category = 'all';
+    }
     state.editingId = null;
     state.formDraft = null;
     state.searchFocused = false;
+    state.categoryFrom = '';
     render();
   }
   function setCategory(cat) {
+    pushView();
+    state.categoryFrom = 'sidebar';
     state.category = cat;
     state.view = 'home';
     state.sidebarOpen = false;
@@ -1723,6 +1923,7 @@
   }
   function openItem(id) {
     if (state.multiSelect) { toggleSelect(id); return; }
+    pushView();
     state.currentId = id;
     state.view = 'itemDetail';
     render();
@@ -1828,31 +2029,88 @@
       try { next.setSelectionRange(pos, pos); } catch (e) {}
     }
   }
+  function updateHomeSearchView() {
+    var input = $('#home-search-input');
+    if (!input) return;
+    var pos = input.selectionStart;
+    state.homeQuery = input.value;
+    $('#app-view').innerHTML = homeHTML();
+    var next = $('#home-search-input');
+    if (next) {
+      next.focus();
+      try { next.setSelectionRange(pos, pos); } catch (e) {}
+    }
+  }
+  function focusHomeSearch() {
+    if (state.homeFocused) return;
+    state.homeFocused = true;
+    updateHomeSearchView();
+  }
+  function clearHomeSearch() {
+    state.homeQuery = '';
+    state.homeFocused = false;
+    var input = $('#home-search-input'); if (input) input.blur();
+    render();
+  }
+  function voiceTargetText(text) {
+    var clean = String(text || '').trim();
+    if (!clean) return;
+    if (state.view === 'home') {
+      state.homeQuery = clean;
+      state.homeFocused = true;
+      pushSearchHistory(clean);
+      render();
+      var hi = $('#home-search-input'); if (hi) hi.focus();
+    } else {
+      state.searchQuery = clean;
+      state.searchFocused = true;
+      pushSearchHistory(clean);
+      render();
+      var si = $('#search-input'); if (si) si.focus();
+    }
+  }
   function startVoiceSearch() {
     var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SR) { toast('当前浏览器不支持语音搜索'); return; }
+    if (!SR) { toast('当前浏览器不支持语音搜索，请用 Chrome 或 Safari 打开'); return; }
+    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+      navigator.mediaDevices.getUserMedia({ audio: true }).then(function (stream) {
+        stream.getTracks().forEach(function (t) { try { t.stop(); } catch (e) {} });
+      }).catch(function () {});
+    }
     var recognition = new SR();
     recognition.lang = currentLang() === 'en' ? 'en-US' : (currentLang() === 'zh-TW' ? 'zh-TW' : 'zh-CN');
-    recognition.interimResults = false;
+    recognition.continuous = false;
+    recognition.interimResults = true;
     recognition.maxAlternatives = 1;
     state.recognizing = true;
     render();
+    var gotResult = false;
     recognition.onresult = function (e) {
-      var text = e.results && e.results[0] && e.results[0][0] ? e.results[0][0].transcript : '';
-      if (text) { state.searchQuery = text; pushSearchHistory(text); }
-      state.recognizing = false;
-      render();
+      var finalText = '', interim = '';
+      for (var i = 0; i < e.results.length; i++) {
+        var r = e.results[i];
+        if (r.isFinal) finalText += r[0].transcript; else interim += r[0].transcript;
+      }
+      var text = String(finalText || interim).replace(/[，。！？、,.!?\s]+$/, '').trim();
+      if (!text) return;
+      gotResult = true;
+      voiceTargetText(text);
     };
-    recognition.onerror = function () {
+    recognition.onerror = function (e) {
       state.recognizing = false;
       render();
-      toast('语音识别失败，请重试');
+      var err = e && e.error;
+      if (err === 'not-allowed' || err === 'service-not-allowed') toast('请允许浏览器使用麦克风权限');
+      else if (err === 'no-speech') toast('没有听到声音，请靠近麦克风再试');
+      else if (err === 'network') toast('语音识别需要联网，请检查网络');
+      else toast('语音识别失败，请重试');
     };
     recognition.onend = function () {
       state.recognizing = false;
       render();
+      if (!gotResult) toast('未识别到内容，请再试一次');
     };
-    try { recognition.start(); } catch (e) { state.recognizing = false; render(); toast('无法启动语音识别'); }
+    try { recognition.start(); } catch (e) { state.recognizing = false; render(); toast('无法启动麦克风，请检查权限'); }
   }
   function focusSearch() {
     if (state.searchFocused) return;
@@ -1876,10 +2134,12 @@
       case 'go-back': goBack(); break;
       case 'nav': openView(el.getAttribute('data-view')); break;
       case 'go-search': openView('search'); break;
+      case 'focus-home-search': focusHomeSearch(); break;
+      case 'clear-home-search': clearHomeSearch(); break;
       case 'focus-search': focusSearch(); break;
       case 'cancel-search': cancelSearch(); break;
       case 'voice-search': startVoiceSearch(); break;
-      case 'notification-hint': case 'go-notifications': openView('notifications'); break;
+      case 'notification-hint': case 'go-notifications': openFromMe('notifications'); break;
       case 'notification-tab': state.notificationTab = el.getAttribute('data-tab') || 'all'; render(); break;
       case 'open-sort-sheet': state.sheet = 'sort'; renderSheet(); break;
       case 'set-sort': state.sortRule = key; state.sheet = null; render(); break;
@@ -1889,6 +2149,17 @@
       case 'select-all': selectAll(); break;
       case 'delete-selected': deleteSelected(); break;
       case 'set-category': setCategory(el.getAttribute('data-cat')); break;
+      case 'open-category-detail':
+        pushView();
+        state.categoryFrom = 'categoryManage';
+        state.category = el.getAttribute('data-cat');
+        state.view = 'home';
+        state.sidebarOpen = false;
+        state.multiSelect = false;
+        state.selectedIds = [];
+        state.homeQuery = '';
+        render();
+        break;
       case 'open-prefs': case 'go-prefs': openView('prefs'); break;
       case 'go-me': openView('me'); break;
       case 'go-link': openView('link'); break;
@@ -1933,9 +2204,7 @@
       case 'go-trash': setCategory('trash'); break;
       case 'manage-categories': openView('categoryManage'); break;
       case 'add-new': openForm(null); break;
-      case 'cancel-form':
-        syncFormDraft();
-        state.editingId = null; state.formDraft = null; state.view = 'home'; render(); break;
+      case 'cancel-form': goBack(); break;
       case 'close-sheet': state.sheet = null; renderSheet(); break;
       case 'toggle-map': state.link.mapExpanded = !state.link.mapExpanded; render(); break;
       case 'open-amap':
@@ -1965,10 +2234,10 @@
         var oldPw = $('#pw-old'), newPw = $('#pw-new'), confirmPw = $('#pw-confirm');
         if (!oldPw || !newPw || !confirmPw || !newPw.value) { toast('请填写新密码'); break; }
         if (newPw.value !== confirmPw.value) { toast('两次新密码不一致'); break; }
-        toast('密码已更新'); state.view = 'me'; render(); break;
+        toast('密码已更新'); goBack(); break;
       case 'tutorial-next':
         if (state.tutorialStep < tutorialSteps().length - 1) { state.tutorialStep++; render(); }
-        else { state.tutorialStep = 0; state.view = 'home'; render(); toast('准备就绪，开始记录吧'); }
+        else { state.tutorialStep = 0; goBack(); toast('准备就绪，开始记录吧'); }
         break;
       case 'tutorial-prev':
         if (state.tutorialStep > 0) { state.tutorialStep--; render(); }
@@ -1991,6 +2260,23 @@
       case 'delete-item': deleteItem(id); break;
       case 'restore-item': restoreExistingItem(id); break;
       case 'pick-image': var fileInput = $('#f-image-file'); if (fileInput) fileInput.click(); break;
+      case 'use-photo-direct':
+        if (state.overlay && state.overlay.src) { var src = state.overlay.src; state.overlay = null; addPhoto(src); toast('已添加照片'); }
+        break;
+      case 'crop-photo':
+        if (state.overlay && state.overlay.src) {
+          state.crop = { src: state.overlay.src, scale: 1, x: 0, y: 0 };
+          state.overlay = { type: 'photoCrop', src: state.overlay.src };
+          renderOverlay();
+        }
+        break;
+      case 'crop-zoom':
+        setCropScale((state.crop ? state.crop.scale : 1) + (Number(el.getAttribute('data-delta')) || 0));
+        break;
+      case 'crop-reset':
+        if (state.crop) { state.crop.scale = 1; state.crop.x = 0; state.crop.y = 0; updateCropTransform(); }
+        break;
+      case 'crop-save': saveCrop(); break;
       case 'remove-photo':
         syncFormDraft();
         if (state.formDraft && state.formDraft.images) {
@@ -2035,11 +2321,10 @@
       case 'date-select-day':
         if (state.overlay) { state.overlay.value = el.getAttribute('data-date'); renderOverlay(); }
         break;
-      case 'cancel-date': state.overlay = null; renderOverlay(); break;
+      case 'cancel-date': state.overlay = null; render(); break;
       case 'clear-date':
-        syncFormDraft();
-        if (state.formDraft && state.overlay) state.formDraft[state.overlay.field] = '';
-        state.overlay = null; render(); break;
+        if (state.overlay) { state.overlay.value = ''; renderOverlay(); }
+        break;
       case 'confirm-date':
         syncFormDraft();
         if (state.formDraft && state.overlay) state.formDraft[state.overlay.field] = state.overlay.value || '';
@@ -2098,15 +2383,18 @@
         var cardKey = el.getAttribute('data-card');
         if (cardKey) { state.meCollapsed[cardKey] = !state.meCollapsed[cardKey]; render(); }
         break;
-      case 'back-to-all': state.category = 'all'; state.multiSelect = false; state.selectedIds = []; render(); break;
-      case 'go-alerts':
-        var alerts = getAlerts();
-        state.category = alerts.expired.length ? 'expired' : 'soon';
-        state.view = 'home'; state.multiSelect = false; render(); break;
-      case 'dismiss-alert':
-        state.alertDismissed = alertKey(getAlerts());
-        try { localStorage.setItem(ALERT_KEY, state.alertDismissed); } catch (e) {}
-        render(); break;
+      case 'back-to-all': state.category = 'all'; state.categoryFrom = ''; state.sidebarOpen = true; state.multiSelect = false; state.selectedIds = []; render(); break;
+      case 'go-alerts': case 'open-alerts': openView('alerts'); break;
+      case 'delete-alert':
+        var aid = el.getAttribute('data-id');
+        if (aid) {
+          state.alertDeletedIds = state.alertDeletedIds || [];
+          if (state.alertDeletedIds.indexOf(aid) < 0) state.alertDeletedIds.push(aid);
+          saveDeletedAlerts();
+          render();
+          toast('提醒已删除，物品已保留');
+        }
+        break;
       case 'search-term': state.searchQuery = el.getAttribute('data-term') || el.textContent; state.searchFocused = true; render(); break;
       case 'set-pref': setPref(key, value); render(); break;
       case 'toggle-pref': setPref(key, !state.pref[key]); render(); break;
@@ -2131,24 +2419,60 @@
       vibrate();
       handleAction(el.getAttribute('data-action'), el);
     });
+    var cropDrag = null;
+    document.addEventListener('pointerdown', function (e) {
+      if (!e.target || !e.target.closest || !state.crop) return;
+      var stage = e.target.closest('#crop-stage');
+      if (!stage) return;
+      cropDrag = { x: e.clientX, y: e.clientY, ox: state.crop.x, oy: state.crop.y };
+      if (stage.setPointerCapture) { try { stage.setPointerCapture(e.pointerId); } catch (err) {} }
+      e.preventDefault();
+    });
+    document.addEventListener('pointermove', function (e) {
+      if (!cropDrag || !state.crop) return;
+      state.crop.x = cropDrag.ox + (e.clientX - cropDrag.x);
+      state.crop.y = cropDrag.oy + (e.clientY - cropDrag.y);
+      clampCropPan(); updateCropTransform();
+    });
+    document.addEventListener('pointerup', function () { cropDrag = null; });
+    document.addEventListener('pointercancel', function () { cropDrag = null; });
     document.addEventListener('focus', function (e) {
       if (e.target && e.target.id === 'search-input') focusSearch();
+      if (e.target && e.target.id === 'home-search-input') focusHomeSearch();
     }, true);
     document.addEventListener('input', function (e) {
       if (e.target && e.target.id === 'search-input') updateSearchView();
+      if (e.target && e.target.id === 'home-search-input') updateHomeSearchView();
+      if (e.target && e.target.id === 'crop-scale') setCropScale(e.target.value);
     });
     document.addEventListener('keydown', function (e) {
       if (e.key !== 'Enter') return;
       if (e.target && e.target.id === 'search-input') {
         pushSearchHistory(e.target.value);
         e.preventDefault();
+      } else if (e.target && e.target.id === 'home-search-input') {
+        pushSearchHistory(e.target.value);
+        e.preventDefault();
+        if (e.target.blur) e.target.blur();
       } else if (e.target && e.target.id === 'new-folder-input') {
         addFolder();
         e.preventDefault();
       }
     });
     document.addEventListener('change', function (e) {
-      if (e.target && e.target.id === 'f-image-file') readImages(e.target.files);
+      if (e.target && e.target.id === 'f-image-file') {
+        var files = e.target.files;
+        if (files && files.length > 1) { readImages(files); e.target.value = ''; return; }
+        if (files && files.length === 1) {
+          var fr = new FileReader();
+          fr.onload = function () {
+            state.overlay = { type: 'photoChoice', src: String(fr.result) };
+            renderOverlay();
+          };
+          fr.readAsDataURL(files[0]);
+        }
+        e.target.value = '';
+      }
       if (e.target && e.target.id === 'profile-image-file' && e.target.files && e.target.files[0]) {
         var file = e.target.files[0];
         var reader = new FileReader();
@@ -2184,7 +2508,11 @@
       saveDB(db);
     }
     state.searchHistory = loadSearchHistory();
-    try { state.alertDismissed = localStorage.getItem(ALERT_KEY) || ''; } catch (e) {}
+    try {
+      var rawAlerts = localStorage.getItem(ALERT_KEY);
+      var parsedAlerts = rawAlerts ? JSON.parse(rawAlerts) : [];
+      state.alertDeletedIds = Array.isArray(parsedAlerts) ? parsedAlerts : (rawAlerts ? [rawAlerts] : []);
+    } catch (e) { state.alertDeletedIds = []; }
     if (typeof window !== 'undefined' && window.location && window.location.hash === '#register') state.view = 'register';
     bindEvents();
     applyTheme();
