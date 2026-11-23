@@ -6,13 +6,16 @@
   'use strict';
 
   /* ---------------- 常量 ---------------- */
-  var APP_VERSION = '2.20';
+  var APP_VERSION = '2.21';
   var DB_KEY = 'organizer_local_v2';
   var PREF_KEY = 'organizer_pref_v2';
   var HISTORY_KEY = 'organizer_search_history_v2';
   var ALERT_KEY = 'organizer_alert_deleted_v2';
 
   var APP_VERSION_CHANGELOG = [
+    { version: '2.21', date: '2026-11-23', title: '分类标题栏对齐设备联动', items: [
+      '分类页标题栏移到固定顶部，与设备联动使用同一套 header：相同位置、间距、字体大小与图标颜色，铃铛在右侧'
+    ] },
     { version: '2.20', date: '2026-11-23', title: '删除侧栏与标题调整', items: [
       '删除左侧抽屉和首页左上角三条横线按钮，首页顶部标题改为“寻迹”',
       '通知铃铛移到分类页右上角，分类图标左对齐，分类标题与图标样式对齐设备联动'
@@ -802,9 +805,18 @@
   function renderHeader() {
     var status = '';
     var header = $('#app-header');
-    var embedded = state.view === 'home' || state.view === 'me' || state.view === 'search';
+    var embedded = state.view === 'home' || state.view === 'me';
     header.style.display = embedded ? 'none' : '';
     if (embedded) { header.innerHTML = status; return; }
+
+    if (state.view === 'search') {
+      header.innerHTML = status +
+        '<div class="header-row link-header">' +
+          '<span class="link-wave">' + navSVG('search') + '</span><div class="header-title">' + tr('分类') + '</div>' +
+          '<div class="header-actions" style="margin-left:auto"><button class="icon-btn quick-bell" data-action="open-notifications" aria-label="' + tr('通知中心') + '"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 9a6 6 0 0 0-12 0c0 7-3 8-3 8h18s-3-1-3-8"/><path d="M10.5 20a2 2 0 0 0 3 0"/></svg></button></div>' +
+        '</div>';
+      return;
+    }
 
     if (state.view === 'form') {
       header.innerHTML = status +
@@ -1172,10 +1184,6 @@
       return tile(c.emoji, c.label, counts[c.key], 'quick-category', c.key);
     }).join('') + tile('#️⃣', '物品分类', null, 'manage-categories', '');
     return '<div class="page quick-page">' +
-      '<div class="quick-head"><span class="quick-head-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="4" y="4" width="7" height="7" rx="1.6"/><rect x="13" y="4" width="7" height="7" rx="1.6"/><rect x="4" y="13" width="7" height="7" rx="1.6"/><rect x="13" y="13" width="7" height="7" rx="1.6"/></svg></span>' +
-        '<span class="quick-head-title">' + tr('分类') + '</span>' +
-        '<button class="quick-bell" data-action="open-notifications" aria-label="' + tr('通知中心') + '"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 9a6 6 0 0 0-12 0c0 7-3 8-3 8h18s-3-1-3-8"/><path d="M10.5 20a2 2 0 0 0 3 0"/></svg></button>' +
-      '</div>' +
       '<div class="quick-grid">' + tiles + '</div>' +
       '<div class="quick-foot">' + tr('按状态快速查看物品，直接搜索请用首页搜索框') + '</div>' +
     '</div>';
