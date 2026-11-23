@@ -6,13 +6,17 @@
   'use strict';
 
   /* ---------------- 常量 ---------------- */
-  var APP_VERSION = '2.21';
+  var APP_VERSION = '2.22';
   var DB_KEY = 'organizer_local_v2';
   var PREF_KEY = 'organizer_pref_v2';
   var HISTORY_KEY = 'organizer_search_history_v2';
   var ALERT_KEY = 'organizer_alert_deleted_v2';
 
   var APP_VERSION_CHANGELOG = [
+    { version: '2.22', date: '2026-11-23', title: '宫格对齐与更新修复', items: [
+      '分类页图标和文字改为中心对齐、等距排列；底部只保留“按状态快速查看物品”',
+      '首页搜索框占位文字只保留“搜索”；版本弹窗新增“刷新检查更新”，资源加版本号避免浏览器缓存'
+    ] },
     { version: '2.21', date: '2026-11-23', title: '分类标题栏对齐设备联动', items: [
       '分类页标题栏移到固定顶部，与设备联动使用同一套 header：相同位置、间距、字体大小与图标颜色，铃铛在右侧'
     ] },
@@ -1003,7 +1007,7 @@
     if (state.compact && !q) body = '<div class="folded-space"></div>';
     var searchBar = '<div class="home-search-bar' + (state.homeFocused ? ' focused' : '') + '">' +
       '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4 4"/></svg>' +
-      '<input id="home-search-input" type="search" autocomplete="off" placeholder="' + tr('直接搜索物品名称 / 分类 / 位置') + '" value="' + escapeHTML(state.homeQuery) + '">' +
+      '<input id="home-search-input" type="search" autocomplete="off" placeholder="' + tr('搜索') + '" value="' + escapeHTML(state.homeQuery) + '">' +
       (q ? '<button class="home-search-clear" data-action="clear-home-search" aria-label="' + tr('清除') + '">✕</button>' : '') +
       (state.homeFocused ? '<button class="home-search-voice" data-action="voice-search" aria-label="' + tr('语音搜索') + '">🎤</button>' : '') +
     '</div>';
@@ -1185,7 +1189,7 @@
     }).join('') + tile('#️⃣', '物品分类', null, 'manage-categories', '');
     return '<div class="page quick-page">' +
       '<div class="quick-grid">' + tiles + '</div>' +
-      '<div class="quick-foot">' + tr('按状态快速查看物品，直接搜索请用首页搜索框') + '</div>' +
+      '<div class="quick-foot">' + tr('按状态快速查看物品') + '</div>' +
     '</div>';
   }
 
@@ -1685,6 +1689,11 @@
         '<div class="crop-foot"><button class="btn" data-action="close-overlay">' + tr('取消') + '</button>' +
           '<button class="btn btn-primary" data-action="crop-save">' + tr('完成裁剪') + '</button></div>' +
       '</div>';
+    }
+    if (o.type === 'version') {
+      return sheetShell(o.title || '更新说明',
+        '<p class="sheet-tip" style="line-height:1.8;white-space:pre-line">' + escapeHTML(o.body || '') + '</p>' +
+        '<button class="btn btn-primary" style="width:calc(100% - 36px);margin:0 18px 16px" data-action="force-update">' + tr('刷新检查更新') + '</button>');
     }
     if (o.type === 'list') {
       var rows = o.options.map(function (op) {
@@ -2415,7 +2424,21 @@
         var text = APP_VERSION_CHANGELOG.map(function (c) {
           return 'v' + c.version + ' · ' + c.date + '\n' + c.title + '\n- ' + c.items.join('\n- ');
         }).join('\n\n');
-        openInfo('更新说明', text);
+        state.overlay = { type: 'version', title: '更新说明', body: text };
+        renderOverlay();
+        break;
+      case 'force-update':
+        var target = (window.location && window.location.pathname ? window.location.pathname : './') + '?v=' + Date.now();
+        if ('serviceWorker' in navigator && navigator.serviceWorker.getRegistration) {
+          navigator.serviceWorker.getRegistration().then(function (reg) {
+            if (!reg) return null;
+            return reg.update().catch(function () {}).then(function () {
+              if (reg.waiting && reg.waiting.postMessage) reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+            });
+          }).catch(function () {});
+        }
+        toast('正在检查更新…');
+        setTimeout(function () { window.location.href = target; }, 400);
         break;
       default: break;
     }
