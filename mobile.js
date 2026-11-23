@@ -6,13 +6,29 @@
   'use strict';
 
   /* ---------------- 常量 ---------------- */
-  var APP_VERSION = '2.23';
+  var APP_VERSION = '2.26';
   var DB_KEY = 'organizer_local_v2';
   var PREF_KEY = 'organizer_pref_v2';
   var HISTORY_KEY = 'organizer_search_history_v2';
   var ALERT_KEY = 'organizer_alert_deleted_v2';
+  var LOCATOR_KEY = 'organizer_locator_share_v1';
+  var LOCATOR_API_KEY = 'organizer_locator_api_v1';
+  var DEFAULT_LOCATOR_LINK = 'https://vipapi.18gps.net//CheTT/CheTTgetPosition.aspx?id=7c730550-a968-49ab-a054-4578cd7a571c&lang=cn';
+  var DEFAULT_LOCATOR_API = 'https://twilight-butterfly-f2a8.xieta1371.workers.dev';
 
   var APP_VERSION_CHANGELOG = [
+    { version: '2.26', date: '2026-11-23', title: '定位器免配置', items: [
+      'Worker 地址和分享链接已内置到 App，打开联动页自动读取真实坐标，用户无需填写任何内容',
+      '定位卡片只保留“刷新位置 / 高德打开”，进入页面自动加载'
+    ] },
+    { version: '2.25', date: '2026-11-23', title: '定位器直显坐标', items: [
+      '联动页可填 Cloudflare Worker 地址，直接读取云知行分享链接的真实经纬度、时间和电量并显示在 App 内',
+      '内置 15 天分享链接；点“高德打开”直接用真实坐标定位，用户无需安装云知行 App'
+    ] },
+    { version: '2.24', date: '2026-11-23', title: '接入云知行分享链接', items: [
+      '联动页新增“定位器实时位置（云知行）”：粘贴云知行生成的 18gps 分享链接即可打开实时位置地图',
+      '链接只保存在本机，不需要商家 API、不需要额外费用；分享过期后重新生成链接即可'
+    ] },
     { version: '2.23', date: '2026-11-23', title: '全页滚动与分类独立页', items: [
       '所有页面内容超出即可滚动；我的头像下移到与设备联动标题同高',
       '分类字母改为拼音首字母自动识别（哭→K）并按 A-Z 排列；分类点进去为独立分组页，不再跳首页',
@@ -560,6 +576,11 @@
     homeFocused: false,
     categoryFrom: '',
     groupCategory: '',
+    locatorShare: '',
+    locatorApi: '',
+    locatorFix: null,
+    locatorLoading: false,
+    locatorAutoTried: false,
     crop: null
   };
 
@@ -1156,6 +1177,10 @@
     renderSidebar();
     renderOverlay();
     ['#app-header', '#app-view', '#bottom-nav', '#sheet-root', '#overlay-root'].forEach(function (sel) { applyI18n($(sel)); });
+    if (state.view === 'link' && !state.locatorAutoTried && !state.locatorFix && !state.locatorLoading) {
+      state.locatorAutoTried = true;
+      setTimeout(refreshLocator, 0);
+    }
   }
   function sortSheetHTML() {
     var opts = [
@@ -1517,6 +1542,71 @@
   }
 
   /* ---------------- 联动页 ---------------- */
+  function normalizeLocatorLink(raw) {
+    var s = String(raw || '').trim();
+    if (!s) return '';
+    var m = s.match(/[?&]id=([0-9a-fA-F-]{8,48})/);
+    if (!m) return '';
+    return 'https://vipapi.18gps.net//CheTT/CheTTgetPosition.aspx?id=' + m[1] + '&lang=cn';
+  }
+  function locatorId() {
+    var m = String(state.locatorShare || '').match(/[?&]id=([0-9a-fA-F-]{8,48})/);
+    return m ? m[1] : '';
+  }
+  function loadLocatorLink() {
+    try { state.locatorShare = normalizeLocatorLink(localStorage.getItem(LOCATOR_KEY)) || ''; } catch (e) { state.locatorShare = ''; }
+    if (!state.locatorShare) state.locatorShare = normalizeLocatorLink(DEFAULT_LOCATOR_LINK);
+    state.locatorApi = DEFAULT_LOCATOR_API;
+  }
+  function saveLocatorLink(raw, apiRaw) {
+    var url = normalizeLocatorLink(raw);
+    if (!url) { toast('请粘贴正确的云知行分享链接（含 id 参数）'); return; }
+    state.locatorShare = url;
+    state.locatorApi = String(apiRaw || '').trim().replace(/\/+$/, '');
+    try { localStorage.setItem(LOCATOR_KEY, url); } catch (e) {}
+    try { localStorage.setItem(LOCATOR_API_KEY, state.locatorApi); } catch (e) {}
+    state.locatorFix = null;
+    render();
+    toast('定位器设置已保存');
+  }
+  function refreshLocator() {
+    var id = locatorId();
+    var api = state.locatorApi;
+    if (!api) { toast('请先填写 Cloudflare Worker 地址'); return; }
+    if (!id) { toast('分享链接无效，请重新粘贴'); return; }
+    state.locatorLoading = true;
+    render();
+    var sep = api.indexOf('?') >= 0 ? '&' : '?';
+    fetch(api + sep + 'id=' + encodeURIComponent(id) + '&t=' + Date.now(), { cache: 'no-store' })
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        state.locatorLoading = false;
+        if (!d || !d.ok) throw new Error((d && d.error) || '读取失败');
+        state.locatorFix = d;
+        render();
+        toast('位置已更新');
+      })
+      .catch(function (e) {
+        state.locatorLoading = false;
+        render();
+        toast('读取位置失败：' + (e && e.message ? e.message : '网络错误'));
+      });
+  }
+  function locatorTimeText(ts) {
+    var n = Number(ts);
+    if (!n || isNaN(n)) return String(ts || '');
+    var d = new Date(n);
+    if (isNaN(d.getTime())) return String(ts);
+    function p(v) { return v < 10 ? '0' + v : '' + v; }
+    return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()) + ' ' +
+      p(d.getHours()) + ':' + p(d.getMinutes()) + ':' + p(d.getSeconds());
+  }
+  function locatorAmapURL() {
+    var f = state.locatorFix;
+    if (!f || !f.lat || !f.lng) return '';
+    return 'https://uri.amap.com/marker?position=' + f.lng + ',' + f.lat +
+      '&name=' + encodeURIComponent('定位器 · ' + (f.device || '')) + '&src=organizer&callnative=1';
+  }
   function linkHTML() {
     var expanded = state.link.mapExpanded;
     var abilities = [
@@ -1539,6 +1629,20 @@
           '<div class="map-pin"></div><div class="map-bubble">你在这里</div>' +
         '</div>' +
         '<div class="map-address">6栋学生宿舍 · 2层 · 101</div>' +
+      '</div>' +
+      '<div class="link-card locator-card">' +
+        '<div class="bold">定位器实时位置（云知行）</div>' +
+        '<div class="muted small">定位服务已内置，打开即可查看，无需安装云知行或填写任何地址。</div>' +
+        '<div class="locator-btns">' +
+          '<button class="map-primary" data-action="refresh-locator">' + tr('刷新位置') + '</button>' +
+          '<button class="map-ghost" data-action="open-locator-link"' + (locatorAmapURL() ? '' : ' disabled') + '>' + tr('高德打开') + '</button>' +
+        '</div>' +
+        '<div class="locator-result">' + (state.locatorLoading ? tr('正在读取位置…') :
+          (state.locatorFix
+            ? '<div>纬度 <b>' + state.locatorFix.lat + '</b> · 经度 <b>' + state.locatorFix.lng + '</b></div>' +
+              '<div class="muted small">' + tr('定位时间：') + escapeHTML(locatorTimeText(state.locatorFix.time)) +
+              (state.locatorFix.battery !== '' && state.locatorFix.battery != null ? ' · ' + tr('电量：') + escapeHTML(String(state.locatorFix.battery)) : '') + '</div>'
+            : '<div class="muted small">' + tr('正在读取位置…') + '</div>')) + '</div>' +
       '</div>' +
       '<div class="section-title">设备<button class="add-device" data-action="add-device-hint">＋ 添加设备</button></div>' +
       '<div class="link-card device-card">' +
@@ -2260,6 +2364,20 @@
       case 'map-plan':
         openInfo('地图方案', '当前使用高德地图 URI 直接唤起本机高德 App；未安装时自动回退到网页版。本机版无需申请 Key。');
         break;
+      case 'save-locator-link':
+        saveLocatorLink(($('#locator-link') || {}).value || '', ($('#locator-api') || {}).value || '');
+        break;
+      case 'refresh-locator': refreshLocator(); break;
+      case 'open-locator-link':
+        var target = locatorAmapURL() || state.locatorShare;
+        if (!target) { toast('请先保存并刷新位置'); break; }
+        if (typeof window !== 'undefined' && window.open) window.open(target, '_blank', 'noopener,noreferrer');
+        break;
+      case 'clear-locator-link':
+        state.locatorShare = '';
+        try { localStorage.removeItem(LOCATOR_KEY); } catch (e) {}
+        render(); toast('已清除定位器链接');
+        break;
       case 'add-device-hint': toast('添加设备在本机版为演示'); break;
       case 'device-hint': toast((el.getAttribute('data-name') || '该功能') + '在本机版为演示'); break;
       case 'me-info': openInfo(el.getAttribute('data-title') || '提示', el.getAttribute('data-body') || ''); break;
@@ -2572,6 +2690,7 @@
       var parsedAlerts = rawAlerts ? JSON.parse(rawAlerts) : [];
       state.alertDeletedIds = Array.isArray(parsedAlerts) ? parsedAlerts : (rawAlerts ? [rawAlerts] : []);
     } catch (e) { state.alertDeletedIds = []; }
+    loadLocatorLink();
     if (typeof window !== 'undefined' && window.location && window.location.hash === '#register') state.view = 'register';
     bindEvents();
     applyTheme();
