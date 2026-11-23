@@ -6,13 +6,18 @@
   'use strict';
 
   /* ---------------- 常量 ---------------- */
-  var APP_VERSION = '2.22';
+  var APP_VERSION = '2.23';
   var DB_KEY = 'organizer_local_v2';
   var PREF_KEY = 'organizer_pref_v2';
   var HISTORY_KEY = 'organizer_search_history_v2';
   var ALERT_KEY = 'organizer_alert_deleted_v2';
 
   var APP_VERSION_CHANGELOG = [
+    { version: '2.23', date: '2026-11-23', title: '全页滚动与分类独立页', items: [
+      '所有页面内容超出即可滚动；我的头像下移到与设备联动标题同高',
+      '分类字母改为拼音首字母自动识别（哭→K）并按 A-Z 排列；分类点进去为独立分组页，不再跳首页',
+      '分类管理添加框移到最上面；主题绿色全部换成更柔和的配色；高德按钮与地图留间距、联动加号加大'
+    ] },
     { version: '2.22', date: '2026-11-23', title: '宫格对齐与更新修复', items: [
       '分类页图标和文字改为中心对齐、等距排列；底部只保留“按状态快速查看物品”',
       '首页搜索框占位文字只保留“搜索”；版本弹窗新增“刷新检查更新”，资源加版本号避免浏览器缓存'
@@ -151,7 +156,7 @@
     '盖':'G','感':'G','高':'G','工':'G','公':'G','购':'G','固':'G','关':'G','光':'G','果':'G','膏':'G',
     '海':'H','孩':'H','盒':'H','护':'H','花':'H','化':'H','黄':'H','会':'H','货':'H',
     '机':'J','家':'J','价':'J','键':'J','件':'J','教':'J','金':'J','进':'J','酒':'J','具':'J','记':'J',
-    '咖':'K','卡':'K','考':'K','课':'K','口':'K','裤':'K','快':'K','矿':'K',
+    '咖':'K','卡':'K','考':'K','课':'K','口':'K','裤':'K','快':'K','矿':'K','哭':'K',
     '拉':'L','蓝':'L','冷':'L','离':'L','里':'L','零':'L','领':'L','脸':'L','粮':'L','料':'L','林':'L','旅':'L','绿':'L',
     '妈':'M','猫':'M','毛':'M','美':'M','门':'M','面':'M','母':'M','木':'M','目':'M','米':'M','民':'M',
     '奶':'N','男':'N','内':'N','能':'N','农':'N','女':'N','牛':'N',
@@ -165,13 +170,28 @@
     '牙':'Y','烟':'Y','药':'Y','衣':'Y','饮':'Y','游':'Y','有':'Y','油':'Y','鱼':'Y','语':'Y','元':'Y','运':'Y',
     '杂':'Z','纸':'Z','指':'Z','中':'Z','周':'Z','主':'Z','住':'Z','专':'Z','自':'Z','总':'Z'
   };
+  var PINYIN_ANCHORS = [
+    ['A', '阿'], ['B', '波'], ['C', '擦'], ['D', '得'], ['E', '鹅'], ['F', '发'], ['G', '噶'], ['H', '哈'],
+    ['J', '击'], ['K', '喀'], ['L', '垃'], ['M', '妈'], ['N', '拿'], ['O', '哦'], ['P', '啪'], ['Q', '期'],
+    ['R', '然'], ['S', '撒'], ['T', '塌'], ['W', '挖'], ['X', '昔'], ['Y', '压'], ['Z', '匝']
+  ];
+  function pinyinInitialOf(ch) {
+    if (/[a-z]/i.test(ch)) return ch.toUpperCase();
+    if (PINYIN_INITIALS[ch]) return PINYIN_INITIALS[ch];
+    if (ch && ch.localeCompare) {
+      var best = '';
+      for (var i = 0; i < PINYIN_ANCHORS.length; i++) {
+        try { if (ch.localeCompare(PINYIN_ANCHORS[i][1], 'zh-CN') >= 0) best = PINYIN_ANCHORS[i][0]; } catch (e) {}
+      }
+      if (best) return best;
+    }
+    return ch.toUpperCase();
+  }
   function categoryLetter(name) {
     var f = String(name || '').trim();
     if (!f) return '#';
     if (CATEGORY_LETTERS[f]) return CATEGORY_LETTERS[f];
-    var ch = f.charAt(0);
-    if (PINYIN_INITIALS[ch]) return PINYIN_INITIALS[ch];
-    return /[a-z]/i.test(ch) ? ch.toUpperCase() : ch;
+    return pinyinInitialOf(f.charAt(0));
   }
   var CATEGORY_COLORS = ['#e07a5f', '#8ab17d', '#d9a441', '#7a9cc6', '#a98cc6', '#6fb1a8'];
   var UNITS = ['件', '卷', '包', '盒', '瓶', '块', '支', '罐', '袋', '个', '双', '片', '颗', '杯', '桶', '节', '粒', '自定义'];
@@ -539,6 +559,7 @@
     homeQuery: '',
     homeFocused: false,
     categoryFrom: '',
+    groupCategory: '',
     crop: null
   };
 
@@ -842,13 +863,13 @@
     }
 
     var titles = {
-      me: '我的', prefs: '显示偏好', categoryManage: '分类管理',
+      me: '我的', prefs: '显示偏好', categoryManage: '分类管理', categoryGroup: state.groupCategory || '分类',
       form: state.editingId ? '编辑物品' : '新增物品', itemDetail: '物品详情',
       tutorial: '新手教程', password: '修改密码', achievement: '成就等级', register: '注册',
       notifications: '通知中心', alerts: '到期提醒'
     };
     var title = titles[state.view] || '寻迹';
-    var showBack = ['prefs', 'categoryManage', 'itemDetail', 'tutorial', 'password', 'achievement', 'register', 'notifications', 'alerts'].indexOf(state.view) >= 0;
+    var showBack = ['prefs', 'categoryManage', 'categoryGroup', 'itemDetail', 'tutorial', 'password', 'achievement', 'register', 'notifications', 'alerts'].indexOf(state.view) >= 0;
     var headerClass = state.view === 'me' ? 'header-row me-header' : 'header-row';
     header.innerHTML = status +
       '<div class="' + headerClass + '">' +
@@ -1125,6 +1146,7 @@
     else if (state.view === 'form') view.innerHTML = formHTML();
     else if (state.view === 'prefs') view.innerHTML = prefsHTML();
     else if (state.view === 'categoryManage') view.innerHTML = categoryManageHTML();
+    else if (state.view === 'categoryGroup') view.innerHTML = categoryGroupHTML();
     else if (state.view === 'itemDetail') view.innerHTML = itemDetailHTML();
     else if (state.view === 'tutorial') view.innerHTML = tutorialHTML();
     else if (state.view === 'password') view.innerHTML = passwordHTML();
@@ -1557,10 +1579,21 @@
     var letters = sorted.map(letterOf).filter(function (v, i, a) { return a.indexOf(v) === i; }).sort();
     return '<div class="page category-page">' +
       '<div class="section-title">物品分类<span class="muted small">按字母排序</span></div>' +
+      '<div class="category-add"><input id="new-folder-input" placeholder="输入自定义分类名"><button data-action="add-folder">添加</button></div>' +
       '<div class="category-list">' + rows + '</div>' +
       '<div class="alpha-index">' + letters.map(function (l) { return '<span>' + l + '</span>'; }).join('') + '</div>' +
-      '<div class="category-add"><input id="new-folder-input" placeholder="输入自定义分类名"><button data-action="add-folder">添加</button></div>' +
     '</div>';
+  }
+
+  /* ---------------- 分类分组独立页 ---------------- */
+  function categoryGroupHTML() {
+    var cat = state.groupCategory || '';
+    var list = sortItems(getItems().filter(function (it) { return !it.trashed && it.folder === cat; }));
+    var body = list.length
+      ? '<div class="item-list">' + list.map(itemCardHTML).join('') + '</div>'
+      : '<div class="empty"><div class="empty-emoji">🗂️</div><div class="empty-text">' + tr('该分类还没有物品') + '</div></div>';
+    return '<div class="page group-page"><div class="section-title">' + escapeHTML(cat) +
+      '<span class="muted small">' + list.length + ' ' + tr('件物品') + '</span></div>' + body + '</div>';
   }
 
   /* ---------------- 物品详情 ---------------- */
@@ -1929,6 +1962,17 @@
     state.selectedIds = [];
     render();
   }
+  function openCategoryGroup(cat) {
+    pushView();
+    state.groupCategory = cat;
+    state.view = 'categoryGroup';
+    state.sheet = null;
+    state.overlay = null;
+    state.sidebarOpen = false;
+    state.multiSelect = false;
+    state.selectedIds = [];
+    render();
+  }
   function openItem(id) {
     if (state.multiSelect) { toggleSelect(id); return; }
     pushView();
@@ -2158,27 +2202,8 @@
       case 'select-all': selectAll(); break;
       case 'delete-selected': deleteSelected(); break;
       case 'set-category': setCategory(el.getAttribute('data-cat')); break;
-      case 'quick-category':
-        pushView();
-        state.categoryFrom = 'quick';
-        state.category = el.getAttribute('data-cat');
-        state.view = 'home';
-        state.sidebarOpen = false;
-        state.multiSelect = false;
-        state.selectedIds = [];
-        state.homeQuery = '';
-        render();
-        break;
-      case 'open-category-detail':
-        pushView();
-        state.categoryFrom = 'categoryManage';
-        state.category = el.getAttribute('data-cat');
-        state.view = 'home';
-        state.sidebarOpen = false;
-        state.multiSelect = false;
-        state.selectedIds = [];
-        state.homeQuery = '';
-        render();
+      case 'quick-category': case 'open-category-detail':
+        openCategoryGroup(el.getAttribute('data-cat'));
         break;
       case 'open-prefs': case 'go-prefs': openView('prefs'); break;
       case 'go-me': openView('me'); break;
