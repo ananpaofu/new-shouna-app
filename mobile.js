@@ -6,13 +6,17 @@
   'use strict';
 
   /* ---------------- 常量 ---------------- */
-  var APP_VERSION = '2.18';
+  var APP_VERSION = '2.19';
   var DB_KEY = 'organizer_local_v2';
   var PREF_KEY = 'organizer_pref_v2';
   var HISTORY_KEY = 'organizer_search_history_v2';
   var ALERT_KEY = 'organizer_alert_deleted_v2';
 
   var APP_VERSION_CHANGELOG = [
+    { version: '2.19', date: '2026-11-23', title: '第二页改为分类导航', items: [
+      '第二个标签由“搜索”改为“分类”，图标换成九宫格；页面放全部/最佳/临期/过期/已开封/库存/回收站/物品分类图标，点按直达',
+      '分类页左上角有页面小标题和图标；首页搜索框灰色加深；搜索仍用首页搜索框'
+    ] },
     { version: '2.18', date: '2026-11-23', title: '滚动与卡片细节补齐', items: [
       '首页标题栏改为随内容一起滚动，只有底部五个图标固定；我的页/搜索页顶部空白收起，头像上移',
       '照片裁剪入口明确为“自定义裁剪”，只保留自由裁剪一种方式；成就卡面增加等级标与纹理'
@@ -845,7 +849,7 @@
     var filtered = state.category !== 'all';
     return '<div class="header-row home-header">' +
       (filtered
-        ? '<button class="icon-btn back-home" data-action="' + (state.categoryFrom === 'categoryManage' ? 'go-back' : 'back-to-all') + '" aria-label="返回" title="返回"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m14 5-7 7 7 7"/></svg></button>'
+        ? '<button class="icon-btn back-home" data-action="' + (state.categoryFrom === 'categoryManage' || state.categoryFrom === 'quick' ? 'go-back' : 'back-to-all') + '" aria-label="返回" title="返回"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m14 5-7 7 7 7"/></svg></button>'
         : '<button class="icon-btn" data-action="open-sidebar" aria-label="菜单"><span class="menu-lines"><i></i><i></i><i></i></span></button>') +
       '<div class="home-title">' + escapeHTML(categoryLabel()) + '</div>' +
       '<div class="header-actions"></div>' +
@@ -856,7 +860,7 @@
   function navSVG(key) {
     var m = {
       home: '<path d="M4 10 12 3.5 20 10v9h-5.5v-5.5h-5V19H4z"/>',
-      search: '<circle cx="11" cy="11" r="6.5"/><path d="m16 16 4 4"/>',
+      search: '<rect x="4" y="4" width="7" height="7" rx="1.6"/><rect x="13" y="4" width="7" height="7" rx="1.6"/><rect x="4" y="13" width="7" height="7" rx="1.6"/><rect x="13" y="13" width="7" height="7" rx="1.6"/>',
       link: '<circle cx="12" cy="12" r="2"/><path d="M8.5 8.5a5 5 0 0 0 0 7M15.5 8.5a5 5 0 0 1 0 7M5.5 5.5a9 9 0 0 0 0 13M18.5 5.5a9 9 0 0 1 0 13"/>',
       me: '<circle cx="12" cy="8" r="3.6"/><path d="M5 20a7 7 0 0 1 14 0"/>'
     };
@@ -867,7 +871,7 @@
     if (state.view === 'form') { $('#bottom-nav').innerHTML = ''; return; }
     var tabs = [
       { key: 'home', label: '首页' },
-      { key: 'search', label: '搜索' },
+      { key: 'search', label: '分类' },
       { key: 'add', label: '' },
       { key: 'link', label: '联动' },
       { key: 'me', label: '我的' }
@@ -1147,47 +1151,34 @@
     document.querySelector('.device-screen').appendChild(wrap);
   }
 
-  /* ---------------- 搜索页 ---------------- */
+  /* ---------------- 分类导航页（原搜索页） ---------------- */
   function searchHTML() {
-    var q = state.searchQuery.trim();
-    var kw = q.toLowerCase();
-    var list = [];
-    if (q) {
-      list = getItems().filter(function (it) {
-        if (it.trashed) return false;
-        var text = [it.name, it.folder, it.unit, it.location, it.note].join(' ').toLowerCase();
-        return text.indexOf(kw) >= 0;
-      });
+    var items = getItems();
+    function count(fn) { return items.filter(function (it) { return !it.trashed && fn(it); }).length; }
+    var counts = {
+      all: items.filter(function (it) { return !it.trashed; }).length,
+      best: count(function (it) { var d = daysUntil(it.expiry); return d != null && d > 7; }),
+      soon: count(function (it) { var d = daysUntil(it.expiry); return d != null && d >= 0 && d <= 7; }),
+      expired: count(function (it) { var d = daysUntil(it.expiry); return d != null && d < 0; }),
+      opened: count(function (it) { return !!it.opened; }),
+      stock: items.filter(function (it) { return !it.trashed; }).length,
+      trash: items.filter(function (it) { return !!it.trashed; }).length
+    };
+    function tile(emoji, label, cnt, action, cat) {
+      return '<button class="quick-tile" data-action="' + action + '"' + (cat ? ' data-cat="' + escapeHTML(cat) + '"' : '') + '>' +
+        '<span class="quick-icon"><span class="quick-emoji">' + emoji + '</span>' +
+          (cnt != null ? '<span class="quick-count">' + cnt + '</span>' : '') + '</span>' +
+        '<span class="quick-name">' + escapeHTML(label) + '</span></button>';
     }
-    var body;
-    if (q) {
-      body = list.length
-        ? '<div class="item-list search-results">' + sortItems(list).map(itemCardHTML).join('') + '</div>'
-        : '<div class="search-empty"><div class="big-search-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m15.5 15.5 5 5"/></svg></div><div class="empty-title">没有找到相关物品</div></div>';
-    } else {
-      var history = state.searchHistory.length
-        ? '<div class="search-history-block"><div class="section-title">搜索历史' +
-          (state.searchHistory.length > 6 ? '<span class="history-tools"><button class="more" data-action="toggle-search-history">' + (state.searchHistoryExpanded ? tr('收起') : tr('展开')) + '</button><span class="more" data-action="clear-search-history">清空</span></span>' : '<span class="more" data-action="clear-search-history">清空</span>') +
-          '</div><div class="search-history">' + state.searchHistory.slice(0, state.searchHistoryExpanded ? 10 : 6).map(function (h) {
-            return '<button class="history-chip" data-action="search-term" data-term="' + escapeHTML(h) + '">' + escapeHTML(h) + '</button>';
-          }).join('') + '</div></div>'
-        : '';
-      body = '<div class="search-empty">' +
-        '<div class="big-search-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m15.5 15.5 5 5"/></svg></div>' +
-        '<div class="empty-title">暂无搜索历史</div>' +
-        '<div class="empty-sub">输入任何内容或扫一扫开始搜索</div>' +
-        (state.searchFocused ? '<button class="voice-btn' + (state.recognizing ? ' recording' : '') + '" data-action="voice-search">🎤 ' + (state.recognizing ? '正在聆听…' : '按住语音搜索') + '</button>' : '') +
-        '</div>' + history;
-    }
-    var placeholder = state.searchFocused ? '搜索物品记录、分类、位置等' : '快速搜索';
-    return '<div class="page search-page">' +
-      '<div class="search-top">' +
-        '<div class="search-bar' + (state.searchFocused ? ' focused' : '') + '" data-action="focus-search">' +
-          '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4 4"/></svg>' +
-          '<input id="search-input" type="search" autocomplete="off" placeholder="' + placeholder + '" value="' + escapeHTML(q) + '">' +
-        '</div>' +
-        (state.searchFocused ? '<button class="search-cancel" data-action="cancel-search">取消</button>' : '') +
-      '</div>' + body + '</div>';
+    var tiles = MAIN_CATEGORIES.map(function (c) {
+      return tile(c.emoji, c.label, counts[c.key], 'quick-category', c.key);
+    }).join('') + tile('#️⃣', '物品分类', null, 'manage-categories', '');
+    return '<div class="page quick-page">' +
+      '<div class="quick-head"><span class="quick-head-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="4" y="4" width="7" height="7" rx="1.6"/><rect x="13" y="4" width="7" height="7" rx="1.6"/><rect x="4" y="13" width="7" height="7" rx="1.6"/><rect x="13" y="13" width="7" height="7" rx="1.6"/></svg></span>' +
+        '<span class="quick-head-title">' + tr('分类') + '</span></div>' +
+      '<div class="quick-grid">' + tiles + '</div>' +
+      '<div class="quick-foot">' + tr('按状态快速查看物品，直接搜索请用首页搜索框') + '</div>' +
+    '</div>';
   }
 
   /* ---------------- 通知中心 ---------------- */
@@ -2149,6 +2140,17 @@
       case 'select-all': selectAll(); break;
       case 'delete-selected': deleteSelected(); break;
       case 'set-category': setCategory(el.getAttribute('data-cat')); break;
+      case 'quick-category':
+        pushView();
+        state.categoryFrom = 'quick';
+        state.category = el.getAttribute('data-cat');
+        state.view = 'home';
+        state.sidebarOpen = false;
+        state.multiSelect = false;
+        state.selectedIds = [];
+        state.homeQuery = '';
+        render();
+        break;
       case 'open-category-detail':
         pushView();
         state.categoryFrom = 'categoryManage';
