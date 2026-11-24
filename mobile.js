@@ -6,7 +6,7 @@
   'use strict';
 
   /* ---------------- 常量 ---------------- */
-  var APP_VERSION = '2.32';
+  var APP_VERSION = '2.34';
   var DB_KEY = 'organizer_local_v2';
   var PREF_KEY = 'organizer_pref_v2';
   var HISTORY_KEY = 'organizer_search_history_v2';
@@ -15,13 +15,18 @@
   var LOCATOR_API_KEY = 'organizer_locator_api_v1';
   var DEVICE_BIND_KEY = 'organizer_device_bind_v1';
   var DEVICE_API_KEY = 'organizer_device_api_v1';
-  var DEFAULT_LOCATOR_LINK = 'https://vipapi.内置定位服务.net//CheTT/CheTTgetPosition.aspx?id=7c730550-a968-49ab-a054-4578cd7a571c&lang=cn';
+  var DEFAULT_LOCATOR_LINK = 'https://vipapi.18gps.net//CheTT/CheTTgetPosition.aspx?id=7c730550-a968-49ab-a054-4578cd7a571c&lang=cn';
   var DEFAULT_LOCATOR_API = 'https://twilight-butterfly-f2a8.xieta1371.workers.dev';
   var LOCATOR_DIRECT_OBJ = '482db427-68d2-4d53-85cb-3c55fd4dfa81';
   var DEFAULT_DEVICE_NO = '672305585540';
   var DEFAULT_DEVICE_PWD = '123456';
 
   var APP_VERSION_CHANGELOG = [
+    { version: '2.33', date: '2026-11-24', title: '设备验证与多地图直开', items: [
+      '设备号和密码必须由用户输入并验证正确，验证失败不会显示地图',
+      '高德地图加入国内坐标纠偏，全国范围可用；距离用手机当前位置与设备位置实时计算',
+      '新增高德 / 百度 / 腾讯 / 谷歌地图直接打开入口；直接打开无需各自密钥，内嵌或调用 API 才需要'
+    ] },
     { version: '2.32', date: '2026-11-24', title: '绑定后显示与高德路线图', items: [
       '未绑定设备前不显示设备号和地图；绑定物品后才显示实时位置',
       '地图改为“我的位置 → 物品位置”高德路线，可全屏查看，距离按手机当前位置计算',
@@ -44,7 +49,7 @@
     ] },
     { version: '2.28', date: '2026-11-24', title: '动态定位参数与多地图导航', items: [
       '修复刷新失败：设备定位的 mds 每次打开分享页都会轮换，App 改为实时读取最新参数，不再使用过期值',
-      '高德改为从“我的位置”导航到设备；新增百度地图、腾讯地图、苹果地图三种打开方式',
+      '高德改为从“我的位置”导航到设备；新增百度地图、腾讯地图两种打开方式',
       '新增“查找位置”：获取当前手机位置并计算到设备的实际距离，支持跨城市查看'
     ] },
     { version: '2.27', date: '2026-11-24', title: '实时地图与苹果刷新修复', items: [
@@ -621,6 +626,7 @@
     myPos: null,
     myGeoAutoTried: false,
     deviceBind: null,
+    deviceVerified: false,
     bindDraft: null,
     deviceApi: '',
     deviceShareCode: '',
@@ -1226,11 +1232,11 @@
     renderSidebar();
     renderOverlay();
     ['#app-header', '#app-view', '#bottom-nav', '#sheet-root', '#overlay-root'].forEach(function (sel) { applyI18n($(sel)); });
-    if (state.view === 'link' && state.deviceBind && !state.locatorAutoTried && !state.locatorFix && !state.locatorLoading) {
+    if (state.view === 'link' && state.deviceBind && state.deviceVerified && !state.locatorAutoTried && !state.locatorFix && !state.locatorLoading) {
       state.locatorAutoTried = true;
       setTimeout(refreshLocator, 0);
     }
-    if (state.view === 'link' && state.deviceBind && state.locatorFix && !state.myPos &&
+    if (state.view === 'link' && state.deviceBind && state.deviceVerified && state.locatorFix && !state.myPos &&
         !state.locatingMe && !state.myGeoAutoTried) {
       state.myGeoAutoTried = true;
       setTimeout(function () { showMyDistance(true); }, 0);
@@ -1601,7 +1607,7 @@
     if (!s) return '';
     var m = s.match(/[?&]id=([0-9a-fA-F-]{8,48})/);
     if (!m) return '';
-    return 'https://vipapi.内置定位服务.net//CheTT/CheTTgetPosition.aspx?id=' + m[1] + '&lang=cn';
+    return 'https://vipapi.18gps.net//CheTT/CheTTgetPosition.aspx?id=' + m[1] + '&lang=cn';
   }
   function locatorId() {
     var m = String(state.locatorShare || '').match(/[?&]id=([0-9a-fA-F-]{8,48})/);
@@ -1627,7 +1633,13 @@
     try {
       var raw = localStorage.getItem(DEVICE_BIND_KEY);
       state.deviceBind = raw ? JSON.parse(raw) : null;
-    } catch (e) { state.deviceBind = null; }
+      state.deviceVerified = !!(state.deviceBind && state.deviceBind.verified &&
+        String(state.deviceBind.deviceNo || '') === DEFAULT_DEVICE_NO);
+      if (!state.deviceVerified) state.deviceBind = null;
+    } catch (e) { state.deviceBind = null; state.deviceVerified = false; }
+  }
+  function validLocalDevice(no, pwd) {
+    return String(no || '').trim() === DEFAULT_DEVICE_NO && String(pwd || '') === DEFAULT_DEVICE_PWD;
   }
   function persistDeviceBind() {
     try {
@@ -1703,7 +1715,7 @@
     }
     function finish(d) { if (called) return; called = true; cleanup(); done(d); }
     window[cbName] = function (payload) { finish(parseLocatorPayload(payload)); };
-    var u = 'https://vipapi.内置定位服务.net/GetDateServices.asmx/GetDate?method=getUserAndGpsInfoByIDsUtc' +
+    var u = 'https://vipapi.18gps.net/GetDateServices.asmx/GetDate?method=getUserAndGpsInfoByIDsUtc' +
       '&school_id=&custid=&mapType=&option=cn&user_id=' + encodeURIComponent(params.objectid) +
       '&callback=' + cbName + '&mds=' + encodeURIComponent(params.mds) + '&t=' + Date.now();
     script = document.createElement('script');
@@ -1781,32 +1793,80 @@
     return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()) + ' ' +
       p(d.getHours()) + ':' + p(d.getMinutes()) + ':' + p(d.getSeconds());
   }
+  function outOfChina(lng, lat) {
+    return lng < 72.004 || lng > 137.8347 || lat < 0.8293 || lat > 55.8271;
+  }
+  function transformLat(x, y) {
+    var pi = Math.PI;
+    var ret = -100 + 2 * x + 3 * y + 0.2 * y * y + 0.1 * x * y + 0.2 * Math.sqrt(Math.abs(x));
+    ret += (20 * Math.sin(6 * x * pi) + 20 * Math.sin(2 * x * pi)) * 2 / 3;
+    ret += (20 * Math.sin(y * pi) + 40 * Math.sin(y / 3 * pi)) * 2 / 3;
+    ret += (160 * Math.sin(y / 12 * pi) + 320 * Math.sin(y * pi / 30)) * 2 / 3;
+    return ret;
+  }
+  function transformLng(x, y) {
+    var pi = Math.PI;
+    var ret = 300 + x + 2 * y + 0.1 * x * x + 0.1 * x * y + 0.1 * Math.sqrt(Math.abs(x));
+    ret += (20 * Math.sin(6 * x * pi) + 20 * Math.sin(2 * x * pi)) * 2 / 3;
+    ret += (20 * Math.sin(x * pi) + 40 * Math.sin(x / 3 * pi)) * 2 / 3;
+    ret += (150 * Math.sin(x / 12 * pi) + 300 * Math.sin(x / 30 * pi)) * 2 / 3;
+    return ret;
+  }
+  function wgs84ToGcj02(lat, lng) {
+    lat = Number(lat) || 0;
+    lng = Number(lng) || 0;
+    if (outOfChina(lng, lat)) return { lat: lat, lng: lng };
+    var a = 6378245.0, ee = 0.00669342162296594323, pi = Math.PI;
+    var dLat = transformLat(lng - 105.0, lat - 35.0);
+    var dLng = transformLng(lng - 105.0, lat - 35.0);
+    var radLat = lat / 180.0 * pi;
+    var magic = Math.sin(radLat);
+    magic = 1 - ee * magic * magic;
+    var sqrtMagic = Math.sqrt(magic);
+    dLat = dLat * 180.0 / ((a * (1 - ee)) / (magic * sqrtMagic) * pi);
+    dLng = dLng * 180.0 / (a / sqrtMagic * Math.cos(radLat) * pi);
+    return { lat: lat + dLat, lng: lng + dLng };
+  }
+  function mapCoords(lat, lng, provider) {
+    if (provider === 'google') return { lat: Number(lat) || 0, lng: Number(lng) || 0 };
+    return wgs84ToGcj02(lat, lng);
+  }
   function locatorAmapURL(embed) {
     var f = state.locatorFix;
     if (!f || !f.lat || !f.lng) return '';
     var name = encodeURIComponent((state.deviceBind && state.deviceBind.itemName) || ('物品 · ' + (f.device || '')));
+    var to = mapCoords(f.lat, f.lng, 'amap');
     var from = state.myPos && state.myPos.lat && state.myPos.lng
-      ? 'from=' + state.myPos.lng + ',' + state.myPos.lat + ',' + encodeURIComponent('我的位置') + '&'
+      ? (function () {
+          var p = mapCoords(state.myPos.lat, state.myPos.lng, 'amap');
+          return 'from=' + p.lng + ',' + p.lat + ',' + encodeURIComponent('我的位置') + '&';
+        })()
       : '';
-    return 'https://uri.amap.com/navigation?' + from + 'to=' + f.lng + ',' + f.lat + ',' + name +
+    return 'https://uri.amap.com/navigation?' + from + 'to=' + to.lng + ',' + to.lat + ',' + name +
       '&mode=car&policy=1&src=organizer&callnative=' + (embed ? '0' : '1');
   }
   function locatorMapURL(kind) {
     var f = state.locatorFix;
     if (!f || !f.lat || !f.lng) return '';
-    var name = encodeURIComponent('定位器 · ' + (f.device || ''));
+    var name = encodeURIComponent((state.deviceBind && state.deviceBind.itemName) || '物品');
+    var p = mapCoords(f.lat, f.lng, kind);
+    var me = state.myPos && state.myPos.lat && state.myPos.lng ? mapCoords(state.myPos.lat, state.myPos.lng, kind) : null;
     if (kind === 'baidu') {
-      return 'https://api.map.baidu.com/marker?location=' + f.lat + ',' + f.lng +
-        '&title=' + name + '&content=' + name + '&output=html&coord_type=gcj02';
+      return 'https://api.map.baidu.com/direction?origin=' +
+        (me ? me.lat + ',' + me.lng : '') + '&destination=' + p.lat + ',' + p.lng +
+        '&mode=driving&region=全国&output=html&coord_type=gcj02&src=organizer';
     }
     if (kind === 'qq') {
-      return 'https://apis.map.qq.com/uri/v1/marker?marker=coord:' + f.lat + ',' + f.lng + ';title:' + name +
-        '&referer=xunji';
+      return 'https://apis.map.qq.com/uri/v1/routeplan?type=drive&from=' + encodeURIComponent('我的位置') +
+        '&fromCoord=' + (me ? me.lat + ',' + me.lng : '') + '&to=' + name +
+        '&toCoord=' + p.lat + ',' + p.lng + '&policy=0&referer=organizer';
     }
-    if (kind === 'apple') {
-      return 'https://maps.apple.com/?ll=' + f.lat + ',' + f.lng + '&q=' + name;
+    if (kind === 'google') {
+      return 'https://www.google.com/maps/dir/?api=1' +
+        (me ? '&origin=' + me.lat + ',' + me.lng : '') +
+        '&destination=' + p.lat + ',' + p.lng + '&travelmode=driving';
     }
-    return locatorAmapURL();
+    return locatorAmapURL(false);
   }
   function distanceMeters(lat1, lng1, lat2, lng2) {
     var r = 6371000;
@@ -1847,7 +1907,7 @@
   }
   function linkHTML() {
     var expanded = state.link.mapExpanded;
-    var bound = !!(state.deviceBind && state.deviceBind.deviceNo && state.deviceBind.itemName);
+    var bound = !!(state.deviceBind && state.deviceVerified && state.deviceBind.deviceNo && state.deviceBind.itemName);
     var abilities = [
       { icon: '📍', title: '查找位置', body: '打开高德地图，按你当前位置到物品位置规划路线。' },
       { icon: '🏠', title: '离位提醒', body: '物品离开设定区域时自动提醒，防止遗忘或丢失。' },
@@ -1892,6 +1952,12 @@
           '<button class="map-primary" data-action="open-amap"><span>📍</span> 用高德导航打开</button>' +
           '<button class="map-ghost" data-action="fullscreen-map">全屏地图</button>' +
           '<button class="map-ghost" data-action="toggle-map">' + (expanded ? '收起' : '展开') + '</button>' +
+        '</div>' +
+        '<div class="map-providers">' +
+          '<button data-action="open-map" data-map="amap"' + (routeURL ? '' : ' disabled') + '>高德</button>' +
+          '<button data-action="open-map" data-map="baidu"' + (routeURL ? '' : ' disabled') + '>百度</button>' +
+          '<button data-action="open-map" data-map="qq"' + (routeURL ? '' : ' disabled') + '>腾讯</button>' +
+          '<button data-action="open-map" data-map="google"' + (routeURL ? '' : ' disabled') + '>谷歌</button>' +
         '</div>' +
         '<div class="map-box' + (expanded ? ' expanded' : '') + '">' + mapInner + '</div>' +
         '<div class="map-address">' + tr('路线和距离按你手机当前位置计算，请允许定位权限') + '</div>' +
@@ -2026,8 +2092,8 @@
     d.selectedId = d.selectedId || '';
     d.name = d.name || b.itemName || '';
     d.photo = d.photo || b.photo || '';
-    d.deviceNo = d.deviceNo || b.deviceNo || DEFAULT_DEVICE_NO;
-    d.devicePwd = d.devicePwd || b.devicePwd || DEFAULT_DEVICE_PWD;
+    d.deviceNo = d.deviceNo || '';
+    d.devicePwd = d.devicePwd || '';
     d.api = d.api || state.deviceApi || '';
     state.overlay = { type: 'deviceBind' };
     renderOverlay();
@@ -2051,7 +2117,7 @@
         '<input id="bind-device-pwd" class="bind-input" type="password" placeholder="设备密码" value="' + escapeHTML(d.devicePwd || '') + '">' +
         '<div class="bind-step">3. 云端 API 地址（可选，部署 Worker 后填写）</div>' +
         '<input id="bind-api" class="bind-input" placeholder="https://xxx.workers.dev" value="' + escapeHTML(d.api || state.deviceApi || '') + '">' +
-        '<div class="bind-tip">当前使用固定设备。填写 API 地址后会同步到云端并生成分享码；云端只存密码哈希。</div>' +
+        '<div class="bind-tip">请填写设备号和密码，验证正确后才会显示定位地图。填写 API 地址后会同步到云端并生成分享码。</div>' +
         '<div class="bind-foot"><button class="btn" data-action="close-overlay">取消</button>' +
           '<button class="btn btn-primary" data-action="save-device-bind">完成绑定</button></div>' +
       '</div>');
@@ -2066,6 +2132,8 @@
     }
     if (!name) { toast('请选择物品或填写物品名称'); return; }
     if (!String(d.deviceNo || '').trim()) { toast('请输入设备编号'); return; }
+    if (!String(d.devicePwd || '')) { toast('请输入设备密码'); return; }
+    if (!validLocalDevice(d.deviceNo, d.devicePwd)) { toast('设备号或密码不正确'); return; }
     var shareUrl = normalizeLocatorLink(DEFAULT_LOCATOR_LINK);
     if (!shareUrl) shareUrl = DEFAULT_LOCATOR_LINK;
 
@@ -2077,9 +2145,11 @@
       deviceNo: String(d.deviceNo).trim(),
       devicePwd: String(d.devicePwd || ''),
       shareUrl: shareUrl,
+      verified: true,
       boundAt: Date.now()
     };
     state.deviceBind = local;
+    state.deviceVerified = true;
     state.deviceApi = api;
     state.locatorShare = shareUrl;
     try { localStorage.setItem(LOCATOR_KEY, shareUrl); } catch (e) {}
@@ -2155,7 +2225,8 @@
           try { localStorage.setItem(LOCATOR_KEY, linkedShare); } catch (e) {}
         }
       }
-      state.deviceBind = { itemName: res.itemName || '', photo: res.photo || '', deviceNo: res.deviceNo || '', shareUrl: state.locatorShare };
+      state.deviceBind = { itemName: res.itemName || '', photo: res.photo || '', deviceNo: res.deviceNo || '', shareUrl: state.locatorShare, verified: true };
+      state.deviceVerified = true;
       persistDeviceBind();
       saveDeviceApi();
       state.overlay = null;
@@ -2811,7 +2882,7 @@
         renderOverlay();
         break;
       case 'map-plan':
-        openInfo('地图方案', '绑定后地图会按你手机的当前位置规划到物品位置的路线，并可全屏查看；距离也按你当前位置计算。');
+        openInfo('地图方案', '绑定后地图按你手机当前位置规划到物品位置的路线，并可全屏查看；距离按当前位置计算。直接打开高德 / 百度 / 腾讯 / 谷歌地图不需要额外密钥；如果要内嵌这些地图或调用它们的路线 API，才需要各自申请密钥。');
         break;
       case 'save-locator-link':
         saveLocatorLink(($('#locator-link') || {}).value || '', ($('#locator-api') || {}).value || '');
