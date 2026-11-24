@@ -214,8 +214,15 @@ a { color: inherit; text-decoration: none; }
 .item-tags > * { flex: 0 0 auto; }
 .tag-yellow { padding: 2px 7px; border-radius: 5px; background: #fbf1cf; color: #8a6a1d; font-size: 11px; }
 .tag-gray { padding: 2px 7px; border-radius: 5px; background: #f1f1f1; color: var(--ink-3); font-size: 11px; }
+.tag-blue { padding: 2px 7px; border-radius: 5px; background: #eaf4ff; color: #2479c4; font-size: 11px; }
+.tag-orange { padding: 2px 7px; border-radius: 5px; background: #fff2df; color: #c87818; font-size: 11px; }
+.tag-red { padding: 2px 7px; border-radius: 5px; background: #ffeaea; color: #c62828; font-size: 11px; }
+.tag-purple { padding: 2px 7px; border-radius: 5px; background: #f2ecff; color: #6e4fb7; font-size: 11px; }
 .item-expiry { font-size: 12px; color: var(--ink-3); margin-top: 6px; }
-.item-time { font-size: 11px; color: var(--green); align-self: flex-start; margin-top: 2px; white-space: nowrap; }
+.item-side { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; flex: 0 0 auto; align-self: center; }
+.item-expired-badge { display: inline-flex; align-items: center; justify-content: center; padding: 3px 8px; border: 1px solid #f0b4b4; border-radius: 6px; background: #ffeaea; color: #c62828; font-size: 11px; font-weight: 700; white-space: nowrap; }
+:root[data-theme='dark'] .item-expired-badge { border-color: #6b3a3a; background: #3a2222; color: #ff9b9b; }
+.item-time { font-size: 11px; color: var(--green); margin-top: 0; white-space: nowrap; }
 .item-card.compact .item-thumb { width: 44px; height: 44px; font-size: 22px; }
 .item-card.compact { padding-top: 9px; padding-bottom: 9px; }
 
@@ -613,6 +620,10 @@ a { color: inherit; text-decoration: none; }
 .link-btn.ghost { background: var(--bg); color: var(--ink); border: 1px solid var(--line-2); }
 .link-row { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--line); font-size: 13px; }
 .link-row:last-child { border-bottom: none; }
+.stock-folder-row { justify-content: flex-start; gap: 8px; cursor: pointer; }
+.stock-folder-row:active { background: var(--bg-soft); }
+.stock-folder-row .muted { margin-left: auto; }
+.stock-folder-row .me-arrow { color: var(--ink-4); }
 
 /* 设备联动页 */
 .link-page .link-card { padding: 14px; }
@@ -737,16 +748,7 @@ body.map-full-open .app-header, body.map-full-open .app-view, body.map-full-open
 .device-icon img { width: 100%; height: 100%; border-radius: 9px; object-fit: cover; display: block; }
 .device-main { flex: 1; min-width: 0; }
 .online { font-size: 11px; color: var(--ink-3); background: var(--bg-soft); padding: 3px 8px; border-radius: 6px; }
-.device-stats { display: flex; gap: 24px; margin: 14px 0; font-size: 11px; color: var(--ink-3); }
-.device-stats > div { flex: 1; }
-.battery { height: 5px; width: 80%; background: var(--line-2); border-radius: 3px; margin-top: 6px; }
-.battery i { display: block; width: 82%; height: 100%; background: var(--ink-2); border-radius: 3px; }
-.signal { display: flex; align-items: flex-end; gap: 3px; height: 12px; margin-top: 4px; }
-.signal i { width: 4px; background: var(--ink-2); border-radius: 2px; }
-.signal i:nth-child(1) { height: 5px; }
-.signal i:nth-child(2) { height: 8px; }
-.signal i:nth-child(3) { height: 12px; }
-.device-actions { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.device-actions { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 10px; }
 .device-actions button { background: #f4f4f4; border-radius: 9px; padding: 8px 2px; min-height: 34px; display: flex; align-items: center; justify-content: center; text-align: center; font-size: 11px; line-height: 1.25; color: var(--ink-2); }
 .ability-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 12px; }
 .ability-card { background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 14px; }
@@ -873,7 +875,6 @@ input[type='time'], input[type='date'] { accent-color: var(--green); color-schem
 .link-page .map-card .map-live-info { margin: 6px 0 0; padding: 6px 8px; line-height: 1.55; }
 .link-page .section-title { margin-top: 10px; margin-bottom: 6px; }
 .link-page .device-card { padding: 10px 12px; }
-.link-page .device-stats { margin: 8px 0; }
 .link-page .device-actions button { padding: 6px 2px; min-height: 32px; }
 .link-page .ability-card { padding: 14px; }
 .link-page .ability-card p { line-height: 1.6; margin-top: 10px; }
