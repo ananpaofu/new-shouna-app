@@ -6,7 +6,7 @@
   'use strict';
 
   /* ---------------- 常量 ---------------- */
-  var APP_VERSION = '2.59';
+  var APP_VERSION = '2.60';
   var DB_KEY = 'organizer_local_v2';
   var PREF_KEY = 'organizer_pref_v2';
   var HISTORY_KEY = 'organizer_search_history_v2';
@@ -24,6 +24,10 @@
   var DEFAULT_DEVICE_API = 'https://device-api.xieta1371.workers.dev';
 
   var APP_VERSION_CHANGELOG = [
+    { version: '2.60', date: '2026-11-24', title: '绑定弹层方框统一', items: [
+      '绑定设备弹层内所有输入框、选择框、拍照预览框、拍照按钮和底部按钮统一为 46px 高度',
+      '拍照图片所在方框与设备号 / 密码输入框等高，页面视觉更整齐'
+    ] },
     { version: '2.59', date: '2026-11-24', title: '绑定弹层与分类全部优化', items: [
       '绑定设备标题略微下移，拍照预览框与右侧按钮边框等高对齐',
       '分类页“全部”入口不再跳到首页，仍留在分类导航，顶部标题显示“全部”',
