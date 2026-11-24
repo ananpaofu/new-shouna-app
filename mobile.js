@@ -6,7 +6,7 @@
   'use strict';
 
   /* ---------------- 常量 ---------------- */
-  var APP_VERSION = '2.26';
+  var APP_VERSION = '2.27';
   var DB_KEY = 'organizer_local_v2';
   var PREF_KEY = 'organizer_pref_v2';
   var HISTORY_KEY = 'organizer_search_history_v2';
@@ -15,8 +15,15 @@
   var LOCATOR_API_KEY = 'organizer_locator_api_v1';
   var DEFAULT_LOCATOR_LINK = 'https://vipapi.18gps.net//CheTT/CheTTgetPosition.aspx?id=7c730550-a968-49ab-a054-4578cd7a571c&lang=cn';
   var DEFAULT_LOCATOR_API = 'https://twilight-butterfly-f2a8.xieta1371.workers.dev';
+  var LOCATOR_DIRECT_MDS = 'eb9ae60f1f5e400bb0c17f328c0769c0';
+  var LOCATOR_DIRECT_OBJ = '482db427-68d2-4d53-85cb-3c55fd4dfa81';
 
   var APP_VERSION_CHANGELOG = [
+    { version: '2.27', date: '2026-11-24', title: '实时地图与苹果刷新修复', items: [
+      '联动页地图直接嵌入云知行分享页面，显示与云知行链接一致的实时地图和物品位置',
+      '苹果手机读取位置新增 5 秒超时和 18gps 直连备用，避免一直卡在“正在读取位置”',
+      '头像拍照或从相册选图后都可直接使用原图或自定义裁剪'
+    ] },
     { version: '2.26', date: '2026-11-23', title: '定位器免配置', items: [
       'Worker 地址和分享链接已内置到 App，打开联动页自动读取真实坐标，用户无需填写任何内容',
       '定位卡片只保留“刷新位置 / 高德打开”，进入页面自动加载'
@@ -1569,28 +1576,69 @@
     render();
     toast('定位器设置已保存');
   }
+  function parseLocatorPayload(payload) {
+    var key = payload && payload.key || {};
+    var rec = payload && payload.records && payload.records[0];
+    if (!rec) return { ok: false, error: '设备暂无定位数据' };
+    function idx(name, fallback) { return key[name] !== undefined ? key[name] : fallback; }
+    function num(v) { return Number(v || 0); }
+    return {
+      ok: true,
+      lat: num(rec[idx('lat', idx('weidu', 3))]),
+      lng: num(rec[idx('lng', idx('jingdu', 2))]),
+      time: rec[idx('datetime', 6)] || null,
+      speed: rec[idx('speed', idx('su', 8))] || '',
+      battery: rec[idx('battery', idx('electric', 20))] || '',
+      device: rec[idx('device', idx('user_name', 1))] || '',
+      expire: rec[idx('expire_date', 17)] || ''
+    };
+  }
+  function locatorJSONP(done) {
+    var cbName = 'locatorCb' + Date.now();
+    var script = null, timer = null, called = false;
+    function cleanup() {
+      if (script && script.parentNode) script.parentNode.removeChild(script);
+      if (timer) clearTimeout(timer);
+      try { delete window[cbName]; } catch (e) { window[cbName] = null; }
+    }
+    function finish(d) { if (called) return; called = true; cleanup(); done(d); }
+    window[cbName] = function (payload) { finish(parseLocatorPayload(payload)); };
+    var u = 'https://vipapi.18gps.net/GetDateServices.asmx/GetDate?method=getUserAndGpsInfoByIDsUtc' +
+      '&school_id=&custid=&mapType=&option=cn&user_id=' + encodeURIComponent(LOCATOR_DIRECT_OBJ.replace(/-/g, '')) +
+      '&callback=' + cbName + '&mds=' + encodeURIComponent(LOCATOR_DIRECT_MDS) + '&t=' + Date.now();
+    script = document.createElement('script');
+    script.src = u;
+    script.onerror = function () { finish({ ok: false, error: '网络读取失败' }); };
+    (document.head || document.body || document.documentElement).appendChild(script);
+    timer = setTimeout(function () { finish({ ok: false, error: '读取超时' }); }, 10000);
+  }
   function refreshLocator() {
     var id = locatorId();
     var api = state.locatorApi;
-    if (!api) { toast('请先填写 Cloudflare Worker 地址'); return; }
-    if (!id) { toast('分享链接无效，请重新粘贴'); return; }
+    if (!api) { toast('定位服务未配置'); return; }
+    if (!id) { toast('分享链接无效'); return; }
     state.locatorLoading = true;
     render();
+    var finished = false;
+    function finish(d) {
+      if (finished) return;
+      finished = true;
+      state.locatorLoading = false;
+      if (!d || !d.ok) {
+        render();
+        toast('读取位置失败：' + ((d && d.error) || '网络错误'));
+        return;
+      }
+      state.locatorFix = d;
+      render();
+      toast('位置已更新');
+    }
+    var fallback = setTimeout(function () { locatorJSONP(finish); }, 5000);
     var sep = api.indexOf('?') >= 0 ? '&' : '?';
     fetch(api + sep + 'id=' + encodeURIComponent(id) + '&t=' + Date.now(), { cache: 'no-store' })
       .then(function (r) { return r.json(); })
-      .then(function (d) {
-        state.locatorLoading = false;
-        if (!d || !d.ok) throw new Error((d && d.error) || '读取失败');
-        state.locatorFix = d;
-        render();
-        toast('位置已更新');
-      })
-      .catch(function (e) {
-        state.locatorLoading = false;
-        render();
-        toast('读取位置失败：' + (e && e.message ? e.message : '网络错误'));
-      });
+      .then(function (d) { clearTimeout(fallback); finish(d); })
+      .catch(function () { clearTimeout(fallback); locatorJSONP(finish); });
   }
   function locatorTimeText(ts) {
     var n = Number(ts);
@@ -1617,18 +1665,16 @@
     ];
     return '<div class="page link-page">' +
       '<div class="link-card">' +
-        '<div class="link-card-head"><div><div class="bold">我的实时位置</div><div class="muted small">6栋学生宿舍 · 2层 · 101</div></div>' +
+        '<div class="link-card-head"><div><div class="bold">定位器实时地图</div><div class="muted small">云知行实时位置 · 自动刷新</div></div>' +
           '<button class="map-toggle" data-action="toggle-map">' + (expanded ? '收起地图 ›' : '下拉展开地图 ›') + '</button></div>' +
         '<div class="map-actions">' +
           '<button class="map-primary" data-action="open-amap"><span>📍</span> 用高德地图打开</button>' +
           '<button class="map-ghost" data-action="toggle-map">' + (expanded ? '收起地图' : '展开地图') + '</button>' +
         '</div>' +
         '<div class="map-box' + (expanded ? ' expanded' : '') + '">' +
-          '<div class="map-blob blob-a"></div><div class="map-blob blob-b"></div><div class="map-blob blob-c"></div>' +
-          '<div class="map-road road-a"></div><div class="map-road road-b"></div>' +
-          '<div class="map-pin"></div><div class="map-bubble">你在这里</div>' +
+          '<iframe class="map-iframe" src="' + escapeHTML(state.locatorShare) + '" title="' + tr('定位器实时地图') + '"></iframe>' +
         '</div>' +
-        '<div class="map-address">6栋学生宿舍 · 2层 · 101</div>' +
+        '<div class="map-address">' + tr('地图来自云知行实时位置，每几秒自动刷新') + '</div>' +
       '</div>' +
       '<div class="link-card locator-card">' +
         '<div class="bold">定位器实时位置（云知行）</div>' +
@@ -2001,9 +2047,15 @@
     ctx.drawImage(img, -dx * k, -dy * k, drawW * k, drawH * k);
     var data;
     try { data = canvas.toDataURL('image/jpeg', 0.86); } catch (e) { toast('裁剪失败，请重试'); return; }
+    var target = state.crop.target || 'form';
     state.overlay = null; state.crop = null;
-    addPhoto(data);
-    toast('已裁剪并添加照片');
+    if (target === 'avatar') {
+      state.pref.avatar = data;
+      savePref(); render(); toast('头像已裁剪更新');
+    } else {
+      addPhoto(data);
+      toast('已裁剪并添加照片');
+    }
   }
 
   /* ---------------- 操作集合 ---------------- */
@@ -2357,8 +2409,8 @@
       case 'close-sheet': state.sheet = null; renderSheet(); break;
       case 'toggle-map': state.link.mapExpanded = !state.link.mapExpanded; render(); break;
       case 'open-amap':
-        var amap = 'https://uri.amap.com/marker?position=116.397428,39.90923&name=' +
-          encodeURIComponent('6栋学生宿舍 · 2层 · 101') + '&src=organizer&callnative=1';
+        var amap = locatorAmapURL() || ('https://uri.amap.com/marker?position=116.397428,39.90923&name=' +
+          encodeURIComponent('6栋学生宿舍 · 2层 · 101') + '&src=organizer&callnative=1');
         if (typeof window !== 'undefined' && window.location) window.location.href = amap;
         break;
       case 'map-plan':
@@ -2424,12 +2476,18 @@
       case 'restore-item': restoreExistingItem(id); break;
       case 'pick-image': var fileInput = $('#f-image-file'); if (fileInput) fileInput.click(); break;
       case 'use-photo-direct':
-        if (state.overlay && state.overlay.src) { var src = state.overlay.src; state.overlay = null; addPhoto(src); toast('已添加照片'); }
+        if (state.overlay && state.overlay.src) {
+          var src = state.overlay.src, target = state.overlay.target || 'form';
+          state.overlay = null;
+          if (target === 'avatar') { state.pref.avatar = src; savePref(); render(); toast('头像已更新'); }
+          else { addPhoto(src); toast('已添加照片'); }
+        }
         break;
       case 'crop-photo':
         if (state.overlay && state.overlay.src) {
-          state.crop = { src: state.overlay.src, scale: 1, x: 0, y: 0 };
-          state.overlay = { type: 'photoCrop', src: state.overlay.src };
+          var cropTarget = state.overlay.target || 'form';
+          state.crop = { src: state.overlay.src, scale: 1, x: 0, y: 0, target: cropTarget };
+          state.overlay = { type: 'photoCrop', src: state.overlay.src, target: cropTarget };
           renderOverlay();
         }
         break;
@@ -2651,13 +2709,14 @@
         e.target.value = '';
       }
       if (e.target && e.target.id === 'profile-image-file' && e.target.files && e.target.files[0]) {
-        var file = e.target.files[0];
-        var reader = new FileReader();
-        reader.onload = function () {
-          state.pref.avatar = String(reader.result);
-          savePref(); render(); toast('头像已更新');
+        var avatarFile = e.target.files[0];
+        var avatarReader = new FileReader();
+        avatarReader.onload = function () {
+          state.overlay = { type: 'photoChoice', src: String(avatarReader.result), target: 'avatar' };
+          renderOverlay();
         };
-        reader.readAsDataURL(file);
+        avatarReader.readAsDataURL(avatarFile);
+        e.target.value = '';
       }
     });
     document.addEventListener('focusin', function (e) {
