@@ -6,7 +6,7 @@
   'use strict';
 
   /* ---------------- 常量 ---------------- */
-  var APP_VERSION = '2.45';
+  var APP_VERSION = '2.46';
   var DB_KEY = 'organizer_local_v2';
   var PREF_KEY = 'organizer_pref_v2';
   var HISTORY_KEY = 'organizer_search_history_v2';
@@ -22,6 +22,11 @@
   var DEFAULT_DEVICE_PWD = '123456';
 
   var APP_VERSION_CHANGELOG = [
+    { version: '2.46', date: '2026-11-24', title: '简化地图弹窗', items: [
+      '地图内删除白色详细标签，只保留物品照片/图案弹窗',
+      '地图下方灰色距离文字后追加物品实时状态（静止 / 移动中）',
+      '地图可自由放大缩小，小窗口默认放大一级以显示更具体位置'
+    ] },
     { version: '2.45', date: '2026-11-24', title: '标签排版与地图清晰度', items: [
       '实时追踪标签改为固定宽度，四行数据全部显示在白色弹窗方框内，行间距缩小',
       '地图改用更深一级高德瓦片配 128px 显示，文字和道路更清晰',
@@ -2035,24 +2040,11 @@
   }
   function mapItemBadgeHTML() {
     var b = state.deviceBind || {};
-    var f = state.locatorFix;
     var icon = b.photo
       ? '<img src="' + escapeHTML(b.photo) + '" alt="">'
       : escapeHTML(state.link.icon || '🐱');
-    var speed = Number(f && f.speed) || 0;
-    var elapsed = f ? locatorElapsedText(f.time) : '';
-    var status = f ? ((speed > 0 ? '移动中' : '静止') + (elapsed ? '(' + elapsed + ')' : '')) : '等待刷新';
-    var dist = state.locatorDistance != null ? Math.round(state.locatorDistance) + '米' : '获取中';
-    var signal = f ? locatorClockText(f.time, false) : '—';
-    var locate = f ? locatorClockText(f.time, true) : '—';
     return '<div class="map-item-badge"><span class="map-item-icon">' + icon + '</span>' +
-      '<span class="map-item-text"><b>' + escapeHTML(b.itemName || '物品') + '</b>' +
-      '<span class="map-item-detail">' +
-        '<span>追踪距离:<em>' + escapeHTML(dist) + '</em></span>' +
-        '<span>状态:<em>' + escapeHTML(status) + '</em></span>' +
-        '<span>信号:<em>' + escapeHTML(signal) + '</em></span>' +
-        '<span>定位:<em>' + escapeHTML(locate) + '</em></span>' +
-      '</span></span></div>';
+      '<span class="map-item-text"><b>' + escapeHTML(b.itemName || '物品') + '</b></span></div>';
   }
   function mapTileURL() {
     return state.mapLayerKind === 'satellite'
@@ -2060,7 +2052,7 @@
       : 'https://webrd0{s}.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=8&x={x}&y={y}&z={z}';
   }
   function mapTileOptions() {
-    return { subdomains: '1234', tileSize: 128, zoomOffset: 1, minZoom: 13, maxZoom: 17, maxNativeZoom: 18 };
+    return { subdomains: '1234', tileSize: 128, zoomOffset: 1, minZoom: 3, maxZoom: 18, maxNativeZoom: 18 };
   }
   function mapLayerSwitchHTML() {
     return '<div class="map-layer-switch">' +
@@ -2096,7 +2088,8 @@
     var coordKey = p.lat + ',' + p.lng;
     var icon = mapItemIcon();
     if (!holder.map) {
-      holder.map = L.map(el, { zoomControl: true, attributionControl: false, preferCanvas: true, minZoom: 13, maxZoom: 17 }).setView([p.lat, p.lng], 16);
+      var startZoom = key === 'small' ? 17 : 16;
+      holder.map = L.map(el, { zoomControl: true, attributionControl: false, preferCanvas: true, minZoom: 3, maxZoom: 18 }).setView([p.lat, p.lng], startZoom);
       holder.tile = L.tileLayer(mapTileURL(), mapTileOptions()).addTo(holder.map);
       holder.marker = L.marker([p.lat, p.lng], { icon: icon, keyboard: false, interactive: false, zIndexOffset: 1000 }).addTo(holder.map);
       holder.coordKey = coordKey;
@@ -2151,12 +2144,13 @@
     var mapInner = state.locatorFix && state.locatorFix.lat && state.locatorFix.lng
       ? '<div class="leaflet-map" id="leaflet-map"></div>' + mapLayerSwitchHTML()
       : '<div class="map-placeholder">' + tr('物品位置读取中，请稍后刷新') + '</div>';
+    var motion = state.locatorFix && (Number(state.locatorFix.speed) || 0) > 0 ? '移动中' : '静止';
     var mapInfo = state.locatorLoading ? tr('正在读取位置…') :
       (state.locatorFix
         ? '<div>纬度 <b>' + state.locatorFix.lat + '</b> · 经度 <b>' + state.locatorFix.lng + '</b></div>' +
           '<div class="muted small">' + tr('定位时间：') + escapeHTML(locatorTimeText(state.locatorFix.time)) +
           (state.locatorFix.battery !== '' && state.locatorFix.battery != null ? ' · ' + tr('电量：') + escapeHTML(String(state.locatorFix.battery)) : '') + '</div>' +
-          (state.locatorDistance != null ? '<div class="muted small">' + tr('我到物品距离：约 ') + '<b>' + distanceText(state.locatorDistance) + '</b></div>' : '')
+          (state.locatorDistance != null ? '<div class="muted small">' + tr('我到物品距离：约 ') + '<b>' + distanceText(state.locatorDistance) + '</b> · ' + tr(motion) + '</div>' : '')
         : '<div class="muted small">' + tr('正在读取位置…') + '</div>');
     return '<div class="page link-page">' +
       '<div class="link-card map-card">' +
