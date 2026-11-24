@@ -1,5 +1,5 @@
 /* 收纳小管家 · Service Worker（缓存优先，支持离线打开） */
-const CACHE = 'organizer-v2.48';
+const CACHE = 'organizer-v2.49';
 const ASSETS = [
   './',
   './index.html',
