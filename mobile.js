@@ -6,7 +6,7 @@
   'use strict';
 
   /* ---------------- 常量 ---------------- */
-  var APP_VERSION = '2.36';
+  var APP_VERSION = '2.37';
   var DB_KEY = 'organizer_local_v2';
   var PREF_KEY = 'organizer_pref_v2';
   var HISTORY_KEY = 'organizer_search_history_v2';
@@ -22,6 +22,11 @@
   var DEFAULT_DEVICE_PWD = '123456';
 
   var APP_VERSION_CHANGELOG = [
+    { version: '2.37', date: '2026-11-24', title: '页面间距与地图拖动', items: [
+      '“我的 / 头像框”页内容上移，顶部间距与设备联动一致',
+      '删除地图下方说明文字，“获取我的位置”改为“获取位置”；联动卡片整体压缩，更容易看到绑定设备',
+      '物品照片气泡与地图页面放入同一可拖动层，拖动地图时气泡一起移动'
+    ] },
     { version: '2.36', date: '2026-11-24', title: '联动页精简与物品标识', items: [
       '联动页合并为一张实时地图卡片，删除重复的“物品实时位置”卡片；设备信息显示在地图下方',
       '“重新绑定”改为“删除绑定”，删除后回到未绑定初始页；绑定照片支持直接使用或自由裁剪',
@@ -642,7 +647,8 @@
     bindDraft: null,
     deviceApi: '',
     deviceShareCode: '',
-    crop: null
+    crop: null,
+    mapPan: { x: 0, y: 0 }
   };
 
   /* ---------------- 工具 ---------------- */
@@ -1939,6 +1945,10 @@
       if (!silent) toast(err && err.code === 1 ? '请允许浏览器获取位置' : '无法获取当前位置，请开启手机定位');
     }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 30000 });
   }
+  function mapLayerStyle() {
+    var p = state.mapPan || { x: 0, y: 0 };
+    return ' style="transform:translate(' + (Number(p.x) || 0) + 'px,' + (Number(p.y) || 0) + 'px)"';
+  }
   function mapItemBadgeHTML() {
     var b = state.deviceBind || {};
     var icon = b.photo
@@ -1980,7 +1990,7 @@
       : escapeHTML(state.link.icon || '🐱');
     var liveMapURL = normalizeLocatorLink(state.locatorShare || DEFAULT_LOCATOR_LINK);
     var mapInner = liveMapURL
-      ? '<iframe class="map-iframe" src="' + escapeHTML(liveMapURL) + '" title="' + tr('物品实时地图') + '" allow="geolocation; fullscreen"></iframe>' + mapItemBadgeHTML()
+      ? '<div class="map-layer"' + mapLayerStyle() + '><iframe class="map-iframe" src="' + escapeHTML(liveMapURL) + '" title="' + tr('物品实时地图') + '" allow="geolocation; fullscreen"></iframe>' + mapItemBadgeHTML() + '</div>'
       : '<div class="map-placeholder">' + tr('物品位置读取中，请稍后刷新') + '</div>';
     var mapInfo = state.locatorLoading ? tr('正在读取位置…') :
       (state.locatorFix
@@ -1995,13 +2005,12 @@
           '<button class="map-toggle" data-action="toggle-map">' + (expanded ? '收起地图 ›' : '下拉展开地图 ›') + '</button></div>' +
         '<div class="map-actions">' +
           '<button class="map-primary" data-action="refresh-locator">' + tr('刷新位置') + '</button>' +
-          '<button class="map-ghost" data-action="find-me">' + tr(state.locatingMe ? '正在定位…' : '获取我的位置') + '</button>' +
+          '<button class="map-ghost" data-action="find-me">' + tr(state.locatingMe ? '正在定位…' : '获取位置') + '</button>' +
           '<button class="map-ghost" data-action="fullscreen-map">' + tr('全屏地图') + '</button>' +
           '<button class="map-ghost" data-action="choose-map">' + tr('选择地图') + '</button>' +
         '</div>' +
         '<div class="map-box' + (expanded ? ' expanded' : '') + '">' + mapInner + '</div>' +
         '<div class="map-live-info">' + mapInfo + '</div>' +
-        '<div class="map-address">' + tr('地图显示设备实时位置，距离按你手机当前位置计算；定位权限由系统弹窗确认') + '</div>' +
       '</div>' +
       '<div class="section-title">设备<button class="add-device danger" data-action="delete-device-bind">' + tr('删除绑定') + '</button></div>' +
       '<div class="link-card device-card">' +
@@ -2326,8 +2335,8 @@
         '<div class="map-full-overlay"><div class="map-full-head"><b>' + tr('物品实时地图') + '</b>' +
         '<span class="map-full-status">' + escapeHTML(locationStatusText()) + '</span>' +
         '<button data-action="close-overlay">✕ ' + tr('关闭') + '</button></div>' +
-        '<iframe class="map-iframe" src="' + escapeHTML(fullURL) + '" title="' + tr('物品实时地图') + '" allow="geolocation; fullscreen"></iframe>' +
-        mapItemBadgeHTML() +
+        '<div class="map-layer"' + mapLayerStyle() + '><iframe class="map-iframe" src="' + escapeHTML(fullURL) + '" title="' + tr('物品实时地图') + '" allow="geolocation; fullscreen"></iframe>' +
+        mapItemBadgeHTML() + '</div>' +
         '</div>';
     }
     if (o.type === 'mapChoose') {
@@ -2955,6 +2964,7 @@
         state.myGeoStatus = 'idle';
         state.myGeoAutoTried = false;
         state.link.mapExpanded = false;
+        state.mapPan = { x: 0, y: 0 };
         try {
           localStorage.removeItem(DEVICE_BIND_KEY);
           localStorage.removeItem(DEVICE_API_KEY);
@@ -3214,6 +3224,31 @@
     });
     document.addEventListener('pointerup', function () { cropDrag = null; });
     document.addEventListener('pointercancel', function () { cropDrag = null; });
+    var mapDrag = null;
+    document.addEventListener('pointerdown', function (e) {
+      if (!e.target || !e.target.closest) return;
+      var layer = e.target.closest('.map-layer');
+      if (!layer) return;
+      mapDrag = { el: layer, x: e.clientX, y: e.clientY, ox: state.mapPan.x || 0, oy: state.mapPan.y || 0 };
+      layer.classList.add('dragging');
+      if (layer.setPointerCapture) { try { layer.setPointerCapture(e.pointerId); } catch (err) {} }
+      e.preventDefault();
+    });
+    document.addEventListener('pointermove', function (e) {
+      if (!mapDrag) return;
+      var max = 140;
+      state.mapPan.x = Math.max(-max, Math.min(max, mapDrag.ox + (e.clientX - mapDrag.x)));
+      state.mapPan.y = Math.max(-max, Math.min(max, mapDrag.oy + (e.clientY - mapDrag.y)));
+      mapDrag.el.style.transform = 'translate(' + state.mapPan.x + 'px,' + state.mapPan.y + 'px)';
+      e.preventDefault();
+    });
+    function endMapDrag() {
+      if (!mapDrag) return;
+      mapDrag.el.classList.remove('dragging');
+      mapDrag = null;
+    }
+    document.addEventListener('pointerup', endMapDrag);
+    document.addEventListener('pointercancel', endMapDrag);
     document.addEventListener('focus', function (e) {
       if (e.target && e.target.id === 'search-input') focusSearch();
       if (e.target && e.target.id === 'home-search-input') focusHomeSearch();
