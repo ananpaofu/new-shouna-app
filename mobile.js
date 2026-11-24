@@ -6,7 +6,7 @@
   'use strict';
 
   /* ---------------- 常量 ---------------- */
-  var APP_VERSION = '2.60';
+  var APP_VERSION = '2.62';
   var DB_KEY = 'organizer_local_v2';
   var PREF_KEY = 'organizer_pref_v2';
   var HISTORY_KEY = 'organizer_search_history_v2';
@@ -24,6 +24,15 @@
   var DEFAULT_DEVICE_API = 'https://device-api.xieta1371.workers.dev';
 
   var APP_VERSION_CHANGELOG = [
+    { version: '2.62', date: '2026-11-24', title: '绑定弹层文字对齐', items: [
+      '“＋ 新建物品”选择框与物品名称输入框文字统一左对齐',
+      '填写任意物品名称时都保持左对齐，视觉起点一致'
+    ] },
+    { version: '2.61', date: '2026-11-24', title: '收起键与按钮微调', items: [
+      '绑定弹层底部取消 / 完成按钮高度加大到 52px，点击区域更舒适',
+      '删除绑定旁的设备收起键换成首页同款 SVG 下拉箭头，颜色为深灰色',
+      '首页收起键颜色改为与旁边排序按钮一致的深灰色，不再使用绿色'
+    ] },
     { version: '2.60', date: '2026-11-24', title: '绑定弹层方框统一', items: [
       '绑定设备弹层内所有输入框、选择框、拍照预览框、拍照按钮和底部按钮统一为 46px 高度',
       '拍照图片所在方框与设备号 / 密码输入框等高，页面视觉更整齐'
@@ -2403,7 +2412,7 @@
           '<button class="add-device" data-action="cancel-delete-mode">' + tr('取消') + '</button>' +
           '<button class="add-device danger" data-action="confirm-delete-device">' + tr('完成') + '</button>'
         : '<button class="add-device danger" data-action="enter-delete-mode">' + tr('删除绑定') + '</button>') +
-      '<button class="device-collapse" data-action="toggle-device-collapse" aria-label="' + tr('收起设备') + '">' + (state.deviceCollapsed ? '⌄' : '⌃') + '</button></span>';
+      '<button class="device-collapse' + (state.deviceCollapsed ? ' folded' : '') + '" data-action="toggle-device-collapse" aria-label="' + tr('收起设备') + '"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></button></span>';
     var deviceCardHTML = state.deviceCollapsed ? '' :
       '<div class="link-card device-card">' +
         '<div class="device-top">' +
