@@ -6,7 +6,7 @@
   'use strict';
 
   /* ---------------- 常量 ---------------- */
-  var APP_VERSION = '2.44';
+  var APP_VERSION = '2.45';
   var DB_KEY = 'organizer_local_v2';
   var PREF_KEY = 'organizer_pref_v2';
   var HISTORY_KEY = 'organizer_search_history_v2';
@@ -22,6 +22,11 @@
   var DEFAULT_DEVICE_PWD = '123456';
 
   var APP_VERSION_CHANGELOG = [
+    { version: '2.45', date: '2026-11-24', title: '标签排版与地图清晰度', items: [
+      '实时追踪标签改为固定宽度，四行数据全部显示在白色弹窗方框内，行间距缩小',
+      '地图改用更深一级高德瓦片配 128px 显示，文字和道路更清晰',
+      '限制最小缩放级别并锁定标签层级，缩放地图时标签不会变形或消失'
+    ] },
     { version: '2.44', date: '2026-11-24', title: '修复空白地图与追踪标签', items: [
       '修正高德瓦片地址，地图不再空白；换成已验证可访问的清晰瓦片',
       '删除“物品位置”，标签改为追踪距离 / 状态（静止时长）/ 信号 / 定位四行实时数据',
@@ -2051,8 +2056,11 @@
   }
   function mapTileURL() {
     return state.mapLayerKind === 'satellite'
-      ? 'https://webst0{s}.is.autonavi.com/appmaptile?style=6&scale=2&x={x}&y={y}&z={z}'
-      : 'https://webrd0{s}.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=2&style=8&x={x}&y={y}&z={z}';
+      ? 'https://webst0{s}.is.autonavi.com/appmaptile?style=6&scale=1&x={x}&y={y}&z={z}'
+      : 'https://webrd0{s}.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=8&x={x}&y={y}&z={z}';
+  }
+  function mapTileOptions() {
+    return { subdomains: '1234', tileSize: 128, zoomOffset: 1, minZoom: 13, maxZoom: 17, maxNativeZoom: 18 };
   }
   function mapLayerSwitchHTML() {
     return '<div class="map-layer-switch">' +
@@ -2088,9 +2096,9 @@
     var coordKey = p.lat + ',' + p.lng;
     var icon = mapItemIcon();
     if (!holder.map) {
-      holder.map = L.map(el, { zoomControl: true, attributionControl: false, preferCanvas: true }).setView([p.lat, p.lng], 16);
-      holder.tile = L.tileLayer(mapTileURL(), { subdomains: '1234', minZoom: 3, maxZoom: 18 }).addTo(holder.map);
-      holder.marker = L.marker([p.lat, p.lng], { icon: icon, keyboard: false }).addTo(holder.map);
+      holder.map = L.map(el, { zoomControl: true, attributionControl: false, preferCanvas: true, minZoom: 13, maxZoom: 17 }).setView([p.lat, p.lng], 16);
+      holder.tile = L.tileLayer(mapTileURL(), mapTileOptions()).addTo(holder.map);
+      holder.marker = L.marker([p.lat, p.lng], { icon: icon, keyboard: false, interactive: false, zIndexOffset: 1000 }).addTo(holder.map);
       holder.coordKey = coordKey;
     } else {
       holder.map.invalidateSize();
@@ -2106,7 +2114,7 @@
       var holder = state.leaflet[key];
       if (!holder.map || typeof L === 'undefined') return;
       if (holder.tile) holder.map.removeLayer(holder.tile);
-      holder.tile = L.tileLayer(mapTileURL(), { subdomains: '1234', minZoom: 3, maxZoom: 18 }).addTo(holder.map);
+      holder.tile = L.tileLayer(mapTileURL(), mapTileOptions()).addTo(holder.map);
     });
   }
   function linkHTML() {
