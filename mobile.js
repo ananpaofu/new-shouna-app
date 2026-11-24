@@ -6,7 +6,7 @@
   'use strict';
 
   /* ---------------- 常量 ---------------- */
-  var APP_VERSION = '2.57';
+  var APP_VERSION = '2.58';
   var DB_KEY = 'organizer_local_v2';
   var PREF_KEY = 'organizer_pref_v2';
   var HISTORY_KEY = 'organizer_search_history_v2';
@@ -24,6 +24,12 @@
   var DEFAULT_DEVICE_API = 'https://device-api.xieta1371.workers.dev';
 
   var APP_VERSION_CHANGELOG = [
+    { version: '2.58', date: '2026-11-24', title: '标签与弹层细节优化', items: [
+      '已过期标签改为紧跟绿色库存标签并列显示，过期物品最多显示分类 / 库存 / 已过期三个标签',
+      '物品分类图标改为青绿色，避免与临近过期等其他七个图标颜色重复',
+      '绑定设备弹层打开时隐藏被遮挡的地图 / 卫星开关，并压缩标题与内容间距',
+      '“一键打开高德地图”改为“一键打开地图”；到期提醒绿色提示按分号分成两行'
+    ] },
     { version: '2.57', date: '2026-11-24', title: '物品卡片布局调整', items: [
       '物品卡片基础标签固定为分类、库存、位置，最多三个',
       '已过期物品在卡片右侧单独显示红色“已过期”标签，与基础标签分开且水平对齐',
@@ -1021,8 +1027,9 @@
       '<div class="alert-detail-card">' + alerts.expired.map(function (it) { return row(it, true); }).join('') + '</div>';
     if (alerts.soon.length) body += '<div class="section-title">' + tr('临近过期') + '</div>' +
       '<div class="alert-detail-card">' + alerts.soon.map(function (it) { return row(it, false); }).join('') + '</div>';
+    var alertTip = tr('只删除提醒，不会删除物品；不点删除直接返回，提醒仍会保留在首页。').replace('；', '；<br>');
     return '<div class="page alert-page">' +
-      '<div class="alert-tip">' + tr('只删除提醒，不会删除物品；不点删除直接返回，提醒仍会保留在首页。') + '</div>' +
+      '<div class="alert-tip">' + alertTip + '</div>' +
       (body || '<div class="empty"><div class="empty-emoji">✅</div><div class="empty-text">' + tr('暂无到期提醒') + '</div></div>') +
       '<button class="alert-back" data-action="go-back">' + tr('返回首页') + '</button>' +
     '</div>';
@@ -1204,16 +1211,15 @@
       : '<div class="item-thumb art-thumb">' + itemArtHTML(it) + '</div>';
     var stock = '<span class="stock-chip">' + tr('库存') + ' ' + (Number(it.quantity) || 1) + ' ' + escapeHTML(tr(it.unit || '件')) + '</span>';
     var locationTag = it.location ? '<span class="tag-blue">' + tr('位置') + ' ' + escapeHTML(it.location) + '</span>' : '';
-    var tagList = ['<span class="tag-yellow">' + escapeHTML(it.folder || '未分类') + '</span>', stock];
-    if (locationTag) tagList.push(locationTag);
-    var tags = tagList.slice(0, 3).join('');
     var days = daysUntil(it.expiry);
-    var expiredBadge = days != null && days < 0
-      ? '<span class="item-expired-badge">' + tr('已过期') + '</span>' : '';
+    var expiredTag = days != null && days < 0
+      ? '<span class="item-expired-inline">' + tr('已过期') + '</span>' : '';
+    var tagList = ['<span class="tag-yellow">' + escapeHTML(it.folder || '未分类') + '</span>', stock];
+    if (expiredTag) tagList.push(expiredTag);
+    else if (locationTag) tagList.push(locationTag);
+    var tags = tagList.slice(0, 3).join('');
     var time = timeAgo(it.updatedAt || it.createdAt);
-    var side = (expiredBadge || time)
-      ? '<div class="item-side">' + expiredBadge + (time ? '<div class="item-time">' + escapeHTML(time) + '</div>' : '') + '</div>'
-      : '';
+    var side = time ? '<div class="item-side"><div class="item-time">' + escapeHTML(time) + '</div></div>' : '';
     return '<div class="item-card' + (selected ? ' selected' : '') + (state.compact ? ' compact' : '') + '" data-action="' + (state.multiSelect ? 'toggle-select' : 'open-item') + '" data-id="' + it.id + '">' +
       circle + thumb +
       '<div class="item-main"><div class="item-name">' + escapeHTML(it.name) + '</div>' +
@@ -1308,7 +1314,7 @@
         '</div>' +
         '<div class="sidebar-body">' +
           '<div class="side-group">' + MAIN_CATEGORIES.map(sideItem).join('') + '</div>' +
-          '<div class="side-group"><div class="side-item" data-action="manage-categories">' + categoryIconHTML({ key: 'categories', color: '#2479c4' }) + '<span>物品分类</span><span class="side-arrow">›</span></div></div>' +
+          '<div class="side-group"><div class="side-item" data-action="manage-categories">' + categoryIconHTML({ key: 'categories', color: '#2a9d8f' }) + '<span>物品分类</span><span class="side-arrow">›</span></div></div>' +
         '</div>' +
       '</aside>';
   }
@@ -1455,7 +1461,7 @@
     }
     var tiles = MAIN_CATEGORIES.map(function (c) {
       return tile(categorySVGHTML(c, 'quick-emoji'), c.label, counts[c.key], 'quick-category', c.key);
-    }).join('') + tile(categorySVGHTML({ key: 'categories', color: '#2479c4' }, 'quick-emoji'), '物品分类', null, 'manage-categories', '');
+    }).join('') + tile(categorySVGHTML({ key: 'categories', color: '#2a9d8f' }, 'quick-emoji'), '物品分类', null, 'manage-categories', '');
     return '<div class="page quick-page">' +
       '<div class="quick-grid">' + tiles + '</div>' +
       '<div class="quick-foot">' + tr('按状态快速查看物品') + '</div>' +
@@ -2346,7 +2352,7 @@
       { icon: '📍', title: '查找位置', body: '打开地图，按你当前位置到物品位置规划路线。' },
       { icon: '🏠', title: '离位提醒', body: '物品离开设定区域时自动提醒，防止遗忘或丢失。' },
       { icon: '📅', title: '自动记录收纳', body: '标签回到收纳区域时，自动更新收纳时间。' },
-      { icon: '🧭', title: '物品导航', body: '一键打开高德地图，直接导航到物品当前位置。' }
+      { icon: '🧭', title: '物品导航', body: '一键打开地图，直接导航到物品当前位置。' }
     ];
     var abilityHTML = '<div class="section-title">联动能力<span class="muted small">设备 + App</span></div>' +
       '<div class="ability-grid">' + abilities.map(function (a) {
@@ -2791,7 +2797,12 @@
   }
   function renderOverlay() {
     var root = $('#overlay-root');
-    if (document.body) document.body.classList.toggle('map-full-open', !!(state.overlay && state.overlay.type === 'mapFull'));
+    if (document.body) {
+      document.body.classList.toggle('map-full-open', !!(state.overlay && state.overlay.type === 'mapFull'));
+      document.body.classList.toggle('overlay-open', !!state.overlay);
+      document.body.classList.toggle('device-bind-open', !!(state.overlay &&
+        (state.overlay.type === 'deviceBind' || state.overlay.type === 'deviceAccess')));
+    }
     if (!root) return;
     destroyLeafletMap('full');
     root.innerHTML = overlayHTML();
