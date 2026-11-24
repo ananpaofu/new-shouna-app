@@ -6,7 +6,7 @@
   'use strict';
 
   /* ---------------- 常量 ---------------- */
-  var APP_VERSION = '2.42';
+  var APP_VERSION = '2.43';
   var DB_KEY = 'organizer_local_v2';
   var PREF_KEY = 'organizer_pref_v2';
   var HISTORY_KEY = 'organizer_search_history_v2';
@@ -22,6 +22,11 @@
   var DEFAULT_DEVICE_PWD = '123456';
 
   var APP_VERSION_CHANGELOG = [
+    { version: '2.43', date: '2026-11-24', title: '地图清晰度和全屏修复', items: [
+      '高德瓦片改用 2 倍图，地图文字、道路和图案更清晰',
+      '物品实时标签放大，保留“物品位置”并持续显示距离、状态、时间',
+      '修复全屏地图下方仍露出小地图的双层叠加问题，并增加返回按钮'
+    ] },
     { version: '2.42', date: '2026-11-24', title: '修复地图加载失败', items: [
       'Leaflet 地图脚本和样式改为随 App 一起部署，不再依赖外部 CDN',
       '解决部分手机网络环境下出现“地图加载失败，请联网后重试”的问题'
@@ -2013,13 +2018,14 @@
     if (time.length >= 8) time = time.slice(-8);
     return '<div class="map-item-badge"><span class="map-item-icon">' + icon + '</span>' +
       '<span class="map-item-text"><b>' + escapeHTML(b.itemName || '物品') + '</b>' +
+      '<small class="map-item-sub">' + tr('物品位置') + '</small>' +
       '<span class="map-item-live">' + escapeHTML(dist + ' · ' + status) + '</span>' +
       '<small>' + escapeHTML(time || '等待刷新定位') + '</small></span></div>';
   }
   function mapTileURL() {
     return state.mapLayerKind === 'satellite'
-      ? 'https://webst0{s}.is.autonavi.com/appmaptile?style=6&x={x}&y={y}&z={z}'
-      : 'https://webrd0{s}.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=7&x={x}&y={y}&z={z}';
+      ? 'https://webst0{s}.is.autonavi.com/appmaptile?style=6&scale=2&x={x}&y={y}&z={z}'
+      : 'https://webrd0{s}.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=2&style=7&x={x}&y={y}&z={z}';
   }
   function mapLayerSwitchHTML() {
     return '<div class="map-layer-switch">' +
@@ -2449,7 +2455,9 @@
     if (o.type === 'deviceAccess') { return deviceAccessHTML(); }
     if (o.type === 'mapFull') {
       return '<div class="sheet-mask show" data-action="close-overlay"></div>' +
-        '<div class="map-full-overlay"><div class="map-full-head">' + mapHeaderPhotoHTML() + '<b>' + tr('物品实时地图') + '</b>' +
+        '<div class="map-full-overlay"><div class="map-full-head">' +
+        '<button class="map-full-back" data-action="close-overlay" aria-label="' + tr('返回') + '">‹</button>' +
+        mapHeaderPhotoHTML() + '<b>' + tr('物品实时地图') + '</b>' +
         '<span class="map-full-status">' + escapeHTML(locationStatusText()) + '</span>' +
         '<button data-action="close-overlay">✕ ' + tr('关闭') + '</button></div>' +
         '<div class="leaflet-map map-full-canvas" id="leaflet-map-full"></div>' + mapLayerSwitchHTML() +
@@ -2510,6 +2518,7 @@
   }
   function renderOverlay() {
     var root = $('#overlay-root');
+    if (document.body) document.body.classList.toggle('map-full-open', !!(state.overlay && state.overlay.type === 'mapFull'));
     if (!root) return;
     destroyLeafletMap('full');
     root.innerHTML = overlayHTML();
