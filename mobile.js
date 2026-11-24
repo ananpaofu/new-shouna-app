@@ -6,7 +6,7 @@
   'use strict';
 
   /* ---------------- 常量 ---------------- */
-  var APP_VERSION = '2.49';
+  var APP_VERSION = '2.50';
   var DB_KEY = 'organizer_local_v2';
   var PREF_KEY = 'organizer_pref_v2';
   var HISTORY_KEY = 'organizer_search_history_v2';
@@ -22,6 +22,10 @@
   var DEFAULT_DEVICE_PWD = '123456';
 
   var APP_VERSION_CHANGELOG = [
+    { version: '2.50', date: '2026-11-24', title: '地图失败自动备用', items: [
+      '高德官方地图因白名单或未加载失败时，自动切换本地备用地图，不再只显示“地图加载失败”',
+      '确认线上实际域名为 ananpaofu.github.io，高德白名单应添加该域名'
+    ] },
     { version: '2.49', date: '2026-11-24', title: '接入高德官方地图', items: [
       '内嵌地图改为高德官方 JS API，使用你提供的高德 Key 和安全密钥',
       '地图清晰度、配色和建筑渲染与高德官方页面一致，不再使用非官方栅格瓦片',
@@ -2065,14 +2069,32 @@
       '<button data-action="switch-map-layer" data-layer="road" class="' + (state.mapLayerKind === 'road' ? 'active' : '') + '">' + tr('地图') + '</button>' +
       '<button data-action="switch-map-layer" data-layer="satellite" class="' + (state.mapLayerKind === 'satellite' ? 'active' : '') + '">' + tr('卫星') + '</button></div>';
   }
+  function fallbackTileURL(satellite) {
+    return satellite
+      ? 'https://webst0{s}.is.autonavi.com/appmaptile?style=6&scale=1&x={x}&y={y}&z={z}'
+      : 'https://webrd0{s}.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=8&x={x}&y={y}&z={z}';
+  }
   function destroyLeafletMap(key) {
     var holder = state.leaflet[key];
-    if (holder && holder.map) { try { holder.map.destroy(); } catch (e) {} }
+    if (holder && holder.map) {
+      try {
+        if (holder.fallback && holder.map.remove) holder.map.remove();
+        else if (holder.map.destroy) holder.map.destroy();
+        else if (holder.map.remove) holder.map.remove();
+      } catch (e) {}
+    }
     state.leaflet[key] = {};
   }
   function applyMapLayerFor(key) {
     var holder = state.leaflet[key];
-    if (!holder.map || typeof AMap === 'undefined') return;
+    if (!holder.map) return;
+    if (holder.fallback && typeof L !== 'undefined') {
+      if (holder.tile) holder.map.removeLayer(holder.tile);
+      holder.tile = L.tileLayer(fallbackTileURL(state.mapLayerKind === 'satellite'),
+        { subdomains: '1234', tileSize: 128, zoomOffset: 1, minZoom: 3, maxZoom: 18, maxNativeZoom: 17 }).addTo(holder.map);
+      return;
+    }
+    if (typeof AMap === 'undefined') return;
     if (holder.satelliteLayer) { holder.map.remove(holder.satelliteLayer); holder.satelliteLayer = null; }
     if (holder.roadLayer) { holder.map.remove(holder.roadLayer); holder.roadLayer = null; }
     holder.map.setMapStyle('amap://styles/normal');
@@ -2085,11 +2107,44 @@
   function applyMapLayer() {
     ['small', 'full'].forEach(applyMapLayerFor);
   }
+  function syncFallbackMap(id, el) {
+    if (typeof L === 'undefined') {
+      el.innerHTML = '<div class="map-placeholder">' + tr('地图加载失败，请联网后重试') + '</div>';
+      return;
+    }
+    var key = id === 'leaflet-map' ? 'small' : 'full';
+    var holder = state.leaflet[key];
+    var f = state.locatorFix;
+    if (!f || !f.lat || !f.lng) return;
+    var p = mapCoords(f.lat, f.lng, 'amap');
+    var coordKey = p.lat + ',' + p.lng;
+    var icon = L.divIcon({
+      className: 'leaflet-item-icon',
+      html: '<div class="leaflet-item-marker">' + mapItemBadgeHTML() + '</div>',
+      iconSize: [0, 0],
+      iconAnchor: [0, 0]
+    });
+    if (!holder.map) {
+      holder.fallback = true;
+      holder.map = L.map(el, { zoomControl: true, attributionControl: false, preferCanvas: true, minZoom: 3, maxZoom: 18 }).setView([p.lat, p.lng], key === 'small' ? 17 : 16);
+      holder.tile = L.tileLayer(fallbackTileURL(state.mapLayerKind === 'satellite'),
+        { subdomains: '1234', tileSize: 128, zoomOffset: 1, minZoom: 3, maxZoom: 18, maxNativeZoom: 17 }).addTo(holder.map);
+      holder.marker = L.marker([p.lat, p.lng], { icon: icon, keyboard: false, interactive: false, zIndexOffset: 1000 }).addTo(holder.map);
+      holder.coordKey = coordKey;
+    } else {
+      holder.map.invalidateSize();
+      if (holder.marker) holder.marker.setIcon(icon);
+      if (holder.coordKey !== coordKey) {
+        holder.coordKey = coordKey;
+        holder.map.setView([p.lat, p.lng], holder.map.getZoom() || 16);
+      }
+    }
+  }
   function syncLeafletMap(id) {
     var el = document.getElementById(id);
     if (!el) return;
     if (typeof AMap === 'undefined') {
-      el.innerHTML = '<div class="map-placeholder">' + tr('地图加载失败，请联网后重试') + '</div>';
+      syncFallbackMap(id, el);
       return;
     }
     var key = id === 'leaflet-map' ? 'small' : 'full';
