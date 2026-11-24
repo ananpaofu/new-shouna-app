@@ -6,7 +6,7 @@
   'use strict';
 
   /* ---------------- 常量 ---------------- */
-  var APP_VERSION = '2.50';
+  var APP_VERSION = '2.52';
   var DB_KEY = 'organizer_local_v2';
   var PREF_KEY = 'organizer_pref_v2';
   var HISTORY_KEY = 'organizer_search_history_v2';
@@ -22,6 +22,14 @@
   var DEFAULT_DEVICE_PWD = '123456';
 
   var APP_VERSION_CHANGELOG = [
+    { version: '2.52', date: '2026-11-24', title: '地图标记样式调整', items: [
+      '物品标记去掉文字，改为白色圆圈图案 + 蓝点样式',
+      '地图上新增用户手机定位标记：白色圆圈手机图案 + 蓝点'
+    ] },
+    { version: '2.51', date: '2026-11-24', title: '刷新高德脚本与放大备用地图', items: [
+      '高德脚本地址加入版本参数，避免浏览器继续使用旧的失败缓存',
+      '备用地图窗口高度加大，小窗口地图不再显得很小'
+    ] },
     { version: '2.50', date: '2026-11-24', title: '地图失败自动备用', items: [
       '高德官方地图因白名单或未加载失败时，自动切换本地备用地图，不再只显示“地图加载失败”',
       '确认线上实际域名为 ananpaofu.github.io，高德白名单应添加该域名'
@@ -2061,13 +2069,22 @@
     var icon = b.photo
       ? '<img src="' + escapeHTML(b.photo) + '" alt="">'
       : escapeHTML(state.link.icon || '🐱');
-    return '<div class="map-item-badge"><span class="map-item-icon">' + icon + '</span>' +
-      '<span class="map-item-text"><b>' + escapeHTML(b.itemName || '物品') + '</b></span></div>';
+    return '<div class="map-item-pin"><span class="map-item-photo">' + icon + '</span>' +
+      '<span class="map-pin-stem"></span><span class="map-pin-dot"></span></div>';
+  }
+  function mapPhoneMarkerHTML() {
+    return '<div class="map-phone-pin"><span class="map-phone-photo">📱</span>' +
+      '<span class="map-pin-stem"></span><span class="map-pin-dot"></span></div>';
   }
   function mapLayerSwitchHTML() {
     return '<div class="map-layer-switch">' +
       '<button data-action="switch-map-layer" data-layer="road" class="' + (state.mapLayerKind === 'road' ? 'active' : '') + '">' + tr('地图') + '</button>' +
       '<button data-action="switch-map-layer" data-layer="satellite" class="' + (state.mapLayerKind === 'satellite' ? 'active' : '') + '">' + tr('卫星') + '</button></div>';
+  }
+  function userMapPoint() {
+    var m = state.myPos;
+    if (!m || !m.lat || !m.lng) return null;
+    return mapCoords(m.lat, m.lng, 'amap');
   }
   function fallbackTileURL(satellite) {
     return satellite
@@ -2118,12 +2135,19 @@
     if (!f || !f.lat || !f.lng) return;
     var p = mapCoords(f.lat, f.lng, 'amap');
     var coordKey = p.lat + ',' + p.lng;
+    var up = userMapPoint();
     var icon = L.divIcon({
       className: 'leaflet-item-icon',
       html: '<div class="leaflet-item-marker">' + mapItemBadgeHTML() + '</div>',
       iconSize: [0, 0],
       iconAnchor: [0, 0]
     });
+    var phoneIcon = up ? L.divIcon({
+      className: 'leaflet-item-icon',
+      html: '<div class="leaflet-item-marker">' + mapPhoneMarkerHTML() + '</div>',
+      iconSize: [0, 0],
+      iconAnchor: [0, 0]
+    }) : null;
     if (!holder.map) {
       holder.fallback = true;
       holder.map = L.map(el, { zoomControl: true, attributionControl: false, preferCanvas: true, minZoom: 3, maxZoom: 18 }).setView([p.lat, p.lng], key === 'small' ? 17 : 16);
@@ -2131,9 +2155,17 @@
         { subdomains: '1234', tileSize: 128, zoomOffset: 1, minZoom: 3, maxZoom: 18, maxNativeZoom: 17 }).addTo(holder.map);
       holder.marker = L.marker([p.lat, p.lng], { icon: icon, keyboard: false, interactive: false, zIndexOffset: 1000 }).addTo(holder.map);
       holder.coordKey = coordKey;
+      if (up && phoneIcon) holder.userMarker = L.marker([up.lat, up.lng], { icon: phoneIcon, keyboard: false, interactive: false, zIndexOffset: 900 }).addTo(holder.map);
     } else {
       holder.map.invalidateSize();
       if (holder.marker) holder.marker.setIcon(icon);
+      if (up && phoneIcon) {
+        if (holder.userMarker) holder.userMarker.setLatLng([up.lat, up.lng]).setIcon(phoneIcon);
+        else holder.userMarker = L.marker([up.lat, up.lng], { icon: phoneIcon, keyboard: false, interactive: false, zIndexOffset: 900 }).addTo(holder.map);
+      } else if (holder.userMarker) {
+        holder.map.removeLayer(holder.userMarker);
+        holder.userMarker = null;
+      }
       if (holder.coordKey !== coordKey) {
         holder.coordKey = coordKey;
         holder.map.setView([p.lat, p.lng], holder.map.getZoom() || 16);
@@ -2153,6 +2185,7 @@
     if (!f || !f.lat || !f.lng) return;
     var p = mapCoords(f.lat, f.lng, 'amap');
     var coordKey = p.lat + ',' + p.lng;
+    var up = userMapPoint();
     var content = '<div class="amap-item-marker">' + mapItemBadgeHTML() + '</div>';
     if (!holder.map) {
       holder.map = new AMap.Map(el, {
@@ -2165,10 +2198,24 @@
       holder.marker = new AMap.Marker({ position: [p.lng, p.lat], content: content, anchor: 'bottom-center', zIndex: 1000 });
       holder.map.add(holder.marker);
       holder.coordKey = coordKey;
+      if (up) {
+        holder.userMarker = new AMap.Marker({ position: [up.lng, up.lat], content: mapPhoneMarkerHTML(), anchor: 'bottom-center', zIndex: 900 });
+        holder.map.add(holder.userMarker);
+      }
       applyMapLayerFor(key);
     } else {
       holder.map.resize();
       if (holder.marker) holder.marker.setContent(content);
+      if (up) {
+        if (holder.userMarker) holder.userMarker.setPosition([up.lng, up.lat]);
+        else {
+          holder.userMarker = new AMap.Marker({ position: [up.lng, up.lat], content: mapPhoneMarkerHTML(), anchor: 'bottom-center', zIndex: 900 });
+          holder.map.add(holder.userMarker);
+        }
+      } else if (holder.userMarker) {
+        holder.map.remove(holder.userMarker);
+        holder.userMarker = null;
+      }
       if (holder.coordKey !== coordKey) {
         holder.coordKey = coordKey;
         holder.map.setCenter([p.lng, p.lat]);
