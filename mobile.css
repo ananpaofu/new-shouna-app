@@ -642,8 +642,9 @@ a { color: inherit; text-decoration: none; }
 .bind-prompt .bold { font-size: 16px; margin-bottom: 6px; }
 .bind-prompt .link-btn { margin-top: 16px; }
 .map-actions { display: flex; gap: 10px; margin-bottom: 8px; }
-.map-providers { display: flex; gap: 8px; margin-bottom: 12px; }
-.map-providers button { flex: 1; padding: 9px 4px; border-radius: 9px; background: var(--green-soft); color: var(--green); font-size: 12px; }
+.map-providers { display: flex; gap: 6px; margin-bottom: 12px; flex-wrap: wrap; }
+.map-providers button { flex: 1 1 56px; padding: 9px 4px; border-radius: 9px; background: var(--green-soft); color: var(--green); font-size: 12px; }
+.map-providers button:disabled { opacity: .45; }
 .map-primary, .map-ghost { flex: 1; padding: 12px; border-radius: 9px; font-size: 13px; }
 .map-primary { background: var(--green); color: #fff; }
 .map-ghost { background: #f3f3f3; color: var(--ink-2); }
