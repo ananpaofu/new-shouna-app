@@ -6,7 +6,7 @@
   'use strict';
 
   /* ---------------- 常量 ---------------- */
-  var APP_VERSION = '2.40';
+  var APP_VERSION = '2.41';
   var DB_KEY = 'organizer_local_v2';
   var PREF_KEY = 'organizer_pref_v2';
   var HISTORY_KEY = 'organizer_search_history_v2';
@@ -22,6 +22,11 @@
   var DEFAULT_DEVICE_PWD = '123456';
 
   var APP_VERSION_CHANGELOG = [
+    { version: '2.41', date: '2026-11-24', title: '纯净实时地图', items: [
+      '内嵌地图改成纯地图画布，不再显示邀请好友、新人特权、打车等第三方页面弹窗和广告',
+      '物品照片气泡固定在真实坐标上，刷新位置后距离、状态、时间会同步更新，拖动缩放地图时气泡跟随',
+      '地图右上角新增“地图 / 卫星”切换，支持原生拖动和缩放'
+    ] },
     { version: '2.40', date: '2026-11-24', title: '导航按钮仅全屏显示', items: [
       '小地图和下拉展开地图都会裁掉页面底部的导航选择按钮',
       '只有点“全屏地图”时才显示地图下方的导航选择按钮'
@@ -661,7 +666,9 @@
     bindDraft: null,
     deviceApi: '',
     deviceShareCode: '',
-    crop: null
+    crop: null,
+    mapLayerKind: 'road',
+    leaflet: { small: {}, full: {} }
   };
 
   /* ---------------- 工具 ---------------- */
@@ -1255,6 +1262,7 @@
     renderHeader();
     renderNav();
     var view = $('#app-view');
+    destroyLeafletMap('small');
     if (state.view === 'home') view.innerHTML = homeHTML();
     else if (state.view === 'search') view.innerHTML = searchHTML();
     else if (state.view === 'alerts') view.innerHTML = alertDetailHTML();
@@ -1278,6 +1286,7 @@
       applyI18n(node);
       fixRenderedText(node);
     });
+    if (state.view === 'link') syncLeafletMap('leaflet-map');
     if (state.view === 'link' && state.deviceBind && state.deviceVerified && !state.locatorAutoTried && !state.locatorFix && !state.locatorLoading) {
       state.locatorAutoTried = true;
       setTimeout(refreshLocator, 0);
@@ -2003,6 +2012,66 @@
       '<span class="map-item-live">' + escapeHTML(dist + ' · ' + status) + '</span>' +
       '<small>' + escapeHTML(time || '等待刷新定位') + '</small></span></div>';
   }
+  function mapTileURL() {
+    return state.mapLayerKind === 'satellite'
+      ? 'https://webst0{s}.is.autonavi.com/appmaptile?style=6&x={x}&y={y}&z={z}'
+      : 'https://webrd0{s}.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=7&x={x}&y={y}&z={z}';
+  }
+  function mapLayerSwitchHTML() {
+    return '<div class="map-layer-switch">' +
+      '<button data-action="switch-map-layer" data-layer="road" class="' + (state.mapLayerKind === 'road' ? 'active' : '') + '">' + tr('地图') + '</button>' +
+      '<button data-action="switch-map-layer" data-layer="satellite" class="' + (state.mapLayerKind === 'satellite' ? 'active' : '') + '">' + tr('卫星') + '</button></div>';
+  }
+  function mapItemIcon() {
+    if (typeof L === 'undefined') return null;
+    return L.divIcon({
+      className: 'leaflet-item-icon',
+      html: '<div class="leaflet-item-marker">' + mapItemBadgeHTML() + '</div>',
+      iconSize: [0, 0],
+      iconAnchor: [0, 0]
+    });
+  }
+  function destroyLeafletMap(key) {
+    var holder = state.leaflet[key];
+    if (holder && holder.map) { try { holder.map.remove(); } catch (e) {} }
+    state.leaflet[key] = {};
+  }
+  function syncLeafletMap(id) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    if (typeof L === 'undefined') {
+      el.innerHTML = '<div class="map-placeholder">' + tr('地图加载失败，请联网后重试') + '</div>';
+      return;
+    }
+    var key = id === 'leaflet-map' ? 'small' : 'full';
+    var holder = state.leaflet[key];
+    var f = state.locatorFix;
+    if (!f || !f.lat || !f.lng) return;
+    var p = mapCoords(f.lat, f.lng, 'amap');
+    var coordKey = p.lat + ',' + p.lng;
+    var icon = mapItemIcon();
+    if (!holder.map) {
+      holder.map = L.map(el, { zoomControl: true, attributionControl: false, preferCanvas: true }).setView([p.lat, p.lng], 16);
+      holder.tile = L.tileLayer(mapTileURL(), { subdomains: '1234', minZoom: 3, maxZoom: 18 }).addTo(holder.map);
+      holder.marker = L.marker([p.lat, p.lng], { icon: icon, keyboard: false }).addTo(holder.map);
+      holder.coordKey = coordKey;
+    } else {
+      holder.map.invalidateSize();
+      if (holder.marker && icon) holder.marker.setIcon(icon);
+      if (holder.coordKey !== coordKey) {
+        holder.coordKey = coordKey;
+        holder.map.setView([p.lat, p.lng], holder.map.getZoom() || 16);
+      }
+    }
+  }
+  function applyMapLayer() {
+    ['small', 'full'].forEach(function (key) {
+      var holder = state.leaflet[key];
+      if (!holder.map || typeof L === 'undefined') return;
+      if (holder.tile) holder.map.removeLayer(holder.tile);
+      holder.tile = L.tileLayer(mapTileURL(), { subdomains: '1234', minZoom: 3, maxZoom: 18 }).addTo(holder.map);
+    });
+  }
   function linkHTML() {
     var expanded = state.link.mapExpanded;
     var bound = !!(state.deviceBind && state.deviceVerified && state.deviceBind.deviceNo && state.deviceBind.itemName);
@@ -2034,9 +2103,8 @@
     var deviceIcon = bind.photo
       ? '<img src="' + escapeHTML(bind.photo) + '" alt="">'
       : escapeHTML(state.link.icon || '🐱');
-    var liveMapURL = locatorEmbedURL();
-    var mapInner = liveMapURL
-      ? '<iframe class="map-iframe" src="' + escapeHTML(liveMapURL) + '" title="' + tr('物品实时地图') + '" allow="geolocation; fullscreen"></iframe>' + mapItemBadgeHTML()
+    var mapInner = state.locatorFix && state.locatorFix.lat && state.locatorFix.lng
+      ? '<div class="leaflet-map" id="leaflet-map"></div>' + mapLayerSwitchHTML()
       : '<div class="map-placeholder">' + tr('物品位置读取中，请稍后刷新') + '</div>';
     var mapInfo = state.locatorLoading ? tr('正在读取位置…') :
       (state.locatorFix
@@ -2376,12 +2444,11 @@
     if (o.type === 'deviceBind') { return deviceBindHTML(); }
     if (o.type === 'deviceAccess') { return deviceAccessHTML(); }
     if (o.type === 'mapFull') {
-      var fullURL = locatorEmbedURL();
       return '<div class="sheet-mask show" data-action="close-overlay"></div>' +
         '<div class="map-full-overlay"><div class="map-full-head">' + mapHeaderPhotoHTML() + '<b>' + tr('物品实时地图') + '</b>' +
         '<span class="map-full-status">' + escapeHTML(locationStatusText()) + '</span>' +
         '<button data-action="close-overlay">✕ ' + tr('关闭') + '</button></div>' +
-        '<iframe class="map-iframe" src="' + escapeHTML(fullURL) + '" title="' + tr('物品实时地图') + '" allow="geolocation; fullscreen"></iframe>' +
+        '<div class="leaflet-map map-full-canvas" id="leaflet-map-full"></div>' + mapLayerSwitchHTML() +
         '</div>';
     }
     if (o.type === 'mapChoose') {
@@ -2439,7 +2506,12 @@
   }
   function renderOverlay() {
     var root = $('#overlay-root');
-    if (root) { root.innerHTML = overlayHTML(); applyI18n(root); fixRenderedText(root); }
+    if (!root) return;
+    destroyLeafletMap('full');
+    root.innerHTML = overlayHTML();
+    applyI18n(root);
+    fixRenderedText(root);
+    if (state.overlay && state.overlay.type === 'mapFull') setTimeout(function () { syncLeafletMap('leaflet-map-full'); }, 0);
   }
   function openInfo(title, body) { state.overlay = { type: 'info', title: title, body: body }; renderOverlay(); }
   function openList(title, key, options, value) {
@@ -2976,6 +3048,14 @@
         renderOverlay();
         break;
       case 'choose-map': state.overlay = { type: 'mapChoose' }; renderOverlay(); break;
+      case 'switch-map-layer':
+        state.mapLayerKind = el.getAttribute('data-layer') === 'satellite' ? 'satellite' : 'road';
+        var layerButtons = document.querySelectorAll('.map-layer-switch button');
+        Array.prototype.forEach.call(layerButtons, function (btn) {
+          btn.classList.toggle('active', btn.getAttribute('data-layer') === state.mapLayerKind);
+        });
+        applyMapLayer();
+        break;
       case 'map-plan':
         openInfo('地图方案', '绑定后地图按你手机当前位置规划到物品位置的路线，并可全屏查看；距离按当前位置计算。直接打开高德 / 百度 / 腾讯 / 谷歌地图不需要额外密钥；如果要内嵌这些地图或调用它们的路线 API，才需要各自申请密钥。');
         break;
