@@ -636,6 +636,7 @@ a { color: inherit; text-decoration: none; }
 .map-item-icon img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .map-item-text { min-width: 0; display: flex; flex-direction: column; line-height: 1.25; }
 .map-item-text b { font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.map-item-live { font-size: 10px; color: var(--green); white-space: nowrap; }
 .map-item-text small { font-size: 10px; color: var(--ink-3); }
 :root[data-theme='dark'] .map-item-badge { --badge-bg: rgba(36,36,36,.95); --badge-border: rgba(99,210,154,.45); }
 .map-live-info { margin: 8px 0; padding: 9px 10px; border-radius: 9px; background: var(--bg-soft); color: var(--ink-2); font-size: 12px; line-height: 1.7; }
@@ -828,6 +829,7 @@ input[type='time'], input[type='date'] { accent-color: var(--green); color-schem
 .link-page .map-card .map-primary, .link-page .map-card .map-ghost { padding: 8px 2px; font-size: 12px; }
 .link-page .map-card .map-box { height: 150px; }
 .link-page .map-card .map-box.expanded { height: 290px; }
+.link-page .map-card .map-iframe { height: calc(100% + 72px); }
 .link-page .map-card .map-live-info { margin: 6px 0 0; padding: 6px 8px; line-height: 1.55; }
 .link-page .section-title { margin-top: 10px; margin-bottom: 6px; }
 .link-page .device-card { padding: 10px 12px; }
