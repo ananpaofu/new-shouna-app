@@ -6,7 +6,7 @@
   'use strict';
 
   /* ---------------- 常量 ---------------- */
-  var APP_VERSION = '2.43';
+  var APP_VERSION = '2.44';
   var DB_KEY = 'organizer_local_v2';
   var PREF_KEY = 'organizer_pref_v2';
   var HISTORY_KEY = 'organizer_search_history_v2';
@@ -22,6 +22,11 @@
   var DEFAULT_DEVICE_PWD = '123456';
 
   var APP_VERSION_CHANGELOG = [
+    { version: '2.44', date: '2026-11-24', title: '修复空白地图与追踪标签', items: [
+      '修正高德瓦片地址，地图不再空白；换成已验证可访问的清晰瓦片',
+      '删除“物品位置”，标签改为追踪距离 / 状态（静止时长）/ 信号 / 定位四行实时数据',
+      '标签内容跟随每次定位刷新变化'
+    ] },
     { version: '2.43', date: '2026-11-24', title: '地图清晰度和全屏修复', items: [
       '高德瓦片改用 2 倍图，地图文字、道路和图案更清晰',
       '物品实时标签放大，保留“物品位置”并持续显示距离、状态、时间',
@@ -2005,6 +2010,24 @@
       : escapeHTML(state.link.icon || '🐱');
     return '<span class="map-head-photo">' + icon + '</span>';
   }
+  function locatorClockText(ts, withMs) {
+    var n = Number(ts);
+    if (!n || isNaN(n)) return String(ts || '—');
+    var d = new Date(n);
+    if (isNaN(d.getTime())) return String(ts);
+    var text = d.getFullYear() + '/' + pad(d.getMonth() + 1) + '/' + pad(d.getDate()) + ' ' +
+      pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds());
+    if (withMs) text += '.' + ('00' + d.getMilliseconds()).slice(-3);
+    return text;
+  }
+  function locatorElapsedText(ts) {
+    var n = Number(ts);
+    if (!n || isNaN(n)) return '';
+    var diff = Math.max(0, Math.floor((Date.now() - n) / 1000));
+    var min = Math.floor(diff / 60), sec = diff % 60;
+    if (min >= 60) return Math.floor(min / 60) + '小时' + (min % 60) + '分' + sec + '秒';
+    return min + '分' + sec + '秒';
+  }
   function mapItemBadgeHTML() {
     var b = state.deviceBind || {};
     var f = state.locatorFix;
@@ -2012,20 +2035,24 @@
       ? '<img src="' + escapeHTML(b.photo) + '" alt="">'
       : escapeHTML(state.link.icon || '🐱');
     var speed = Number(f && f.speed) || 0;
-    var status = f ? (speed > 0 ? '移动中' : '静止') : '等待刷新';
-    var dist = state.locatorDistance != null ? '距你约 ' + distanceText(state.locatorDistance) : '距离获取中';
-    var time = f ? locatorTimeText(f.time) : '';
-    if (time.length >= 8) time = time.slice(-8);
+    var elapsed = f ? locatorElapsedText(f.time) : '';
+    var status = f ? ((speed > 0 ? '移动中' : '静止') + (elapsed ? '(' + elapsed + ')' : '')) : '等待刷新';
+    var dist = state.locatorDistance != null ? Math.round(state.locatorDistance) + '米' : '获取中';
+    var signal = f ? locatorClockText(f.time, false) : '—';
+    var locate = f ? locatorClockText(f.time, true) : '—';
     return '<div class="map-item-badge"><span class="map-item-icon">' + icon + '</span>' +
       '<span class="map-item-text"><b>' + escapeHTML(b.itemName || '物品') + '</b>' +
-      '<small class="map-item-sub">' + tr('物品位置') + '</small>' +
-      '<span class="map-item-live">' + escapeHTML(dist + ' · ' + status) + '</span>' +
-      '<small>' + escapeHTML(time || '等待刷新定位') + '</small></span></div>';
+      '<span class="map-item-detail">' +
+        '<span>追踪距离:<em>' + escapeHTML(dist) + '</em></span>' +
+        '<span>状态:<em>' + escapeHTML(status) + '</em></span>' +
+        '<span>信号:<em>' + escapeHTML(signal) + '</em></span>' +
+        '<span>定位:<em>' + escapeHTML(locate) + '</em></span>' +
+      '</span></span></div>';
   }
   function mapTileURL() {
     return state.mapLayerKind === 'satellite'
       ? 'https://webst0{s}.is.autonavi.com/appmaptile?style=6&scale=2&x={x}&y={y}&z={z}'
-      : 'https://webrd0{s}.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=2&style=7&x={x}&y={y}&z={z}';
+      : 'https://webrd0{s}.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=2&style=8&x={x}&y={y}&z={z}';
   }
   function mapLayerSwitchHTML() {
     return '<div class="map-layer-switch">' +
