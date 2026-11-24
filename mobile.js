@@ -6,19 +6,29 @@
   'use strict';
 
   /* ---------------- 常量 ---------------- */
-  var APP_VERSION = '2.27';
+  var APP_VERSION = '2.29';
   var DB_KEY = 'organizer_local_v2';
   var PREF_KEY = 'organizer_pref_v2';
   var HISTORY_KEY = 'organizer_search_history_v2';
   var ALERT_KEY = 'organizer_alert_deleted_v2';
   var LOCATOR_KEY = 'organizer_locator_share_v1';
   var LOCATOR_API_KEY = 'organizer_locator_api_v1';
+  var DEVICE_BIND_KEY = 'organizer_device_bind_v1';
   var DEFAULT_LOCATOR_LINK = 'https://vipapi.18gps.net//CheTT/CheTTgetPosition.aspx?id=7c730550-a968-49ab-a054-4578cd7a571c&lang=cn';
   var DEFAULT_LOCATOR_API = 'https://twilight-butterfly-f2a8.xieta1371.workers.dev';
-  var LOCATOR_DIRECT_MDS = 'eb9ae60f1f5e400bb0c17f328c0769c0';
   var LOCATOR_DIRECT_OBJ = '482db427-68d2-4d53-85cb-3c55fd4dfa81';
 
   var APP_VERSION_CHANGELOG = [
+    { version: '2.29', date: '2026-11-24', title: '分类修复与设备绑定演示', items: [
+      '分类管理页可正常上下滑动；全部 / 最佳 / 已过期等入口改为状态筛选，中文显示中文，全部能看到所有未删除物品',
+      '设备联动新增本地绑定流程：选物品或新建、拍照或从相册选图、填设备号和密码，绑定后卡片和地图圆圈显示物品照片',
+      '把不支持的“播放声音”改成“查找位置”，响铃需硬件支持，不再误导'
+    ] },
+    { version: '2.28', date: '2026-11-24', title: '动态定位参数与多地图导航', items: [
+      '修复刷新失败：云知行的 mds 每次打开分享页都会轮换，App 改为实时读取最新参数，不再使用过期值',
+      '高德改为从“我的位置”导航到设备；新增百度地图、腾讯地图、苹果地图三种打开方式',
+      '新增“查找位置”：获取当前手机位置并计算到设备的实际距离，支持跨城市查看'
+    ] },
     { version: '2.27', date: '2026-11-24', title: '实时地图与苹果刷新修复', items: [
       '联动页地图直接嵌入云知行分享页面，显示与云知行链接一致的实时地图和物品位置',
       '苹果手机读取位置新增 5 秒超时和 18gps 直连备用，避免一直卡在“正在读取位置”',
@@ -588,6 +598,10 @@
     locatorFix: null,
     locatorLoading: false,
     locatorAutoTried: false,
+    locatorDistance: null,
+    locatingMe: false,
+    deviceBind: null,
+    bindDraft: null,
     crop: null
   };
 
@@ -852,6 +866,12 @@
     var all = MAIN_CATEGORIES.concat(state.folders.map(function (f) { return { key: f, label: f }; }));
     for (var i = 0; i < all.length; i++) { if (all[i].key === state.category) return all[i].label; }
     return '全部';
+  }
+  function isMainCategory(cat) {
+    for (var i = 0; i < MAIN_CATEGORIES.length; i++) {
+      if (MAIN_CATEGORIES[i].key === cat) return true;
+    }
+    return false;
   }
 
   /* ---------------- 顶部栏 ---------------- */
@@ -1576,7 +1596,22 @@
     render();
     toast('定位器设置已保存');
   }
+  function loadDeviceBind() {
+    try {
+      var raw = localStorage.getItem(DEVICE_BIND_KEY);
+      state.deviceBind = raw ? JSON.parse(raw) : null;
+    } catch (e) { state.deviceBind = null; }
+  }
+  function persistDeviceBind() {
+    try {
+      if (state.deviceBind) localStorage.setItem(DEVICE_BIND_KEY, JSON.stringify(state.deviceBind));
+      else localStorage.removeItem(DEVICE_BIND_KEY);
+    } catch (e) {}
+  }
   function parseLocatorPayload(payload) {
+    if (payload && payload.success === false) {
+      return { ok: false, error: payload.errorCode === '403' ? '分享已过期或参数无效' : '定位接口返回异常' };
+    }
     var key = payload && payload.key || {};
     var rec = payload && payload.records && payload.records[0];
     if (!rec) return { ok: false, error: '设备暂无定位数据' };
@@ -1593,7 +1628,31 @@
       expire: rec[idx('expire_date', 17)] || ''
     };
   }
-  function locatorJSONP(done) {
+  function parseLocatorParams(html) {
+    var text = String(html || '');
+    var m = text.match(/[?&]mds=([0-9a-fA-F]{16,64})/i);
+    var objectid = LOCATOR_DIRECT_OBJ;
+    var pm = text.match(/new\s+Program\s*\(([\s\S]*?)\)/);
+    if (pm) {
+      var quoted = pm[1].match(/"[^"]*"|'[^']*'/g) || [];
+      for (var i = 0; i < quoted.length; i++) {
+        var v = quoted[i].slice(1, -1);
+        if (/^[0-9a-fA-F-]{16,64}$/.test(v)) { objectid = v; break; }
+      }
+    }
+    return m ? { mds: m[1], objectid: objectid.replace(/-/g, '') } : null;
+  }
+  function fetchLocatorParams(done) {
+    var called = false;
+    function finish(v) { if (called) return; called = true; done(v); }
+    var timer = setTimeout(function () { finish(null); }, 8000);
+    fetch(state.locatorShare || DEFAULT_LOCATOR_LINK, { cache: 'no-store' })
+      .then(function (r) { return r.text(); })
+      .then(function (html) { clearTimeout(timer); finish(parseLocatorParams(html)); })
+      .catch(function () { clearTimeout(timer); finish(null); });
+  }
+  function locatorJSONP(params, done) {
+    if (!params || !params.mds || !params.objectid) { done({ ok: false, error: '定位参数无效' }); return; }
     var cbName = 'locatorCb' + Date.now();
     var script = null, timer = null, called = false;
     function cleanup() {
@@ -1604,8 +1663,8 @@
     function finish(d) { if (called) return; called = true; cleanup(); done(d); }
     window[cbName] = function (payload) { finish(parseLocatorPayload(payload)); };
     var u = 'https://vipapi.18gps.net/GetDateServices.asmx/GetDate?method=getUserAndGpsInfoByIDsUtc' +
-      '&school_id=&custid=&mapType=&option=cn&user_id=' + encodeURIComponent(LOCATOR_DIRECT_OBJ.replace(/-/g, '')) +
-      '&callback=' + cbName + '&mds=' + encodeURIComponent(LOCATOR_DIRECT_MDS) + '&t=' + Date.now();
+      '&school_id=&custid=&mapType=&option=cn&user_id=' + encodeURIComponent(params.objectid) +
+      '&callback=' + cbName + '&mds=' + encodeURIComponent(params.mds) + '&t=' + Date.now();
     script = document.createElement('script');
     script.src = u;
     script.onerror = function () { finish({ ok: false, error: '网络读取失败' }); };
@@ -1614,8 +1673,6 @@
   }
   function refreshLocator() {
     var id = locatorId();
-    var api = state.locatorApi;
-    if (!api) { toast('定位服务未配置'); return; }
     if (!id) { toast('分享链接无效'); return; }
     state.locatorLoading = true;
     render();
@@ -1630,15 +1687,25 @@
         return;
       }
       state.locatorFix = d;
+      state.locatorDistance = null;
       render();
       toast('位置已更新');
     }
-    var fallback = setTimeout(function () { locatorJSONP(finish); }, 5000);
-    var sep = api.indexOf('?') >= 0 ? '&' : '?';
-    fetch(api + sep + 'id=' + encodeURIComponent(id) + '&t=' + Date.now(), { cache: 'no-store' })
-      .then(function (r) { return r.json(); })
-      .then(function (d) { clearTimeout(fallback); finish(d); })
-      .catch(function () { clearTimeout(fallback); locatorJSONP(finish); });
+    function workerFallback() {
+      var api = state.locatorApi;
+      if (!api) { finish({ ok: false, error: '定位参数已过期' }); return; }
+      var sep = api.indexOf('?') >= 0 ? '&' : '?';
+      fetch(api + sep + 'id=' + encodeURIComponent(id) + '&t=' + Date.now(), { cache: 'no-store' })
+        .then(function (r) { return r.json(); })
+        .then(finish)
+        .catch(function () { finish({ ok: false, error: '分享已过期或网络不可用' }); });
+    }
+    fetchLocatorParams(function (params) {
+      if (!params) { workerFallback(); return; }
+      locatorJSONP(params, function (d) {
+        if (d && d.ok) finish(d); else workerFallback();
+      });
+    });
   }
   function locatorTimeText(ts) {
     var n = Number(ts);
@@ -1652,13 +1719,69 @@
   function locatorAmapURL() {
     var f = state.locatorFix;
     if (!f || !f.lat || !f.lng) return '';
-    return 'https://uri.amap.com/marker?position=' + f.lng + ',' + f.lat +
-      '&name=' + encodeURIComponent('定位器 · ' + (f.device || '')) + '&src=organizer&callnative=1';
+    var name = encodeURIComponent('定位器 · ' + (f.device || ''));
+    return 'https://uri.amap.com/navigation?to=' + f.lng + ',' + f.lat + ',' + name +
+      '&mode=car&policy=1&src=organizer&callnative=1';
+  }
+  function locatorMapURL(kind) {
+    var f = state.locatorFix;
+    if (!f || !f.lat || !f.lng) return '';
+    var name = encodeURIComponent('定位器 · ' + (f.device || ''));
+    if (kind === 'baidu') {
+      return 'https://api.map.baidu.com/marker?location=' + f.lat + ',' + f.lng +
+        '&title=' + name + '&content=' + name + '&output=html&coord_type=gcj02';
+    }
+    if (kind === 'qq') {
+      return 'https://apis.map.qq.com/uri/v1/marker?marker=coord:' + f.lat + ',' + f.lng + ';title:' + name +
+        '&referer=xunji';
+    }
+    if (kind === 'apple') {
+      return 'https://maps.apple.com/?ll=' + f.lat + ',' + f.lng + '&q=' + name;
+    }
+    return locatorAmapURL();
+  }
+  function distanceMeters(lat1, lng1, lat2, lng2) {
+    var r = 6371000;
+    function rad(v) { return v * Math.PI / 180; }
+    var dLat = rad(lat2 - lat1), dLng = rad(lng2 - lng1);
+    var a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(rad(lat1)) * Math.cos(rad(lat2)) * Math.sin(dLng / 2) * Math.sin(dLng / 2);
+    return 2 * r * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  }
+  function distanceText(m) {
+    return m < 1000 ? Math.round(m) + ' 米' : (m / 1000).toFixed(1) + ' 公里';
+  }
+  function showMyDistance() {
+    if (!navigator.geolocation) { toast('当前浏览器不支持获取位置'); return; }
+    var f = state.locatorFix;
+    if (!f || !f.lat || !f.lng) { toast('请先刷新设备位置'); return; }
+    state.locatingMe = true;
+    render();
+    navigator.geolocation.getCurrentPosition(function (pos) {
+      var m = distanceMeters(pos.coords.latitude, pos.coords.longitude, f.lat, f.lng);
+      state.locatorDistance = m;
+      state.locatingMe = false;
+      render();
+      toast('我到设备约 ' + distanceText(m));
+    }, function (err) {
+      state.locatingMe = false;
+      render();
+      toast(err && err.code === 1 ? '请允许浏览器获取位置' : '无法获取当前位置，请开启手机定位');
+    }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 30000 });
   }
   function linkHTML() {
     var expanded = state.link.mapExpanded;
+    var bind = state.deviceBind || {};
+    var deviceName = bind.itemName || '收纳箱 A 标签';
+    var deviceSub = bind.deviceNo ? ('设备 ' + bind.deviceNo + ' · 已绑定') : '尚未绑定物品 · 储物间 · 未连接';
+    var deviceIcon = bind.photo
+      ? '<img src="' + escapeHTML(bind.photo) + '" alt="">'
+      : escapeHTML(state.link.icon || '🐱');
+    var mapPhotoMarker = bind.photo
+      ? '<div class="map-photo-marker"><img src="' + escapeHTML(bind.photo) + '" alt="' + escapeHTML(deviceName) + '"></div>'
+      : '';
     var abilities = [
-      { icon: '🔔', title: '一键查找', body: 'App 呼叫标签，标签发声发光，按信号强弱找到物品。' },
+      { icon: '🔔', title: '查找位置', body: '打开地图导航并根据实时距离寻找物品；响铃需要硬件支持。' },
       { icon: '🏠', title: '离位提醒', body: '物品离开设定区域时自动提醒，防止遗忘或丢失。' },
       { icon: '📅', title: '自动记录收纳', body: '标签回到收纳区域时，自动更新收纳时间。' },
       { icon: '🔋', title: '低电量提醒', body: '标签电量不足时提示更换，避免关键时刻失联。' }
@@ -1668,11 +1791,17 @@
         '<div class="link-card-head"><div><div class="bold">定位器实时地图</div><div class="muted small">云知行实时位置 · 自动刷新</div></div>' +
           '<button class="map-toggle" data-action="toggle-map">' + (expanded ? '收起地图 ›' : '下拉展开地图 ›') + '</button></div>' +
         '<div class="map-actions">' +
-          '<button class="map-primary" data-action="open-amap"><span>📍</span> 用高德地图打开</button>' +
+          '<button class="map-primary" data-action="open-amap"><span>📍</span> 用高德导航打开</button>' +
           '<button class="map-ghost" data-action="toggle-map">' + (expanded ? '收起地图' : '展开地图') + '</button>' +
+        '</div>' +
+        '<div class="map-providers">' +
+          '<button data-action="open-map" data-map="baidu">百度地图</button>' +
+          '<button data-action="open-map" data-map="qq">腾讯地图</button>' +
+          '<button data-action="open-map" data-map="apple">苹果地图</button>' +
         '</div>' +
         '<div class="map-box' + (expanded ? ' expanded' : '') + '">' +
           '<iframe class="map-iframe" src="' + escapeHTML(state.locatorShare) + '" title="' + tr('定位器实时地图') + '"></iframe>' +
+          mapPhotoMarker +
         '</div>' +
         '<div class="map-address">' + tr('地图来自云知行实时位置，每几秒自动刷新') + '</div>' +
       '</div>' +
@@ -1681,24 +1810,26 @@
         '<div class="muted small">定位服务已内置，打开即可查看，无需安装云知行或填写任何地址。</div>' +
         '<div class="locator-btns">' +
           '<button class="map-primary" data-action="refresh-locator">' + tr('刷新位置') + '</button>' +
+          '<button class="map-ghost" data-action="find-me">' + tr(state.locatingMe ? '正在定位…' : '查找位置') + '</button>' +
           '<button class="map-ghost" data-action="open-locator-link"' + (locatorAmapURL() ? '' : ' disabled') + '>' + tr('高德打开') + '</button>' +
         '</div>' +
         '<div class="locator-result">' + (state.locatorLoading ? tr('正在读取位置…') :
           (state.locatorFix
             ? '<div>纬度 <b>' + state.locatorFix.lat + '</b> · 经度 <b>' + state.locatorFix.lng + '</b></div>' +
               '<div class="muted small">' + tr('定位时间：') + escapeHTML(locatorTimeText(state.locatorFix.time)) +
-              (state.locatorFix.battery !== '' && state.locatorFix.battery != null ? ' · ' + tr('电量：') + escapeHTML(String(state.locatorFix.battery)) : '') + '</div>'
+              (state.locatorFix.battery !== '' && state.locatorFix.battery != null ? ' · ' + tr('电量：') + escapeHTML(String(state.locatorFix.battery)) : '') + '</div>' +
+              (state.locatorDistance != null ? '<div class="muted small">' + tr('我到设备距离：约 ') + '<b>' + distanceText(state.locatorDistance) + '</b></div>' : '')
             : '<div class="muted small">' + tr('正在读取位置…') + '</div>')) + '</div>' +
       '</div>' +
       '<div class="section-title">设备<button class="add-device" data-action="add-device-hint">＋ 添加设备</button></div>' +
       '<div class="link-card device-card">' +
-        '<div class="device-top"><div class="device-icon" data-action="pick-device-icon">' + escapeHTML(state.link.icon || '🐱') + '</div><div class="device-main"><div class="bold">收纳箱 A 标签</div><div class="muted small">尚未绑定物品 · 储物间 · 未连接</div></div><span class="online">在线</span></div>' +
+        '<div class="device-top"><div class="device-icon" data-action="bind-device">' + deviceIcon + '</div><div class="device-main"><div class="bold">' + escapeHTML(deviceName) + '</div><div class="muted small">' + escapeHTML(deviceSub) + '</div></div><span class="online">在线</span></div>' +
         '<div class="device-stats"><div><span>电量 82%</span><div class="battery"><i></i></div></div>' +
           '<div><span>信号强度</span><div class="signal"><i></i><i></i><i></i></div></div></div>' +
         '<div class="device-actions">' +
-          '<button data-action="device-hint" data-name="播放声音">播放声音</button>' +
+          '<button data-action="find-me">查找位置</button>' +
           '<button data-action="pick-device-icon">自定义标签</button>' +
-          '<button data-action="device-hint" data-name="绑定物品">绑定物品</button>' +
+          '<button data-action="bind-device">' + tr('绑定物品') + '</button>' +
           '<button data-action="device-hint" data-name="离位提醒">离位提醒<br>开</button>' +
         '</div>' +
       '</div>' +
@@ -1794,6 +1925,73 @@
         '<div class="sheet-head"><h2>' + escapeHTML(title) + '</h2>' +
         '<button class="sheet-close" data-action="close-overlay">✕</button></div>' + body + '</div>';
   }
+  function syncBindDraft() {
+    var d = state.bindDraft || (state.bindDraft = {});
+    var sel = $('#bind-item-select'), name = $('#bind-item-name');
+    var no = $('#bind-device-no'), pw = $('#bind-device-pwd');
+    if (sel) d.selectedId = sel.value;
+    if (name) d.name = name.value;
+    if (no) d.deviceNo = no.value;
+    if (pw) d.devicePwd = pw.value;
+    return d;
+  }
+  function openBindSheet() {
+    var b = state.deviceBind || {};
+    var d = state.bindDraft || (state.bindDraft = {});
+    d.selectedId = d.selectedId || '';
+    d.name = d.name || b.itemName || '';
+    d.photo = d.photo || b.photo || '';
+    d.deviceNo = d.deviceNo || b.deviceNo || '';
+    d.devicePwd = d.devicePwd || b.devicePwd || '';
+    state.overlay = { type: 'deviceBind' };
+    renderOverlay();
+  }
+  function deviceBindHTML() {
+    var d = state.bindDraft || {};
+    var items = getItems().filter(function (it) { return !it.trashed; });
+    var opts = '<option value="">＋ 新建物品</option>' + items.map(function (it) {
+      return '<option value="' + escapeHTML(it.id) + '"' + (d.selectedId === it.id ? ' selected' : '') + '>' + escapeHTML(it.name || '未命名') + '</option>';
+    }).join('');
+    return sheetShell('绑定设备',
+      '<div class="bind-sheet">' +
+        '<div class="bind-step">1. 选择或新建要绑定的物品</div>' +
+        '<select id="bind-item-select" class="bind-input">' + opts + '</select>' +
+        '<input id="bind-item-name" class="bind-input" placeholder="物品名称（新建时填写）" value="' + escapeHTML(d.name || '') + '">' +
+        '<div class="bind-photo-row"><div class="bind-photo-preview">' + (d.photo ? '<img src="' + escapeHTML(d.photo) + '" alt="">' : '📷') + '</div>' +
+          '<button type="button" class="btn" data-action="bind-pick-photo">拍照 / 从相册选择照片</button></div>' +
+        '<input type="file" id="bind-photo-file" accept="image/*" style="display:none">' +
+        '<div class="bind-step">2. 输入设备编号和密码</div>' +
+        '<input id="bind-device-no" class="bind-input" placeholder="设备编号" value="' + escapeHTML(d.deviceNo || '') + '">' +
+        '<input id="bind-device-pwd" class="bind-input" type="password" placeholder="设备密码" value="' + escapeHTML(d.devicePwd || '') + '">' +
+        '<div class="bind-tip">本机演示版：密码只保存在本机；联网版会改为只存哈希，并用分享令牌读取位置。</div>' +
+        '<div class="bind-foot"><button class="btn" data-action="close-overlay">取消</button>' +
+          '<button class="btn btn-primary" data-action="save-device-bind">完成绑定</button></div>' +
+      '</div>');
+  }
+  function saveDeviceBind() {
+    var d = syncBindDraft();
+    var name = String(d.name || '').trim();
+    var photo = d.photo || '';
+    if (d.selectedId) {
+      var it = findItem(d.selectedId);
+      if (it) { name = it.name || name; photo = it.image || photo; }
+    }
+    if (!name) { toast('请选择物品或填写物品名称'); return; }
+    if (!String(d.deviceNo || '').trim()) { toast('请输入设备编号'); return; }
+    state.deviceBind = {
+      itemId: d.selectedId || '',
+      itemName: name,
+      photo: photo,
+      deviceNo: String(d.deviceNo).trim(),
+      devicePwd: String(d.devicePwd || ''),
+      boundAt: Date.now()
+    };
+    persistDeviceBind();
+    state.overlay = null;
+    state.bindDraft = null;
+    render();
+    toast('设备已绑定');
+  }
   function calendarPickerHTML(o) {
     var value = o.value || todayStr();
     var month = (o.month && !isNaN(o.month.getTime())) ? o.month : new Date(value + 'T00:00:00');
@@ -1849,6 +2047,7 @@
         '<button class="btn btn-primary" data-action="save-profile-input">保存</button></div>');
     }
     if (o.type === 'time') { return '<div class="sheet-mask show" data-action="close-overlay"></div><div class="sheet show">' + timePickerHTML(o) + '</div>'; }
+    if (o.type === 'deviceBind') { return deviceBindHTML(); }
     if (o.type === 'photoChoice') {
       return sheetShell('添加照片',
         '<div class="photo-choice"><img src="' + escapeHTML(o.src) + '" alt="">' +
@@ -2108,9 +2307,9 @@
     state.categoryFrom = '';
     render();
   }
-  function setCategory(cat) {
+  function setCategory(cat, from) {
     pushView();
-    state.categoryFrom = 'sidebar';
+    state.categoryFrom = from || 'sidebar';
     state.category = cat;
     state.view = 'home';
     state.sidebarOpen = false;
@@ -2358,9 +2557,11 @@
       case 'select-all': selectAll(); break;
       case 'delete-selected': deleteSelected(); break;
       case 'set-category': setCategory(el.getAttribute('data-cat')); break;
-      case 'quick-category': case 'open-category-detail':
-        openCategoryGroup(el.getAttribute('data-cat'));
+      case 'quick-category':
+        var qcat = el.getAttribute('data-cat');
+        if (isMainCategory(qcat)) setCategory(qcat, 'quick'); else openCategoryGroup(qcat);
         break;
+      case 'open-category-detail': openCategoryGroup(el.getAttribute('data-cat')); break;
       case 'open-prefs': case 'go-prefs': openView('prefs'); break;
       case 'go-me': openView('me'); break;
       case 'go-link': openView('link'); break;
@@ -2409,12 +2610,18 @@
       case 'close-sheet': state.sheet = null; renderSheet(); break;
       case 'toggle-map': state.link.mapExpanded = !state.link.mapExpanded; render(); break;
       case 'open-amap':
-        var amap = locatorAmapURL() || ('https://uri.amap.com/marker?position=116.397428,39.90923&name=' +
-          encodeURIComponent('6栋学生宿舍 · 2层 · 101') + '&src=organizer&callnative=1');
+        var amap = locatorAmapURL();
+        if (!amap) { toast('请先刷新设备位置'); break; }
         if (typeof window !== 'undefined' && window.location) window.location.href = amap;
         break;
+      case 'open-map':
+        var mapURL = locatorMapURL(el.getAttribute('data-map'));
+        if (!mapURL) { toast('请先刷新设备位置'); break; }
+        if (typeof window !== 'undefined' && window.location) window.location.href = mapURL;
+        break;
+      case 'find-me': showMyDistance(); break;
       case 'map-plan':
-        openInfo('地图方案', '当前使用高德地图 URI 直接唤起本机高德 App；未安装时自动回退到网页版。本机版无需申请 Key。');
+        openInfo('地图方案', '刷新位置后可直接用高德导航、百度地图、腾讯地图或苹果地图打开设备坐标；高德会从“我的位置”规划到设备的路线。');
         break;
       case 'save-locator-link':
         saveLocatorLink(($('#locator-link') || {}).value || '', ($('#locator-api') || {}).value || '');
@@ -2430,7 +2637,9 @@
         try { localStorage.removeItem(LOCATOR_KEY); } catch (e) {}
         render(); toast('已清除定位器链接');
         break;
-      case 'add-device-hint': toast('添加设备在本机版为演示'); break;
+      case 'add-device-hint': case 'bind-device': openBindSheet(); break;
+      case 'bind-pick-photo': var bindFile = $('#bind-photo-file'); if (bindFile) bindFile.click(); break;
+      case 'save-device-bind': saveDeviceBind(); break;
       case 'device-hint': toast((el.getAttribute('data-name') || '该功能') + '在本机版为演示'); break;
       case 'me-info': openInfo(el.getAttribute('data-title') || '提示', el.getAttribute('data-body') || ''); break;
       case 'toggle-me-setting':
@@ -2718,6 +2927,23 @@
         avatarReader.readAsDataURL(avatarFile);
         e.target.value = '';
       }
+      if (e.target && e.target.id === 'bind-item-select') {
+        var bindDraft = syncBindDraft();
+        var picked = findItem(bindDraft.selectedId);
+        bindDraft.name = picked ? (picked.name || '') : '';
+        bindDraft.photo = picked ? (picked.image || '') : '';
+        renderOverlay();
+      }
+      if (e.target && e.target.id === 'bind-photo-file' && e.target.files && e.target.files[0]) {
+        var photoDraft = syncBindDraft();
+        var bindReader = new FileReader();
+        bindReader.onload = function () {
+          photoDraft.photo = String(bindReader.result);
+          renderOverlay();
+        };
+        bindReader.readAsDataURL(e.target.files[0]);
+        e.target.value = '';
+      }
     });
     document.addEventListener('focusin', function (e) {
       if (document.body && e.target && /^(INPUT|TEXTAREA)$/.test(e.target.tagName)) document.body.classList.add('keyboard-open');
@@ -2750,6 +2976,7 @@
       state.alertDeletedIds = Array.isArray(parsedAlerts) ? parsedAlerts : (rawAlerts ? [rawAlerts] : []);
     } catch (e) { state.alertDeletedIds = []; }
     loadLocatorLink();
+    loadDeviceBind();
     if (typeof window !== 'undefined' && window.location && window.location.hash === '#register') state.view = 'register';
     bindEvents();
     applyTheme();
