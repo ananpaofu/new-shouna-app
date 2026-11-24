@@ -6,7 +6,7 @@
   'use strict';
 
   /* ---------------- 常量 ---------------- */
-  var APP_VERSION = '2.30';
+  var APP_VERSION = '2.32';
   var DB_KEY = 'organizer_local_v2';
   var PREF_KEY = 'organizer_pref_v2';
   var HISTORY_KEY = 'organizer_search_history_v2';
@@ -15,14 +15,26 @@
   var LOCATOR_API_KEY = 'organizer_locator_api_v1';
   var DEVICE_BIND_KEY = 'organizer_device_bind_v1';
   var DEVICE_API_KEY = 'organizer_device_api_v1';
-  var DEFAULT_LOCATOR_LINK = 'https://vipapi.18gps.net//CheTT/CheTTgetPosition.aspx?id=7c730550-a968-49ab-a054-4578cd7a571c&lang=cn';
+  var DEFAULT_LOCATOR_LINK = 'https://vipapi.内置定位服务.net//CheTT/CheTTgetPosition.aspx?id=7c730550-a968-49ab-a054-4578cd7a571c&lang=cn';
   var DEFAULT_LOCATOR_API = 'https://twilight-butterfly-f2a8.xieta1371.workers.dev';
   var LOCATOR_DIRECT_OBJ = '482db427-68d2-4d53-85cb-3c55fd4dfa81';
+  var DEFAULT_DEVICE_NO = '672305585540';
+  var DEFAULT_DEVICE_PWD = '123456';
 
   var APP_VERSION_CHANGELOG = [
+    { version: '2.32', date: '2026-11-24', title: '绑定后显示与高德路线图', items: [
+      '未绑定设备前不显示设备号和地图；绑定物品后才显示实时位置',
+      '地图改为“我的位置 → 物品位置”高德路线，可全屏查看，距离按手机当前位置计算',
+      '去掉分享链接输入，设备号和密码默认使用当前固定设备，界面不再显示第三方名称'
+    ] },
+    { version: '2.31', date: '2026-11-24', title: '每台设备独立分享链接', items: [
+      '绑定设备时新增“设备定位分享链接”输入项，每台设备填自己的链接，不再共用内置示例链接',
+      '云端返回分享链接给连接的手机，朋友端地图自动对准该设备',
+      '明确设备编号和密码是你们自己的绑定凭证，不是商家账号；真正位置来自设备定位分享链接'
+    ] },
     { version: '2.30', date: '2026-11-24', title: '云端绑定与分享码', items: [
       '新增 Cloudflare Worker + KV 云端接口：设备绑定只存密码哈希，生成分享码，朋友可用分享码或设备号密码连接',
-      'App 填入云端 API 地址后，刷新位置改走云端接口；云端实时解析 18gps 分享页参数并缓存最新位置',
+      'App 填入云端 API 地址后，刷新位置改走云端接口；云端实时解析 内置定位服务 分享页参数并缓存最新位置',
       '机主绑定成功后直接显示分享码；朋友连接后自动显示物品照片和到设备的距离'
     ] },
     { version: '2.29', date: '2026-11-24', title: '分类修复与设备绑定演示', items: [
@@ -31,13 +43,13 @@
       '把不支持的“播放声音”改成“查找位置”，响铃需硬件支持，不再误导'
     ] },
     { version: '2.28', date: '2026-11-24', title: '动态定位参数与多地图导航', items: [
-      '修复刷新失败：云知行的 mds 每次打开分享页都会轮换，App 改为实时读取最新参数，不再使用过期值',
+      '修复刷新失败：设备定位的 mds 每次打开分享页都会轮换，App 改为实时读取最新参数，不再使用过期值',
       '高德改为从“我的位置”导航到设备；新增百度地图、腾讯地图、苹果地图三种打开方式',
       '新增“查找位置”：获取当前手机位置并计算到设备的实际距离，支持跨城市查看'
     ] },
     { version: '2.27', date: '2026-11-24', title: '实时地图与苹果刷新修复', items: [
-      '联动页地图直接嵌入云知行分享页面，显示与云知行链接一致的实时地图和物品位置',
-      '苹果手机读取位置新增 5 秒超时和 18gps 直连备用，避免一直卡在“正在读取位置”',
+      '联动页地图直接嵌入设备定位分享页面，显示与设备定位链接一致的实时地图和物品位置',
+      '苹果手机读取位置新增 5 秒超时和 内置定位服务 直连备用，避免一直卡在“正在读取位置”',
       '头像拍照或从相册选图后都可直接使用原图或自定义裁剪'
     ] },
     { version: '2.26', date: '2026-11-23', title: '定位器免配置', items: [
@@ -45,11 +57,11 @@
       '定位卡片只保留“刷新位置 / 高德打开”，进入页面自动加载'
     ] },
     { version: '2.25', date: '2026-11-23', title: '定位器直显坐标', items: [
-      '联动页可填 Cloudflare Worker 地址，直接读取云知行分享链接的真实经纬度、时间和电量并显示在 App 内',
-      '内置 15 天分享链接；点“高德打开”直接用真实坐标定位，用户无需安装云知行 App'
+      '联动页可填 Cloudflare Worker 地址，直接读取设备定位分享链接的真实经纬度、时间和电量并显示在 App 内',
+      '内置 15 天分享链接；点“高德打开”直接用真实坐标定位，用户无需安装设备定位 App'
     ] },
-    { version: '2.24', date: '2026-11-23', title: '接入云知行分享链接', items: [
-      '联动页新增“定位器实时位置（云知行）”：粘贴云知行生成的 18gps 分享链接即可打开实时位置地图',
+    { version: '2.24', date: '2026-11-23', title: '接入设备定位分享链接', items: [
+      '联动页新增“定位器实时位置（设备定位）”：粘贴设备定位生成的 内置定位服务 分享链接即可打开实时位置地图',
       '链接只保存在本机，不需要商家 API、不需要额外费用；分享过期后重新生成链接即可'
     ] },
     { version: '2.23', date: '2026-11-23', title: '全页滚动与分类独立页', items: [
@@ -606,6 +618,8 @@
     locatorAutoTried: false,
     locatorDistance: null,
     locatingMe: false,
+    myPos: null,
+    myGeoAutoTried: false,
     deviceBind: null,
     bindDraft: null,
     deviceApi: '',
@@ -1212,9 +1226,14 @@
     renderSidebar();
     renderOverlay();
     ['#app-header', '#app-view', '#bottom-nav', '#sheet-root', '#overlay-root'].forEach(function (sel) { applyI18n($(sel)); });
-    if (state.view === 'link' && !state.locatorAutoTried && !state.locatorFix && !state.locatorLoading) {
+    if (state.view === 'link' && state.deviceBind && !state.locatorAutoTried && !state.locatorFix && !state.locatorLoading) {
       state.locatorAutoTried = true;
       setTimeout(refreshLocator, 0);
+    }
+    if (state.view === 'link' && state.deviceBind && state.locatorFix && !state.myPos &&
+        !state.locatingMe && !state.myGeoAutoTried) {
+      state.myGeoAutoTried = true;
+      setTimeout(function () { showMyDistance(true); }, 0);
     }
   }
   function sortSheetHTML() {
@@ -1582,7 +1601,7 @@
     if (!s) return '';
     var m = s.match(/[?&]id=([0-9a-fA-F-]{8,48})/);
     if (!m) return '';
-    return 'https://vipapi.18gps.net//CheTT/CheTTgetPosition.aspx?id=' + m[1] + '&lang=cn';
+    return 'https://vipapi.内置定位服务.net//CheTT/CheTTgetPosition.aspx?id=' + m[1] + '&lang=cn';
   }
   function locatorId() {
     var m = String(state.locatorShare || '').match(/[?&]id=([0-9a-fA-F-]{8,48})/);
@@ -1595,7 +1614,7 @@
   }
   function saveLocatorLink(raw, apiRaw) {
     var url = normalizeLocatorLink(raw);
-    if (!url) { toast('请粘贴正确的云知行分享链接（含 id 参数）'); return; }
+    if (!url) { toast('请粘贴正确的设备定位分享链接（含 id 参数）'); return; }
     state.locatorShare = url;
     state.locatorApi = String(apiRaw || '').trim().replace(/\/+$/, '');
     try { localStorage.setItem(LOCATOR_KEY, url); } catch (e) {}
@@ -1684,7 +1703,7 @@
     }
     function finish(d) { if (called) return; called = true; cleanup(); done(d); }
     window[cbName] = function (payload) { finish(parseLocatorPayload(payload)); };
-    var u = 'https://vipapi.18gps.net/GetDateServices.asmx/GetDate?method=getUserAndGpsInfoByIDsUtc' +
+    var u = 'https://vipapi.内置定位服务.net/GetDateServices.asmx/GetDate?method=getUserAndGpsInfoByIDsUtc' +
       '&school_id=&custid=&mapType=&option=cn&user_id=' + encodeURIComponent(params.objectid) +
       '&callback=' + cbName + '&mds=' + encodeURIComponent(params.mds) + '&t=' + Date.now();
     script = document.createElement('script');
@@ -1708,6 +1727,13 @@
         toast('读取位置失败：' + ((d && d.error) || '网络错误'));
         return;
       }
+      if (d.shareUrl) {
+        var linked = normalizeLocatorLink(d.shareUrl);
+        if (linked && linked !== state.locatorShare) {
+          state.locatorShare = linked;
+          try { localStorage.setItem(LOCATOR_KEY, linked); } catch (e) {}
+        }
+      }
       if (d.itemName || d.photo) {
         var bound = state.deviceBind || {};
         if (d.itemName) bound.itemName = d.itemName;
@@ -1717,7 +1743,9 @@
         persistDeviceBind();
       }
       state.locatorFix = d;
-      state.locatorDistance = null;
+      state.locatorDistance = state.myPos
+        ? distanceMeters(state.myPos.lat, state.myPos.lng, d.lat, d.lng)
+        : null;
       render();
       toast('位置已更新');
     }
@@ -1753,12 +1781,15 @@
     return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()) + ' ' +
       p(d.getHours()) + ':' + p(d.getMinutes()) + ':' + p(d.getSeconds());
   }
-  function locatorAmapURL() {
+  function locatorAmapURL(embed) {
     var f = state.locatorFix;
     if (!f || !f.lat || !f.lng) return '';
-    var name = encodeURIComponent('定位器 · ' + (f.device || ''));
-    return 'https://uri.amap.com/navigation?to=' + f.lng + ',' + f.lat + ',' + name +
-      '&mode=car&policy=1&src=organizer&callnative=1';
+    var name = encodeURIComponent((state.deviceBind && state.deviceBind.itemName) || ('物品 · ' + (f.device || '')));
+    var from = state.myPos && state.myPos.lat && state.myPos.lng
+      ? 'from=' + state.myPos.lng + ',' + state.myPos.lat + ',' + encodeURIComponent('我的位置') + '&'
+      : '';
+    return 'https://uri.amap.com/navigation?' + from + 'to=' + f.lng + ',' + f.lat + ',' + name +
+      '&mode=car&policy=1&src=organizer&callnative=' + (embed ? '0' : '1');
   }
   function locatorMapURL(kind) {
     var f = state.locatorFix;
@@ -1788,77 +1819,100 @@
   function distanceText(m) {
     return m < 1000 ? Math.round(m) + ' 米' : (m / 1000).toFixed(1) + ' 公里';
   }
-  function showMyDistance() {
-    if (!navigator.geolocation) { toast('当前浏览器不支持获取位置'); return; }
+  function showMyDistance(silent) {
+    if (!navigator.geolocation) {
+      if (!silent) toast('当前浏览器不支持获取位置');
+      return;
+    }
     var f = state.locatorFix;
-    if (!f || !f.lat || !f.lng) { toast('请先刷新设备位置'); return; }
+    if (!f || !f.lat || !f.lng) {
+      if (!silent) toast('请先刷新设备位置');
+      return;
+    }
     state.locatingMe = true;
     render();
     navigator.geolocation.getCurrentPosition(function (pos) {
-      var m = distanceMeters(pos.coords.latitude, pos.coords.longitude, f.lat, f.lng);
+      var lat = pos.coords.latitude, lng = pos.coords.longitude;
+      var m = distanceMeters(lat, lng, f.lat, f.lng);
+      state.myPos = { lat: lat, lng: lng };
       state.locatorDistance = m;
       state.locatingMe = false;
       render();
-      toast('我到设备约 ' + distanceText(m));
+      if (!silent) toast('我到物品约 ' + distanceText(m));
     }, function (err) {
       state.locatingMe = false;
       render();
-      toast(err && err.code === 1 ? '请允许浏览器获取位置' : '无法获取当前位置，请开启手机定位');
+      if (!silent) toast(err && err.code === 1 ? '请允许浏览器获取位置' : '无法获取当前位置，请开启手机定位');
     }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 30000 });
   }
   function linkHTML() {
     var expanded = state.link.mapExpanded;
-    var bind = state.deviceBind || {};
-    var deviceName = bind.itemName || '收纳箱 A 标签';
-    var deviceSub = bind.deviceNo ? ('设备 ' + bind.deviceNo + ' · 已绑定') : '尚未绑定物品 · 储物间 · 未连接';
-    var deviceIcon = bind.photo
-      ? '<img src="' + escapeHTML(bind.photo) + '" alt="">'
-      : escapeHTML(state.link.icon || '🐱');
-    var mapPhotoMarker = bind.photo
-      ? '<div class="map-photo-marker"><img src="' + escapeHTML(bind.photo) + '" alt="' + escapeHTML(deviceName) + '"></div>'
-      : '';
+    var bound = !!(state.deviceBind && state.deviceBind.deviceNo && state.deviceBind.itemName);
     var abilities = [
-      { icon: '🔔', title: '查找位置', body: '打开地图导航并根据实时距离寻找物品；响铃需要硬件支持。' },
+      { icon: '📍', title: '查找位置', body: '打开高德地图，按你当前位置到物品位置规划路线。' },
       { icon: '🏠', title: '离位提醒', body: '物品离开设定区域时自动提醒，防止遗忘或丢失。' },
       { icon: '📅', title: '自动记录收纳', body: '标签回到收纳区域时，自动更新收纳时间。' },
       { icon: '🔋', title: '低电量提醒', body: '标签电量不足时提示更换，避免关键时刻失联。' }
     ];
+    var abilityHTML = '<div class="section-title">联动能力<span class="muted small">设备 + App</span></div>' +
+      '<div class="ability-grid">' + abilities.map(function (a) {
+        return '<div class="ability-card"><div class="ability-icon">' + a.icon + '</div><div class="bold">' + a.title + '</div><p>' + a.body + '</p></div>';
+      }).join('') + '</div>';
+
+    if (!bound) {
+      return '<div class="page link-page">' +
+        '<div class="link-card bind-prompt">' +
+          '<div class="bind-prompt-icon">📍</div>' +
+          '<div class="bold">绑定设备与物品</div>' +
+          '<div class="muted small">绑定完成后，这里会显示物品实时位置、路线地图和距离。</div>' +
+          '<button class="link-btn" data-action="bind-device">绑定设备与物品</button>' +
+        '</div>' +
+        abilityHTML +
+        '<div class="link-card"><div class="bold">设备联动说明</div>' +
+          '<p class="desc">绑定设备号、密码和物品后，App 会读取设备最新位置，并根据你手机的当前位置计算距离。不同手机绑定同一台设备时，距离和路线都会按各自当前位置计算。</p>' +
+        '</div>' +
+      '</div>';
+    }
+
+    var bind = state.deviceBind;
+    var deviceName = bind.itemName || '物品';
+    var deviceSub = '设备 ' + bind.deviceNo + ' · 已绑定';
+    var deviceIcon = bind.photo
+      ? '<img src="' + escapeHTML(bind.photo) + '" alt="">'
+      : escapeHTML(state.link.icon || '🐱');
+    var routeURL = locatorAmapURL(true);
+    var mapInner = routeURL
+      ? '<iframe class="map-iframe" src="' + escapeHTML(routeURL) + '" title="' + tr('物品实时地图') + '"></iframe>'
+      : '<div class="map-placeholder">' + tr(state.locatorLoading ? '正在读取物品位置…' : '物品位置读取中，请稍后刷新') + '</div>';
     return '<div class="page link-page">' +
       '<div class="link-card">' +
-        '<div class="link-card-head"><div><div class="bold">定位器实时地图</div><div class="muted small">云知行实时位置 · 自动刷新</div></div>' +
+        '<div class="link-card-head"><div><div class="bold">物品实时地图</div><div class="muted small">我的位置 → 物品位置 · 实时路线</div></div>' +
           '<button class="map-toggle" data-action="toggle-map">' + (expanded ? '收起地图 ›' : '下拉展开地图 ›') + '</button></div>' +
         '<div class="map-actions">' +
           '<button class="map-primary" data-action="open-amap"><span>📍</span> 用高德导航打开</button>' +
-          '<button class="map-ghost" data-action="toggle-map">' + (expanded ? '收起地图' : '展开地图') + '</button>' +
+          '<button class="map-ghost" data-action="fullscreen-map">全屏地图</button>' +
+          '<button class="map-ghost" data-action="toggle-map">' + (expanded ? '收起' : '展开') + '</button>' +
         '</div>' +
-        '<div class="map-providers">' +
-          '<button data-action="open-map" data-map="baidu">百度地图</button>' +
-          '<button data-action="open-map" data-map="qq">腾讯地图</button>' +
-          '<button data-action="open-map" data-map="apple">苹果地图</button>' +
-        '</div>' +
-        '<div class="map-box' + (expanded ? ' expanded' : '') + '">' +
-          '<iframe class="map-iframe" src="' + escapeHTML(state.locatorShare) + '" title="' + tr('定位器实时地图') + '"></iframe>' +
-          mapPhotoMarker +
-        '</div>' +
-        '<div class="map-address">' + tr('地图来自云知行实时位置，每几秒自动刷新') + '</div>' +
+        '<div class="map-box' + (expanded ? ' expanded' : '') + '">' + mapInner + '</div>' +
+        '<div class="map-address">' + tr('路线和距离按你手机当前位置计算，请允许定位权限') + '</div>' +
       '</div>' +
       '<div class="link-card locator-card">' +
-        '<div class="bold">定位器实时位置（云知行）</div>' +
-        '<div class="muted small">定位服务已内置，打开即可查看，无需安装云知行或填写任何地址。</div>' +
+        '<div class="bold">物品实时位置</div>' +
+        '<div class="muted small">已绑定设备，打开即可查看物品实时位置。</div>' +
         '<div class="locator-btns">' +
           '<button class="map-primary" data-action="refresh-locator">' + tr('刷新位置') + '</button>' +
-          '<button class="map-ghost" data-action="find-me">' + tr(state.locatingMe ? '正在定位…' : '查找位置') + '</button>' +
-          '<button class="map-ghost" data-action="open-locator-link"' + (locatorAmapURL() ? '' : ' disabled') + '>' + tr('高德打开') + '</button>' +
+          '<button class="map-ghost" data-action="find-me">' + tr(state.locatingMe ? '正在定位…' : '获取我的位置') + '</button>' +
+          '<button class="map-ghost" data-action="fullscreen-map">' + tr('全屏地图') + '</button>' +
         '</div>' +
         '<div class="locator-result">' + (state.locatorLoading ? tr('正在读取位置…') :
           (state.locatorFix
             ? '<div>纬度 <b>' + state.locatorFix.lat + '</b> · 经度 <b>' + state.locatorFix.lng + '</b></div>' +
               '<div class="muted small">' + tr('定位时间：') + escapeHTML(locatorTimeText(state.locatorFix.time)) +
               (state.locatorFix.battery !== '' && state.locatorFix.battery != null ? ' · ' + tr('电量：') + escapeHTML(String(state.locatorFix.battery)) : '') + '</div>' +
-              (state.locatorDistance != null ? '<div class="muted small">' + tr('我到设备距离：约 ') + '<b>' + distanceText(state.locatorDistance) + '</b></div>' : '')
+              (state.locatorDistance != null ? '<div class="muted small">' + tr('我到物品距离：约 ') + '<b>' + distanceText(state.locatorDistance) + '</b></div>' : '')
             : '<div class="muted small">' + tr('正在读取位置…') + '</div>')) + '</div>' +
       '</div>' +
-      '<div class="section-title">设备<button class="add-device" data-action="add-device-hint">＋ 添加设备</button></div>' +
+      '<div class="section-title">设备<button class="add-device" data-action="bind-device">重新绑定</button></div>' +
       '<div class="link-card device-card">' +
         '<div class="device-top"><div class="device-icon" data-action="bind-device">' + deviceIcon + '</div><div class="device-main"><div class="bold">' + escapeHTML(deviceName) + '</div><div class="muted small">' + escapeHTML(deviceSub) + '</div></div><span class="online">在线</span></div>' +
         '<div class="device-stats"><div><span>电量 82%</span><div class="battery"><i></i></div></div>' +
@@ -1866,18 +1920,11 @@
         '<div class="device-actions">' +
           '<button data-action="find-me">查找位置</button>' +
           '<button data-action="bind-access">连接设备</button>' +
-          '<button data-action="bind-device">' + tr('绑定物品') + '</button>' +
+          '<button data-action="bind-device">' + tr('修改绑定') + '</button>' +
           '<button data-action="device-hint" data-name="离位提醒">离位提醒<br>开</button>' +
         '</div>' +
       '</div>' +
-      '<div class="section-title">联动能力<span class="muted small">设备 + App</span></div>' +
-      '<div class="ability-grid">' + abilities.map(function (a) {
-        return '<div class="ability-card"><div class="ability-icon">' + a.icon + '</div><div class="bold">' + a.title + '</div><p>' + a.body + '</p></div>';
-      }).join('') + '</div>' +
-      '<div class="link-card"><div class="bold">设备联动说明</div>' +
-        '<p class="desc">当前为交互演示：标签状态在 App 内模拟。开启蓝牙后可搜索附近标签并模拟连接；接入真实硬件时，标签通过蓝牙广播 ID 与信号强度，App 接收后实现查找、离位判定与自动记录。</p>' +
-        '<button class="wide-ghost" data-action="map-plan">查看真实中国地图接入方案</button>' +
-      '</div>' +
+      abilityHTML +
     '</div>';
   }
 
@@ -1979,8 +2026,8 @@
     d.selectedId = d.selectedId || '';
     d.name = d.name || b.itemName || '';
     d.photo = d.photo || b.photo || '';
-    d.deviceNo = d.deviceNo || b.deviceNo || '';
-    d.devicePwd = d.devicePwd || b.devicePwd || '';
+    d.deviceNo = d.deviceNo || b.deviceNo || DEFAULT_DEVICE_NO;
+    d.devicePwd = d.devicePwd || b.devicePwd || DEFAULT_DEVICE_PWD;
     d.api = d.api || state.deviceApi || '';
     state.overlay = { type: 'deviceBind' };
     renderOverlay();
@@ -1999,12 +2046,12 @@
         '<div class="bind-photo-row"><div class="bind-photo-preview">' + (d.photo ? '<img src="' + escapeHTML(d.photo) + '" alt="">' : '📷') + '</div>' +
           '<button type="button" class="btn" data-action="bind-pick-photo">拍照 / 从相册选择照片</button></div>' +
         '<input type="file" id="bind-photo-file" accept="image/*" style="display:none">' +
-        '<div class="bind-step">2. 输入设备编号和密码</div>' +
+        '<div class="bind-step">2. 设备编号和密码</div>' +
         '<input id="bind-device-no" class="bind-input" placeholder="设备编号" value="' + escapeHTML(d.deviceNo || '') + '">' +
         '<input id="bind-device-pwd" class="bind-input" type="password" placeholder="设备密码" value="' + escapeHTML(d.devicePwd || '') + '">' +
         '<div class="bind-step">3. 云端 API 地址（可选，部署 Worker 后填写）</div>' +
         '<input id="bind-api" class="bind-input" placeholder="https://xxx.workers.dev" value="' + escapeHTML(d.api || state.deviceApi || '') + '">' +
-        '<div class="bind-tip">填写 API 地址后会同步到云端，生成分享码；不填则只保存在本机。云端只存密码哈希，不存明文。</div>' +
+        '<div class="bind-tip">当前使用固定设备。填写 API 地址后会同步到云端并生成分享码；云端只存密码哈希。</div>' +
         '<div class="bind-foot"><button class="btn" data-action="close-overlay">取消</button>' +
           '<button class="btn btn-primary" data-action="save-device-bind">完成绑定</button></div>' +
       '</div>');
@@ -2019,6 +2066,8 @@
     }
     if (!name) { toast('请选择物品或填写物品名称'); return; }
     if (!String(d.deviceNo || '').trim()) { toast('请输入设备编号'); return; }
+    var shareUrl = normalizeLocatorLink(DEFAULT_LOCATOR_LINK);
+    if (!shareUrl) shareUrl = DEFAULT_LOCATOR_LINK;
 
     var api = normalizeDeviceApi(d.api || state.deviceApi || '');
     var local = {
@@ -2027,10 +2076,13 @@
       photo: photo,
       deviceNo: String(d.deviceNo).trim(),
       devicePwd: String(d.devicePwd || ''),
+      shareUrl: shareUrl,
       boundAt: Date.now()
     };
     state.deviceBind = local;
     state.deviceApi = api;
+    state.locatorShare = shareUrl;
+    try { localStorage.setItem(LOCATOR_KEY, shareUrl); } catch (e) {}
     persistDeviceBind();
     saveDeviceApi();
     state.overlay = null;
@@ -2047,7 +2099,7 @@
         password: local.devicePwd,
         itemName: local.itemName,
         photo: local.photo,
-        shareUrl: state.locatorShare
+        shareUrl: local.shareUrl
       })
     }).then(function (r) { return r.json(); }).then(function (res) {
       if (!res.ok) throw new Error(res.error || '云端绑定失败');
@@ -2096,7 +2148,14 @@
     }).then(function (r) { return r.json(); }).then(function (res) {
       if (!res.ok) throw new Error(res.error || '连接失败');
       state.deviceShareCode = String(res.shareCode || '').toUpperCase();
-      state.deviceBind = { itemName: res.itemName || '', photo: res.photo || '', deviceNo: res.deviceNo || '' };
+      if (res.shareUrl) {
+        var linkedShare = normalizeLocatorLink(res.shareUrl);
+        if (linkedShare) {
+          state.locatorShare = linkedShare;
+          try { localStorage.setItem(LOCATOR_KEY, linkedShare); } catch (e) {}
+        }
+      }
+      state.deviceBind = { itemName: res.itemName || '', photo: res.photo || '', deviceNo: res.deviceNo || '', shareUrl: state.locatorShare };
       persistDeviceBind();
       saveDeviceApi();
       state.overlay = null;
@@ -2164,6 +2223,16 @@
     if (o.type === 'time') { return '<div class="sheet-mask show" data-action="close-overlay"></div><div class="sheet show">' + timePickerHTML(o) + '</div>'; }
     if (o.type === 'deviceBind') { return deviceBindHTML(); }
     if (o.type === 'deviceAccess') { return deviceAccessHTML(); }
+    if (o.type === 'mapFull') {
+      var fullURL = locatorAmapURL(true);
+      return '<div class="sheet-mask show" data-action="close-overlay"></div>' +
+        '<div class="map-full-overlay"><div class="map-full-head"><b>' + tr('物品实时地图') + '</b>' +
+        '<button data-action="close-overlay">✕ ' + tr('关闭') + '</button></div>' +
+        (fullURL
+          ? '<iframe class="map-iframe" src="' + escapeHTML(fullURL) + '" title="' + tr('物品实时地图') + '"></iframe>'
+          : '<div class="map-placeholder">' + tr('物品位置读取中，请稍后刷新') + '</div>') +
+        '</div>';
+    }
     if (o.type === 'photoChoice') {
       return sheetShell('添加照片',
         '<div class="photo-choice"><img src="' + escapeHTML(o.src) + '" alt="">' +
@@ -2736,8 +2805,13 @@
         if (typeof window !== 'undefined' && window.location) window.location.href = mapURL;
         break;
       case 'find-me': showMyDistance(); break;
+      case 'fullscreen-map':
+        if (!locatorAmapURL(true)) { toast('请先绑定并刷新物品位置'); break; }
+        state.overlay = { type: 'mapFull' };
+        renderOverlay();
+        break;
       case 'map-plan':
-        openInfo('地图方案', '刷新位置后可直接用高德导航、百度地图、腾讯地图或苹果地图打开设备坐标；高德会从“我的位置”规划到设备的路线。');
+        openInfo('地图方案', '绑定后地图会按你手机的当前位置规划到物品位置的路线，并可全屏查看；距离也按你当前位置计算。');
         break;
       case 'save-locator-link':
         saveLocatorLink(($('#locator-link') || {}).value || '', ($('#locator-api') || {}).value || '');
