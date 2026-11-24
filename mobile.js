@@ -6,7 +6,7 @@
   'use strict';
 
   /* ---------------- 常量 ---------------- */
-  var APP_VERSION = '2.47';
+  var APP_VERSION = '2.48';
   var DB_KEY = 'organizer_local_v2';
   var PREF_KEY = 'organizer_pref_v2';
   var HISTORY_KEY = 'organizer_search_history_v2';
@@ -22,6 +22,11 @@
   var DEFAULT_DEVICE_PWD = '123456';
 
   var APP_VERSION_CHANGELOG = [
+    { version: '2.48', date: '2026-11-24', title: '恢复建筑地图与气泡排版', items: [
+      '道路瓦片换回带建筑图案的高德样式，17 级已验证有内容，继续放大用已有瓦片缩放',
+      '进一步增强地图色彩对比度',
+      '物品气泡加宽，图标和文字缩小并留出空间，避免文字挤出白框'
+    ] },
     { version: '2.47', date: '2026-11-24', title: '修复放大空白和地图配色', items: [
       '限制瓦片最高可用层级为 17，继续放大会缩放已有瓦片，不再出现空白地图',
       '道路图切换回高德颜色更明显的瓦片样式，并增强饱和度和对比度'
@@ -2053,7 +2058,7 @@
   function mapTileURL() {
     return state.mapLayerKind === 'satellite'
       ? 'https://webst0{s}.is.autonavi.com/appmaptile?style=6&scale=1&x={x}&y={y}&z={z}'
-      : 'https://webrd0{s}.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=7&x={x}&y={y}&z={z}';
+      : 'https://webrd0{s}.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=8&x={x}&y={y}&z={z}';
   }
   function mapTileOptions() {
     return { subdomains: '1234', tileSize: 128, zoomOffset: 1, minZoom: 3, maxZoom: 18, maxNativeZoom: 17 };
