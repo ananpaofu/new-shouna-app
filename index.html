@@ -11,7 +11,7 @@
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="apple-touch-icon" href="icon-192.png" />
   <link rel="icon" href="icon-192.png" />
-  <link rel="stylesheet" href="mobile.css?v=2.35" />
+  <link rel="stylesheet" href="mobile.css?v=2.36" />
   <title>寻迹 · 收纳清单</title>
 </head>
 <body>
@@ -30,7 +30,7 @@
   </div>
 
   <!-- 仅保留纯前端逻辑：无任何后端 / 社交 / 云端 SDK -->
-  <script src="mobile.js?v=2.35"></script>
+  <script src="mobile.js?v=2.36"></script>
   <script>
     // PWA 安装事件捕获（供「安装到桌面」按钮调用）
     window.__organizerInstallPrompt = null;
@@ -43,7 +43,7 @@
     });
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', function () {
-        navigator.serviceWorker.register('./sw.js?v=2.35', { updateViaCache: 'none' }).then(function (reg) {
+        navigator.serviceWorker.register('./sw.js?v=2.36', { updateViaCache: 'none' }).then(function (reg) {
           if (reg && typeof reg.update === 'function') reg.update();
           if (reg) reg.addEventListener('updatefound', function () {
             var nw = reg.installing;
