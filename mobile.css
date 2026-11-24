@@ -617,10 +617,6 @@ a { color: inherit; text-decoration: none; }
 .map-box { position: relative; height: 200px; border-radius: 12px; background: #eef5f5; overflow: hidden; border: 1px solid #e5eeee; }
 .map-box.expanded { height: 320px; }
 .map-iframe { width: 100%; height: 100%; border: 0; display: block; background: var(--bg-soft); }
-.map-layer { position: absolute; inset: -32px; touch-action: none; cursor: grab; }
-.map-layer.dragging { cursor: grabbing; }
-.map-layer .map-iframe { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
-.map-full-overlay .map-layer { inset: -48px; }
 .map-item-badge {
   --badge-bg: rgba(255,255,255,.96); --badge-border: rgba(31,157,85,.35);
   position: absolute; left: 50%; top: 26%; transform: translate(-50%,-50%); z-index: 3;
@@ -663,13 +659,11 @@ a { color: inherit; text-decoration: none; }
 .map-full-overlay { position: absolute; inset: 0; z-index: 80; background: var(--bg); display: flex; flex-direction: column; }
 .map-full-head { flex: 0 0 auto; height: 36px; padding: 0 10px; display: flex; align-items: center; gap: 8px; border-bottom: 1px solid var(--line); }
 .map-full-head b { flex: 0 0 auto; font-size: 13px; white-space: nowrap; }
+.map-head-photo { flex: 0 0 auto; width: 24px; height: 24px; border-radius: 50%; background: var(--green-soft); display: flex; align-items: center; justify-content: center; font-size: 14px; line-height: 1; overflow: hidden; }
+.map-head-photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .map-full-status { flex: 1 1 auto; min-width: 0; color: var(--ink-3); font-size: 11px; text-align: right; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .map-full-head button { flex: 0 0 auto; padding: 4px 8px; border-radius: 7px; background: var(--bg-soft); color: var(--ink-2); font-size: 11px; white-space: nowrap; }
 .map-full-overlay .map-iframe, .map-full-overlay .map-placeholder { flex: 1 1 auto; min-height: 0; }
-.map-full-overlay .map-item-badge { top: 18%; padding: 8px 14px 8px 8px; }
-.map-full-overlay .map-item-icon { width: 44px; height: 44px; font-size: 26px; }
-.map-full-overlay .map-item-text b { font-size: 14px; }
-.map-full-overlay .map-item-text small { font-size: 11px; }
 .bind-prompt { text-align: center; padding: 28px 18px; }
 .bind-prompt-icon { width: 64px; height: 64px; margin: 0 auto 14px; border-radius: 18px; background: var(--green-soft); color: var(--green); display: flex; align-items: center; justify-content: center; font-size: 28px; }
 .bind-prompt .bold { font-size: 16px; margin-bottom: 6px; }
