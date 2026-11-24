@@ -6,7 +6,7 @@
   'use strict';
 
   /* ---------------- 常量 ---------------- */
-  var APP_VERSION = '2.37';
+  var APP_VERSION = '2.38';
   var DB_KEY = 'organizer_local_v2';
   var PREF_KEY = 'organizer_pref_v2';
   var HISTORY_KEY = 'organizer_search_history_v2';
@@ -22,6 +22,11 @@
   var DEFAULT_DEVICE_PWD = '123456';
 
   var APP_VERSION_CHANGELOG = [
+    { version: '2.38', date: '2026-11-24', title: '高德标记地图', items: [
+      '内嵌地图改为高德标记地图，不再显示旧页面里的设备编号和加载失败的图片',
+      '取消拖动地图图层的方案，恢复地图原生拖动、缩放和放大缩小按钮，平移时不会出现空白',
+      '全屏地图不再放大的物品气泡，改为在顶栏用小头像显示绑定物品'
+    ] },
     { version: '2.37', date: '2026-11-24', title: '页面间距与地图拖动', items: [
       '“我的 / 头像框”页内容上移，顶部间距与设备联动一致',
       '删除地图下方说明文字，“获取我的位置”改为“获取位置”；联动卡片整体压缩，更容易看到绑定设备',
@@ -647,8 +652,7 @@
     bindDraft: null,
     deviceApi: '',
     deviceShareCode: '',
-    crop: null,
-    mapPan: { x: 0, y: 0 }
+    crop: null
   };
 
   /* ---------------- 工具 ---------------- */
@@ -1945,9 +1949,22 @@
       if (!silent) toast(err && err.code === 1 ? '请允许浏览器获取位置' : '无法获取当前位置，请开启手机定位');
     }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 30000 });
   }
-  function mapLayerStyle() {
-    var p = state.mapPan || { x: 0, y: 0 };
-    return ' style="transform:translate(' + (Number(p.x) || 0) + 'px,' + (Number(p.y) || 0) + 'px)"';
+  function locatorEmbedURL() {
+    var f = state.locatorFix;
+    var fallback = normalizeLocatorLink(state.locatorShare || DEFAULT_LOCATOR_LINK);
+    if (!f || !f.lat || !f.lng) return fallback;
+    var name = (state.deviceBind && state.deviceBind.itemName) || '物品';
+    var p = mapCoords(f.lat, f.lng, 'amap');
+    if (!p.lat || !p.lng) return fallback;
+    return 'https://uri.amap.com/marker?position=' + p.lng + ',' + p.lat +
+      '&name=' + encodeURIComponent(name) + '&src=organizer&coordinate=gaode&callnative=0&zoom=16';
+  }
+  function mapHeaderPhotoHTML() {
+    var b = state.deviceBind || {};
+    var icon = b.photo
+      ? '<img src="' + escapeHTML(b.photo) + '" alt="">'
+      : escapeHTML(state.link.icon || '🐱');
+    return '<span class="map-head-photo">' + icon + '</span>';
   }
   function mapItemBadgeHTML() {
     var b = state.deviceBind || {};
@@ -1988,9 +2005,9 @@
     var deviceIcon = bind.photo
       ? '<img src="' + escapeHTML(bind.photo) + '" alt="">'
       : escapeHTML(state.link.icon || '🐱');
-    var liveMapURL = normalizeLocatorLink(state.locatorShare || DEFAULT_LOCATOR_LINK);
+    var liveMapURL = locatorEmbedURL();
     var mapInner = liveMapURL
-      ? '<div class="map-layer"' + mapLayerStyle() + '><iframe class="map-iframe" src="' + escapeHTML(liveMapURL) + '" title="' + tr('物品实时地图') + '" allow="geolocation; fullscreen"></iframe>' + mapItemBadgeHTML() + '</div>'
+      ? '<iframe class="map-iframe" src="' + escapeHTML(liveMapURL) + '" title="' + tr('物品实时地图') + '" allow="geolocation; fullscreen"></iframe>' + mapItemBadgeHTML()
       : '<div class="map-placeholder">' + tr('物品位置读取中，请稍后刷新') + '</div>';
     var mapInfo = state.locatorLoading ? tr('正在读取位置…') :
       (state.locatorFix
@@ -2330,13 +2347,12 @@
     if (o.type === 'deviceBind') { return deviceBindHTML(); }
     if (o.type === 'deviceAccess') { return deviceAccessHTML(); }
     if (o.type === 'mapFull') {
-      var fullURL = normalizeLocatorLink(state.locatorShare || DEFAULT_LOCATOR_LINK);
+      var fullURL = locatorEmbedURL();
       return '<div class="sheet-mask show" data-action="close-overlay"></div>' +
-        '<div class="map-full-overlay"><div class="map-full-head"><b>' + tr('物品实时地图') + '</b>' +
+        '<div class="map-full-overlay"><div class="map-full-head">' + mapHeaderPhotoHTML() + '<b>' + tr('物品实时地图') + '</b>' +
         '<span class="map-full-status">' + escapeHTML(locationStatusText()) + '</span>' +
         '<button data-action="close-overlay">✕ ' + tr('关闭') + '</button></div>' +
-        '<div class="map-layer"' + mapLayerStyle() + '><iframe class="map-iframe" src="' + escapeHTML(fullURL) + '" title="' + tr('物品实时地图') + '" allow="geolocation; fullscreen"></iframe>' +
-        mapItemBadgeHTML() + '</div>' +
+        '<iframe class="map-iframe" src="' + escapeHTML(fullURL) + '" title="' + tr('物品实时地图') + '" allow="geolocation; fullscreen"></iframe>' +
         '</div>';
     }
     if (o.type === 'mapChoose') {
@@ -2964,7 +2980,6 @@
         state.myGeoStatus = 'idle';
         state.myGeoAutoTried = false;
         state.link.mapExpanded = false;
-        state.mapPan = { x: 0, y: 0 };
         try {
           localStorage.removeItem(DEVICE_BIND_KEY);
           localStorage.removeItem(DEVICE_API_KEY);
@@ -3224,31 +3239,6 @@
     });
     document.addEventListener('pointerup', function () { cropDrag = null; });
     document.addEventListener('pointercancel', function () { cropDrag = null; });
-    var mapDrag = null;
-    document.addEventListener('pointerdown', function (e) {
-      if (!e.target || !e.target.closest) return;
-      var layer = e.target.closest('.map-layer');
-      if (!layer) return;
-      mapDrag = { el: layer, x: e.clientX, y: e.clientY, ox: state.mapPan.x || 0, oy: state.mapPan.y || 0 };
-      layer.classList.add('dragging');
-      if (layer.setPointerCapture) { try { layer.setPointerCapture(e.pointerId); } catch (err) {} }
-      e.preventDefault();
-    });
-    document.addEventListener('pointermove', function (e) {
-      if (!mapDrag) return;
-      var max = 140;
-      state.mapPan.x = Math.max(-max, Math.min(max, mapDrag.ox + (e.clientX - mapDrag.x)));
-      state.mapPan.y = Math.max(-max, Math.min(max, mapDrag.oy + (e.clientY - mapDrag.y)));
-      mapDrag.el.style.transform = 'translate(' + state.mapPan.x + 'px,' + state.mapPan.y + 'px)';
-      e.preventDefault();
-    });
-    function endMapDrag() {
-      if (!mapDrag) return;
-      mapDrag.el.classList.remove('dragging');
-      mapDrag = null;
-    }
-    document.addEventListener('pointerup', endMapDrag);
-    document.addEventListener('pointercancel', endMapDrag);
     document.addEventListener('focus', function (e) {
       if (e.target && e.target.id === 'search-input') focusSearch();
       if (e.target && e.target.id === 'home-search-input') focusHomeSearch();
