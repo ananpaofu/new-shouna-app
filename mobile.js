@@ -6,7 +6,7 @@
   'use strict';
 
   /* ---------------- 常量 ---------------- */
-  var APP_VERSION = '2.41';
+  var APP_VERSION = '2.42';
   var DB_KEY = 'organizer_local_v2';
   var PREF_KEY = 'organizer_pref_v2';
   var HISTORY_KEY = 'organizer_search_history_v2';
@@ -22,6 +22,10 @@
   var DEFAULT_DEVICE_PWD = '123456';
 
   var APP_VERSION_CHANGELOG = [
+    { version: '2.42', date: '2026-11-24', title: '修复地图加载失败', items: [
+      'Leaflet 地图脚本和样式改为随 App 一起部署，不再依赖外部 CDN',
+      '解决部分手机网络环境下出现“地图加载失败，请联网后重试”的问题'
+    ] },
     { version: '2.41', date: '2026-11-24', title: '纯净实时地图', items: [
       '内嵌地图改成纯地图画布，不再显示邀请好友、新人特权、打车等第三方页面弹窗和广告',
       '物品照片气泡固定在真实坐标上，刷新位置后距离、状态、时间会同步更新，拖动缩放地图时气泡跟随',
