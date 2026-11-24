@@ -532,6 +532,18 @@ a { color: inherit; text-decoration: none; }
 .photo-choice img { width: 100%; max-height: 240px; object-fit: contain; border-radius: 12px; background: var(--bg-soft); }
 .photo-choice-tip { font-size: 12px; color: var(--ink-3); margin: 10px 0 14px; }
 .photo-choice-btns { display: flex; gap: 10px; }
+.bind-sheet { padding: 4px 18px 18px; }
+.bind-step { font-size: 12px; color: var(--ink-3); margin: 10px 0 8px; }
+.bind-input { width: 100%; box-sizing: border-box; padding: 11px 12px; border: 1px solid var(--line-2); border-radius: 9px;
+  background: var(--bg); color: var(--ink); font-size: 13px; outline: none; margin-bottom: 8px; }
+.bind-input:focus { border-color: var(--green); }
+.bind-photo-row { display: flex; align-items: center; gap: 10px; margin: 4px 0 12px; }
+.bind-photo-preview { width: 54px; height: 54px; flex: 0 0 auto; border-radius: 10px; background: var(--bg-soft);
+  display: flex; align-items: center; justify-content: center; font-size: 20px; overflow: hidden; }
+.bind-photo-preview img { width: 100%; height: 100%; object-fit: cover; }
+.bind-photo-row .btn { padding: 11px; }
+.bind-tip { font-size: 11px; color: var(--ink-4); line-height: 1.6; margin: 4px 0 12px; }
+.bind-foot { display: flex; gap: 10px; }
 .crop-sheet { padding: 0 0 calc(10px + env(safe-area-inset-bottom)); }
 .crop-stage { position: relative; width: calc(100% - 32px); aspect-ratio: 1; margin: 0 16px; border-radius: 12px;
   background: var(--bg-soft); overflow: hidden; touch-action: none; cursor: grab; }
@@ -605,6 +617,10 @@ a { color: inherit; text-decoration: none; }
 .map-box { position: relative; height: 200px; border-radius: 12px; background: #eef5f5; overflow: hidden; border: 1px solid #e5eeee; }
 .map-box.expanded { height: 320px; }
 .map-iframe { width: 100%; height: 100%; border: 0; display: block; background: var(--bg-soft); }
+.map-photo-marker { position: absolute; left: 50%; top: 48%; width: 46px; height: 46px; border-radius: 50%; border: 3px solid #fff;
+  box-shadow: 0 0 0 6px rgba(31,157,85,.28), 0 2px 8px rgba(0,0,0,.25); overflow: hidden;
+  transform: translate(-50%,-50%); z-index: 2; pointer-events: none; }
+.map-photo-marker img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .map-blob { position: absolute; border-radius: 50%; opacity: .65; }
 .blob-a { width: 150px; height: 150px; background: #d8ecd8; left: -30px; top: -20px; }
 .blob-b { width: 170px; height: 170px; background: #dcebf2; right: -40px; top: 10px; }
@@ -615,7 +631,9 @@ a { color: inherit; text-decoration: none; }
 .map-pin { position: absolute; left: 50%; top: 48%; width: 16px; height: 16px; border-radius: 50%; background: #3b82f6; border: 3px solid #fff; box-shadow: 0 0 0 6px rgba(59,130,246,.2); transform: translate(-50%,-50%); }
 .map-bubble { position: absolute; left: 50%; top: calc(48% + 18px); transform: translateX(-50%); background: #3b82f6; color: #fff; font-size: 11px; padding: 3px 9px; border-radius: 6px; white-space: nowrap; }
 .map-address { margin: 10px 0; display: inline-block; padding: 6px 10px; border: 1px solid #cfe0ee; border-radius: 8px; color: #2f6fa8; font-size: 12px; background: #f4f9fd; }
-.map-actions { display: flex; gap: 10px; margin-bottom: 12px; }
+.map-actions { display: flex; gap: 10px; margin-bottom: 8px; }
+.map-providers { display: flex; gap: 8px; margin-bottom: 12px; }
+.map-providers button { flex: 1; padding: 9px 4px; border-radius: 9px; background: var(--green-soft); color: var(--green); font-size: 12px; }
 .map-primary, .map-ghost { flex: 1; padding: 12px; border-radius: 9px; font-size: 13px; }
 .map-primary { background: var(--green); color: #fff; }
 .map-ghost { background: #f3f3f3; color: var(--ink-2); }
@@ -630,7 +648,8 @@ a { color: inherit; text-decoration: none; }
 .locator-result b { color: var(--green); font-weight: 700; }
 .add-device { font-size: 11px; color: var(--ink-3); background: #f2f2f2; padding: 5px 10px; border-radius: 8px; }
 .device-card .device-top { display: flex; align-items: center; gap: 10px; }
-.device-icon { width: 42px; height: 42px; border-radius: 9px; background: var(--bg-soft); display: flex; align-items: center; justify-content: center; font-size: 20px; }
+.device-icon { width: 42px; height: 42px; border-radius: 9px; background: var(--bg-soft); display: flex; align-items: center; justify-content: center; font-size: 20px; overflow: hidden; }
+.device-icon img { width: 100%; height: 100%; border-radius: 9px; object-fit: cover; display: block; }
 .device-main { flex: 1; min-width: 0; }
 .online { font-size: 11px; color: var(--ink-3); background: var(--bg-soft); padding: 3px 8px; border-radius: 6px; }
 .device-stats { display: flex; gap: 24px; margin: 14px 0; font-size: 11px; color: var(--ink-3); }
@@ -653,8 +672,16 @@ a { color: inherit; text-decoration: none; }
 .wide-ghost { width: 100%; padding: 11px; border-radius: 9px; background: #f3f3f3; font-size: 12px; color: var(--ink-2); }
 
 /* 物品分类页 */
-.category-page { position: relative; }
-.category-list { background: var(--bg); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
+.category-page { display: block; position: relative; overflow-y: auto; overflow-x: hidden; scrollbar-width: none;
+  -ms-overflow-style: none; -webkit-overflow-scrolling: touch; padding-bottom: 26px; }
+.category-page::-webkit-scrollbar { display: none; }
+.category-page > * { flex-shrink: 0; }
+.category-list { background: var(--bg); border: 1px solid var(--line); border-radius: var(--radius); overflow: visible; }
+.group-page { display: block; overflow-y: auto; overflow-x: hidden; scrollbar-width: none;
+  -ms-overflow-style: none; -webkit-overflow-scrolling: touch; padding-bottom: 26px; }
+.group-page::-webkit-scrollbar { display: none; }
+.group-page > * { flex-shrink: 0; }
+.group-page .item-list { overflow: visible; flex: none; }
 .category-row { display: flex; align-items: center; gap: 12px; padding: 14px; border-bottom: 1px dashed var(--line); font-size: 13px; }
 .category-row:last-child { border-bottom: none; }
 .cat-letter { width: 22px; height: 22px; border-radius: 6px; background: var(--bg-soft); display: flex; align-items: center; justify-content: center; font-size: 11px; color: var(--ink-3); }
