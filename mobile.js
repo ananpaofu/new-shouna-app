@@ -6,7 +6,7 @@
   'use strict';
 
   /* ---------------- 常量 ---------------- */
-  var APP_VERSION = '2.52';
+  var APP_VERSION = '2.54';
   var DB_KEY = 'organizer_local_v2';
   var PREF_KEY = 'organizer_pref_v2';
   var HISTORY_KEY = 'organizer_search_history_v2';
@@ -15,6 +15,7 @@
   var LOCATOR_API_KEY = 'organizer_locator_api_v1';
   var DEVICE_BIND_KEY = 'organizer_device_bind_v1';
   var DEVICE_API_KEY = 'organizer_device_api_v1';
+  var LEAVE_ALERT_KEY = 'organizer_leave_alert_v1';
   var DEFAULT_LOCATOR_LINK = 'https://vipapi.18gps.net//CheTT/CheTTgetPosition.aspx?id=7c730550-a968-49ab-a054-4578cd7a571c&lang=cn';
   var DEFAULT_LOCATOR_API = 'https://twilight-butterfly-f2a8.xieta1371.workers.dev';
   var LOCATOR_DIRECT_OBJ = '482db427-68d2-4d53-85cb-3c55fd4dfa81';
@@ -22,6 +23,18 @@
   var DEFAULT_DEVICE_PWD = '123456';
 
   var APP_VERSION_CHANGELOG = [
+    { version: '2.54', date: '2026-11-24', title: '分类图标统一优化', items: [
+      '分类页与侧栏图标改为统一线性 SVG，避免 iOS / Android emoji 显示不一致',
+      '全部、状态良好、临近过期、已过期、已开封、库存、回收站图标按文字含义重新设计',
+      '图标颜色与状态语义对应，物品分类使用四宫格图标，整体更简洁统一'
+    ] },
+    { version: '2.53', date: '2026-11-24', title: '联动页操作完善', items: [
+      '“获取位置”改为“物品导航”，可选物品后跳转高德地图导航到物品位置',
+      '隐藏地图左下角高德版权文字，设备按钮压缩并保持居中',
+      '离开提醒改为开关式按钮，开启后持续监听位置，距离超过60米显示红色提醒',
+      '设备电量改用定位数据里的真实电量，删除假的信号强度；低电量提醒改为物品导航能力',
+      '删除绑定改为勾选后确认，支持全选和一键收起设备'
+    ] },
     { version: '2.52', date: '2026-11-24', title: '地图标记样式调整', items: [
       '物品标记去掉文字，改为白色圆圈图案 + 蓝点样式',
       '地图上新增用户手机定位标记：白色圆圈手机图案 + 蓝点'
@@ -254,31 +267,31 @@
 
   // 侧边栏分类
   var MAIN_CATEGORIES = [
-    { key: 'all', label: '全部', icon: 'box', emoji: '🧺', color: '#a9782f' },
-    { key: 'best', label: '状态良好', icon: 'star', emoji: '✅', color: '#2f9c60' },
-    { key: 'soon', label: '临近过期', icon: 'clock', emoji: '⏰', color: '#2479c4' },
-    { key: 'expired', label: '已过期', icon: 'warn', emoji: '🚫', color: '#e04b44' },
-    { key: 'opened', label: '已开封', icon: 'drop', emoji: '📂', color: '#d98b2b' },
-    { key: 'stock', label: '库存总览', icon: 'layers', emoji: '🏬', color: '#7959c7' },
-    { key: 'trash', label: '回收站', icon: 'trash', emoji: '🗑️', color: '#965656' }
+    { key: 'all', label: '全部', icon: 'all', color: '#a9782f' },
+    { key: 'best', label: '状态良好', icon: 'best', color: '#2f9c60' },
+    { key: 'soon', label: '临近过期', icon: 'soon', color: '#2479c4' },
+    { key: 'expired', label: '已过期', icon: 'expired', color: '#e04b44' },
+    { key: 'opened', label: '已开封', icon: 'opened', color: '#d98b2b' },
+    { key: 'stock', label: '库存总览', icon: 'stock', color: '#7959c7' },
+    { key: 'trash', label: '回收站', icon: 'trash', color: '#965656' }
   ];
   var CATEGORY_SVG = {
-    box: '<path d="M4 7.5 12 3l8 4.5v9L12 21l-8-4.5z"/><path d="M4 7.5 12 12l8-4.5M12 12v9"/>',
-    leaf: '<path d="M20 4C10 4 5 8 5 14a5 5 0 0 0 5 5c6 0 10-5 10-15z"/><path d="M4 20c3-5 7-8 12-10"/>',
-    clock: '<circle cx="12" cy="12" r="8"/><path d="M12 7v5l3 2"/>',
-    warn: '<path d="M12 3 2 20h20z"/><path d="M12 9v5M12 17h.01"/>',
-    drop: '<path d="M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11z"/><path d="M9 14a3 3 0 0 0 3 3"/>',
-    layers: '<path d="m12 3 9 5-9 5-9-5z"/><path d="m3 13 9 5 9-5M3 17l9 5 9-5"/>',
+    all: '<path d="M4 8h16l-2 13H6z"/><path d="M8 8V6a4 4 0 0 1 8 0v2"/>',
+    best: '<path d="M12 3 5 6v5c0 4.5 3 8 7 10 4-2 7-5.5 7-10V6z"/><path d="m9 12 2 2 4-4"/>',
+    soon: '<circle cx="12" cy="13" r="7"/><path d="M12 9v4l3 2M5 3 2.5 5.5M19 3l2.5 2.5M12 3v2"/>',
+    expired: '<circle cx="12" cy="12" r="9"/><path d="m9 9 6 6M15 9l-6 6"/>',
+    opened: '<path d="M4 10 12 5l8 5v9l-8 5-8-5z"/><path d="m4 10 8 5 8-5M12 15v9M8 6.5l8 5"/>',
+    stock: '<path d="M3 21V8l9-5 9 5v13"/><path d="M3 9h18M7 13h3M14 13h3M7 17h3M14 17h3"/>',
     trash: '<path d="M4 7h16M9 7V4h6v3M6 7l1 14h10l1-14"/><path d="M10 11v6M14 11v6"/>',
-    hash: '<path d="M5 9h14M5 15h14M10 3 8 21M16 3l-2 18"/>',
-    star: '<path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2-5.6-3-5.6 3 1.1-6.2L3 9.6l6.2-.9z"/>'
+    categories: '<rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/>'
   };
-  function categoryIconHTML(c) {
-    if (c.emoji) return '<span class="side-emoji side-emoji-solid">' + c.emoji + '</span>';
-    var svg = CATEGORY_SVG[c.icon] || CATEGORY_SVG.box;
-    return '<span class="side-emoji" style="color:' + (c.color || 'var(--green)') + '">' +
-      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">' + svg + '</svg></span>';
+  function categorySVGHTML(c, cls) {
+    var key = c.key || c.icon || 'all';
+    var svg = CATEGORY_SVG[key] || CATEGORY_SVG[c.icon] || CATEGORY_SVG.all;
+    return '<span class="' + (cls || 'side-emoji') + ' category-svg" style="color:' + (c.color || 'var(--green)') + '">' +
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">' + svg + '</svg></span>';
   }
+  function categoryIconHTML(c) { return categorySVGHTML(c, 'side-emoji'); }
   var DEFAULT_CATEGORIES = [
     '食品', '药品', '化妆品', '衣物', '文档证件', '电子产品', '文具书籍',
     '钥匙锁具', '清洁用品', '运动用品', '母婴用品', '工具五金', '其他'
@@ -718,7 +731,13 @@
     deviceShareCode: '',
     crop: null,
     mapLayerKind: 'road',
-    leaflet: { small: {}, full: {} }
+    leaflet: { small: {}, full: {} },
+    leaveAlertEnabled: (function () { try { return localStorage.getItem(LEAVE_ALERT_KEY) === '1'; } catch (e) { return false; } })(),
+    leaveAlertTriggered: false,
+    leaveAlertWatch: null,
+    deleteMode: false,
+    selectedDevices: {},
+    deviceCollapsed: false
   };
 
   /* ---------------- 工具 ---------------- */
@@ -1251,7 +1270,7 @@
         '</div>' +
         '<div class="sidebar-body">' +
           '<div class="side-group">' + MAIN_CATEGORIES.map(sideItem).join('') + '</div>' +
-          '<div class="side-group"><div class="side-item" data-action="manage-categories">' + categoryIconHTML({ emoji: '🗂️' }) + '<span>物品分类</span><span class="side-arrow">›</span></div></div>' +
+          '<div class="side-group"><div class="side-item" data-action="manage-categories">' + categoryIconHTML({ key: 'categories', color: '#7959c7' }) + '<span>物品分类</span><span class="side-arrow">›</span></div></div>' +
         '</div>' +
       '</aside>';
   }
@@ -1390,15 +1409,15 @@
       stock: items.filter(function (it) { return !it.trashed; }).length,
       trash: items.filter(function (it) { return !!it.trashed; }).length
     };
-    function tile(emoji, label, cnt, action, cat) {
+    function tile(iconHTML, label, cnt, action, cat) {
       return '<button class="quick-tile" data-action="' + action + '"' + (cat ? ' data-cat="' + escapeHTML(cat) + '"' : '') + '>' +
-        '<span class="quick-icon"><span class="quick-emoji">' + emoji + '</span>' +
+        '<span class="quick-icon">' + iconHTML +
           (cnt != null ? '<span class="quick-count">' + cnt + '</span>' : '') + '</span>' +
         '<span class="quick-name">' + escapeHTML(label) + '</span></button>';
     }
     var tiles = MAIN_CATEGORIES.map(function (c) {
-      return tile(c.emoji, c.label, counts[c.key], 'quick-category', c.key);
-    }).join('') + tile('🗂️', '物品分类', null, 'manage-categories', '');
+      return tile(categorySVGHTML(c, 'quick-emoji'), c.label, counts[c.key], 'quick-category', c.key);
+    }).join('') + tile(categorySVGHTML({ key: 'categories', color: '#7959c7' }, 'quick-emoji'), '物品分类', null, 'manage-categories', '');
     return '<div class="page quick-page">' +
       '<div class="quick-grid">' + tiles + '</div>' +
       '<div class="quick-foot">' + tr('按状态快速查看物品') + '</div>' +
@@ -2017,6 +2036,37 @@
       if (!silent) toast(err && err.code === 1 ? '请允许浏览器获取位置' : '无法获取当前位置，请开启手机定位');
     }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 30000 });
   }
+  function updateLeaveAlertPosition(pos) {
+    var lat = pos.coords.latitude, lng = pos.coords.longitude;
+    var f = state.locatorFix;
+    state.myPos = { lat: lat, lng: lng };
+    state.myGeoStatus = 'granted';
+    state.locatingMe = false;
+    state.locatorDistance = f && f.lat && f.lng ? distanceMeters(lat, lng, f.lat, f.lng) : state.locatorDistance;
+    state.leaveAlertTriggered = !!(state.leaveAlertEnabled && state.locatorDistance != null && state.locatorDistance > 60);
+    render();
+  }
+  function startLeaveAlertWatch() {
+    if (!navigator.geolocation || state.leaveAlertWatch != null) return;
+    state.leaveAlertWatch = navigator.geolocation.watchPosition(updateLeaveAlertPosition, function (err) {
+      state.myGeoStatus = err && err.code === 1 ? 'denied' : 'error';
+      render();
+    }, { enableHighAccuracy: true, maximumAge: 10000, timeout: 20000 });
+  }
+  function stopLeaveAlertWatch() {
+    if (navigator.geolocation && state.leaveAlertWatch != null) {
+      try { navigator.geolocation.clearWatch(state.leaveAlertWatch); } catch (e) {}
+    }
+    state.leaveAlertWatch = null;
+  }
+  function toggleLeaveAlert() {
+    state.leaveAlertEnabled = !state.leaveAlertEnabled;
+    state.leaveAlertTriggered = false;
+    try { localStorage.setItem(LEAVE_ALERT_KEY, state.leaveAlertEnabled ? '1' : '0'); } catch (e) {}
+    if (state.leaveAlertEnabled) { toast('离开提醒定位已开启'); startLeaveAlertWatch(); }
+    else { stopLeaveAlertWatch(); toast('离开提醒已关闭'); }
+    render();
+  }
   function locatorLiveText(fullTime) {
     var f = state.locatorFix;
     if (!f) return fullTime ? '等待刷新定位' : '等待刷新定位';
@@ -2222,6 +2272,35 @@
       }
     }
   }
+  function clearDeviceBinding() {
+    state.deviceBind = null;
+    state.deviceVerified = false;
+    state.deviceShareCode = '';
+    state.deviceApi = '';
+    state.bindDraft = null;
+    state.locatorShare = '';
+    state.locatorFix = null;
+    state.locatorLoading = false;
+    state.locatorAutoTried = false;
+    state.locatorDistance = null;
+    state.locatingMe = false;
+    state.myPos = null;
+    state.myGeoStatus = 'idle';
+    state.myGeoAutoTried = false;
+    state.link.mapExpanded = false;
+    state.leaveAlertTriggered = false;
+    state.deleteMode = false;
+    state.selectedDevices = {};
+    state.deviceCollapsed = false;
+    stopLeaveAlertWatch();
+    try {
+      localStorage.removeItem(DEVICE_BIND_KEY);
+      localStorage.removeItem(DEVICE_API_KEY);
+      localStorage.removeItem(LOCATOR_KEY);
+    } catch (e) {}
+    render();
+    toast('绑定已删除');
+  }
   function linkHTML() {
     var expanded = state.link.mapExpanded;
     var bound = !!(state.deviceBind && state.deviceVerified && state.deviceBind.deviceNo && state.deviceBind.itemName);
@@ -2229,7 +2308,7 @@
       { icon: '📍', title: '查找位置', body: '打开地图，按你当前位置到物品位置规划路线。' },
       { icon: '🏠', title: '离位提醒', body: '物品离开设定区域时自动提醒，防止遗忘或丢失。' },
       { icon: '📅', title: '自动记录收纳', body: '标签回到收纳区域时，自动更新收纳时间。' },
-      { icon: '🔋', title: '低电量提醒', body: '标签电量不足时提示更换，避免关键时刻失联。' }
+      { icon: '🧭', title: '物品导航', body: '一键打开高德地图，直接导航到物品当前位置。' }
     ];
     var abilityHTML = '<div class="section-title">联动能力<span class="muted small">设备 + App</span></div>' +
       '<div class="ability-grid">' + abilities.map(function (a) {
@@ -2253,6 +2332,10 @@
     var deviceIcon = bind.photo
       ? '<img src="' + escapeHTML(bind.photo) + '" alt="">'
       : escapeHTML(state.link.icon || '🐱');
+    var batteryRaw = state.locatorFix && state.locatorFix.battery != null && state.locatorFix.battery !== '' ? String(state.locatorFix.battery) : '0';
+    var batteryNum = Math.max(0, Math.min(100, Number(batteryRaw) || 0));
+    var batteryText = state.locatorFix && state.locatorFix.battery != null && state.locatorFix.battery !== '' ? batteryNum + '%' : '--';
+    var deviceSelected = !!(state.deleteMode && state.selectedDevices[bind.deviceNo]);
     var mapInner = state.locatorFix && state.locatorFix.lat && state.locatorFix.lng
       ? '<div class="leaflet-map" id="leaflet-map"></div>' + mapLayerSwitchHTML()
       : '<div class="map-placeholder">' + tr('物品位置读取中，请稍后刷新') + '</div>';
@@ -2264,31 +2347,46 @@
           (state.locatorFix.battery !== '' && state.locatorFix.battery != null ? ' · ' + tr('电量：') + escapeHTML(String(state.locatorFix.battery)) : '') + '</div>' +
           (state.locatorDistance != null ? '<div class="muted small">' + tr('我到物品距离：约 ') + '<b>' + distanceText(state.locatorDistance) + '</b> · ' + tr(motion) + '</div>' : '')
         : '<div class="muted small">' + tr('正在读取位置…') + '</div>');
+    var deviceTools = '<span class="device-tools">' +
+      (state.deleteMode
+        ? '<button class="add-device" data-action="select-all-device">' + tr('全选') + '</button>' +
+          '<button class="add-device" data-action="cancel-delete-mode">' + tr('取消') + '</button>' +
+          '<button class="add-device danger" data-action="confirm-delete-device">' + tr('完成') + '</button>'
+        : '<button class="add-device danger" data-action="enter-delete-mode">' + tr('删除绑定') + '</button>') +
+      '<button class="device-collapse" data-action="toggle-device-collapse" aria-label="' + tr('收起设备') + '">' + (state.deviceCollapsed ? '⌄' : '⌃') + '</button></span>';
+    var deviceCardHTML = state.deviceCollapsed ? '' :
+      '<div class="link-card device-card">' +
+        '<div class="device-top">' +
+          (state.deleteMode ? '<span class="device-select-circle' + (deviceSelected ? ' selected' : '') + '" data-action="toggle-device-select"></span>' : '') +
+          '<div class="device-icon" data-action="pick-device-icon">' + deviceIcon + '</div>' +
+          '<div class="device-main"><div class="bold">' + escapeHTML(deviceName) + '</div><div class="muted small">' + escapeHTML(deviceSub) + '</div></div><span class="online">在线</span></div>' +
+        '<div class="device-stats"><div><span>' + tr('电量') + ' ' + escapeHTML(batteryText) + '</span><div class="battery"><i style="width:' + batteryNum + '%"></i></div></div></div>' +
+        '<div class="device-actions">' +
+          '<button data-action="find-me">查找位置</button>' +
+          '<button data-action="pick-device-icon">选择图案</button>' +
+          '<button data-action="bind-device">' + tr('修改绑定') + '</button>' +
+          '<button class="leave-alert-btn' + (state.leaveAlertEnabled ? ' active' : '') + '" data-action="toggle-leave-alert">' + tr('离开提醒') + '</button>' +
+        '</div>' +
+      '</div>';
+    var leaveBanner = state.leaveAlertTriggered
+      ? '<div class="leave-alert-banner">⚠ 离开提醒：' + escapeHTML(deviceName) + ' 距离手机已超过 60 米</div>'
+      : '';
     return '<div class="page link-page">' +
+      leaveBanner +
       '<div class="link-card map-card">' +
         '<div class="link-card-head"><div><div class="bold">物品实时地图</div><div class="muted small">' + escapeHTML(locationStatusText()) + '</div></div>' +
           '<button class="map-toggle" data-action="toggle-map">' + (expanded ? '收起地图 ›' : '下拉展开地图 ›') + '</button></div>' +
         '<div class="map-actions">' +
           '<button class="map-primary" data-action="refresh-locator">' + tr('刷新位置') + '</button>' +
-          '<button class="map-ghost" data-action="find-me">' + tr(state.locatingMe ? '正在定位…' : '获取位置') + '</button>' +
+          '<button class="map-ghost" data-action="item-navigation">' + tr('物品导航') + '</button>' +
           '<button class="map-ghost" data-action="fullscreen-map">' + tr('全屏地图') + '</button>' +
           '<button class="map-ghost" data-action="choose-map">' + tr('选择地图') + '</button>' +
         '</div>' +
         '<div class="map-box' + (expanded ? ' expanded' : '') + '">' + mapInner + '</div>' +
         '<div class="map-live-info">' + mapInfo + '</div>' +
       '</div>' +
-      '<div class="section-title">设备<button class="add-device danger" data-action="delete-device-bind">' + tr('删除绑定') + '</button></div>' +
-      '<div class="link-card device-card">' +
-        '<div class="device-top"><div class="device-icon" data-action="pick-device-icon">' + deviceIcon + '</div><div class="device-main"><div class="bold">' + escapeHTML(deviceName) + '</div><div class="muted small">' + escapeHTML(deviceSub) + '</div></div><span class="online">在线</span></div>' +
-        '<div class="device-stats"><div><span>电量 82%</span><div class="battery"><i></i></div></div>' +
-          '<div><span>信号强度</span><div class="signal"><i></i><i></i><i></i></div></div></div>' +
-        '<div class="device-actions">' +
-          '<button data-action="find-me">查找位置</button>' +
-          '<button data-action="pick-device-icon">选择图案</button>' +
-          '<button data-action="bind-device">' + tr('修改绑定') + '</button>' +
-          '<button data-action="device-hint" data-name="离位提醒">离位提醒<br>开</button>' +
-        '</div>' +
-      '</div>' +
+      '<div class="section-title device-section-title"><span>' + tr('设备') + '</span>' + deviceTools + '</div>' +
+      deviceCardHTML +
       abilityHTML +
     '</div>';
   }
@@ -2612,6 +2710,13 @@
           '<button data-action="open-map" data-map="qq">腾讯地图</button>' +
           '<button data-action="open-map" data-map="google">谷歌地图</button>' +
         '</div>');
+    }
+    if (o.type === 'itemNav') {
+      var navName = (state.deviceBind && state.deviceBind.itemName) || '物品';
+      return sheetShell(tr('选择导航物品'),
+        '<div class="sheet-list"><div class="sheet-row" data-action="navigate-item">' +
+          '<span class="row-emoji">🧭</span><span class="row-main">' + escapeHTML(navName) +
+          '<span class="row-sub">' + tr('打开高德地图导航到物品当前位置') + '</span></span></div></div>');
     }
     if (o.type === 'photoChoice') {
       return sheetShell('添加照片',
@@ -3202,6 +3307,14 @@
         renderOverlay();
         break;
       case 'choose-map': state.overlay = { type: 'mapChoose' }; renderOverlay(); break;
+      case 'item-navigation': state.overlay = { type: 'itemNav' }; renderOverlay(); break;
+      case 'navigate-item':
+        state.overlay = null;
+        renderOverlay();
+        var navURL = locatorAmapURL(false);
+        if (!navURL) { toast('请先刷新设备位置'); break; }
+        if (typeof window !== 'undefined' && window.location) window.location.href = navURL;
+        break;
       case 'switch-map-layer':
         state.mapLayerKind = el.getAttribute('data-layer') === 'satellite' ? 'satellite' : 'road';
         var layerButtons = document.querySelectorAll('.map-layer-switch button');
@@ -3227,30 +3340,31 @@
         try { localStorage.removeItem(LOCATOR_KEY); } catch (e) {}
         render(); toast('已清除定位器链接');
         break;
-      case 'delete-device-bind':
-        state.deviceBind = null;
-        state.deviceVerified = false;
-        state.deviceShareCode = '';
-        state.deviceApi = '';
-        state.bindDraft = null;
-        state.locatorShare = '';
-        state.locatorFix = null;
-        state.locatorLoading = false;
-        state.locatorAutoTried = false;
-        state.locatorDistance = null;
-        state.locatingMe = false;
-        state.myPos = null;
-        state.myGeoStatus = 'idle';
-        state.myGeoAutoTried = false;
-        state.link.mapExpanded = false;
-        try {
-          localStorage.removeItem(DEVICE_BIND_KEY);
-          localStorage.removeItem(DEVICE_API_KEY);
-          localStorage.removeItem(LOCATOR_KEY);
-        } catch (e) {}
+      case 'enter-delete-mode':
+        state.deleteMode = true;
+        state.selectedDevices = {};
         render();
-        toast('绑定已删除');
         break;
+      case 'cancel-delete-mode':
+        state.deleteMode = false;
+        state.selectedDevices = {};
+        render();
+        break;
+      case 'toggle-device-select':
+        if (!state.deviceBind) break;
+        state.selectedDevices[state.deviceBind.deviceNo] = !state.selectedDevices[state.deviceBind.deviceNo];
+        render();
+        break;
+      case 'select-all-device':
+        if (state.deviceBind) state.selectedDevices[state.deviceBind.deviceNo] = true;
+        render();
+        break;
+      case 'confirm-delete-device':
+        if (!state.deviceBind || !state.selectedDevices[state.deviceBind.deviceNo]) { toast('请先选择要删除的设备'); break; }
+        clearDeviceBinding();
+        break;
+      case 'toggle-device-collapse': state.deviceCollapsed = !state.deviceCollapsed; render(); break;
+      case 'toggle-leave-alert': toggleLeaveAlert(); break;
       case 'add-device-hint': case 'bind-device': openBindSheet(); break;
       case 'bind-access': openAccessSheet(); break;
       case 'bind-pick-photo': var bindFile = $('#bind-photo-file'); if (bindFile) bindFile.click(); break;
@@ -3604,6 +3718,7 @@
     bindEvents();
     applyTheme();
     render();
+    if (state.leaveAlertEnabled) startLeaveAlertWatch();
   }
 
   init();
