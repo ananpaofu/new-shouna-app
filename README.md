@@ -47,6 +47,19 @@
 - 新增物品选一张照片后可选“直接使用”或“自定义裁剪”（拖动、缩放后导出方形图）；多张选择时直接添加，不限制图片尺寸；“我的”页头像从拍照或相册选取后也同样进入“直接使用 / 自定义裁剪”选择
 - 显示偏好可静态切换，设置保存在本机
 
+## 云端设备服务（Cloudflare Worker + KV）
+
+不需要商家接口，只读取公开的 18gps 分享页；商家密码不会被发到云端或用于登录商家系统。
+
+1. Cloudflare 控制台 → **Workers & Pages → KV** → 创建命名空间，例如 `device_kv`
+2. **Workers & Pages → Create Worker** → 粘贴 `device-worker.js` 全部内容 → Deploy
+3. 进入这个 Worker → **Settings → Variables → KV Namespace Bindings** → 添加：变量名 `DEVICE_KV`，值选刚建的 `device_kv` → 再 Deploy
+4. 浏览器打开 `https://你的worker.workers.dev/api/device`，看到 `{"ok":false,"error":"缺少 code 参数"}` 说明部署成功
+5. App 里「绑定设备」→ 填设备编号、密码、物品、照片，并在“云端 API 地址”填 Worker 根地址（如 `https://xxx.workers.dev`）→ 完成后会显示分享码
+6. 朋友在设备卡片点「连接设备」→ 填同一个云端 API 地址和机主给的分享码，也可以填设备号 + 密码
+7. 连接后「刷新位置」直接走云端接口，云端每次实时解析分享页里的 `mds`，并把最新位置缓存到 KV
+8. 18gps 分享链接到期后，需要重新生成分享链接，并在机主端重新绑定或更新云端记录
+
 ## 本地运行
 
 直接用浏览器打开 `index.html` 即可。若需要 PWA / Service Worker 的完整行为，可用本地服务器：
@@ -91,5 +104,6 @@ powershell -NoProfile -ExecutionPolicy Bypass -File "C:\Users\Xieta\Desktop\Trac
 | `manifest.webmanifest` | PWA 清单 |
 | `icon-192.png` / `icon-512.png` | PWA 图标 |
 | `upload-app.ps1` | GitHub Pages 上传脚本 |
+| `device-worker.js` | Cloudflare Worker + KV：设备绑定、分享码、云端位置接口（部署到 Cloudflare，不上传 GitHub Pages） |
 
-数据键：`organizer_local_v2`、`organizer_pref_v2`、`organizer_search_history_v2`。
+数据键：`organizer_local_v2`、`organizer_pref_v2`、`organizer_search_history_v2`、`organizer_device_bind_v1`、`organizer_device_api_v1`。
