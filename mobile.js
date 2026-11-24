@@ -6,7 +6,7 @@
   'use strict';
 
   /* ---------------- 常量 ---------------- */
-  var APP_VERSION = '2.48';
+  var APP_VERSION = '2.49';
   var DB_KEY = 'organizer_local_v2';
   var PREF_KEY = 'organizer_pref_v2';
   var HISTORY_KEY = 'organizer_search_history_v2';
@@ -22,6 +22,11 @@
   var DEFAULT_DEVICE_PWD = '123456';
 
   var APP_VERSION_CHANGELOG = [
+    { version: '2.49', date: '2026-11-24', title: '接入高德官方地图', items: [
+      '内嵌地图改为高德官方 JS API，使用你提供的高德 Key 和安全密钥',
+      '地图清晰度、配色和建筑渲染与高德官方页面一致，不再使用非官方栅格瓦片',
+      '保留物品照片气泡、实时状态、地图/卫星切换、全屏返回，不加入导航弹窗和广告'
+    ] },
     { version: '2.48', date: '2026-11-24', title: '恢复建筑地图与气泡排版', items: [
       '道路瓦片换回带建筑图案的高德样式，17 级已验证有内容，继续放大用已有瓦片缩放',
       '进一步增强地图色彩对比度',
@@ -2055,37 +2060,35 @@
     return '<div class="map-item-badge"><span class="map-item-icon">' + icon + '</span>' +
       '<span class="map-item-text"><b>' + escapeHTML(b.itemName || '物品') + '</b></span></div>';
   }
-  function mapTileURL() {
-    return state.mapLayerKind === 'satellite'
-      ? 'https://webst0{s}.is.autonavi.com/appmaptile?style=6&scale=1&x={x}&y={y}&z={z}'
-      : 'https://webrd0{s}.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=8&x={x}&y={y}&z={z}';
-  }
-  function mapTileOptions() {
-    return { subdomains: '1234', tileSize: 128, zoomOffset: 1, minZoom: 3, maxZoom: 18, maxNativeZoom: 17 };
-  }
   function mapLayerSwitchHTML() {
     return '<div class="map-layer-switch">' +
       '<button data-action="switch-map-layer" data-layer="road" class="' + (state.mapLayerKind === 'road' ? 'active' : '') + '">' + tr('地图') + '</button>' +
       '<button data-action="switch-map-layer" data-layer="satellite" class="' + (state.mapLayerKind === 'satellite' ? 'active' : '') + '">' + tr('卫星') + '</button></div>';
   }
-  function mapItemIcon() {
-    if (typeof L === 'undefined') return null;
-    return L.divIcon({
-      className: 'leaflet-item-icon',
-      html: '<div class="leaflet-item-marker">' + mapItemBadgeHTML() + '</div>',
-      iconSize: [0, 0],
-      iconAnchor: [0, 0]
-    });
-  }
   function destroyLeafletMap(key) {
     var holder = state.leaflet[key];
-    if (holder && holder.map) { try { holder.map.remove(); } catch (e) {} }
+    if (holder && holder.map) { try { holder.map.destroy(); } catch (e) {} }
     state.leaflet[key] = {};
+  }
+  function applyMapLayerFor(key) {
+    var holder = state.leaflet[key];
+    if (!holder.map || typeof AMap === 'undefined') return;
+    if (holder.satelliteLayer) { holder.map.remove(holder.satelliteLayer); holder.satelliteLayer = null; }
+    if (holder.roadLayer) { holder.map.remove(holder.roadLayer); holder.roadLayer = null; }
+    holder.map.setMapStyle('amap://styles/normal');
+    if (state.mapLayerKind === 'satellite') {
+      holder.satelliteLayer = new AMap.TileLayer.Satellite();
+      holder.roadLayer = new AMap.TileLayer.RoadNet();
+      holder.map.add([holder.satelliteLayer, holder.roadLayer]);
+    }
+  }
+  function applyMapLayer() {
+    ['small', 'full'].forEach(applyMapLayerFor);
   }
   function syncLeafletMap(id) {
     var el = document.getElementById(id);
     if (!el) return;
-    if (typeof L === 'undefined') {
+    if (typeof AMap === 'undefined') {
       el.innerHTML = '<div class="map-placeholder">' + tr('地图加载失败，请联网后重试') + '</div>';
       return;
     }
@@ -2095,29 +2098,27 @@
     if (!f || !f.lat || !f.lng) return;
     var p = mapCoords(f.lat, f.lng, 'amap');
     var coordKey = p.lat + ',' + p.lng;
-    var icon = mapItemIcon();
+    var content = '<div class="amap-item-marker">' + mapItemBadgeHTML() + '</div>';
     if (!holder.map) {
-      var startZoom = key === 'small' ? 17 : 16;
-      holder.map = L.map(el, { zoomControl: true, attributionControl: false, preferCanvas: true, minZoom: 3, maxZoom: 18 }).setView([p.lat, p.lng], startZoom);
-      holder.tile = L.tileLayer(mapTileURL(), mapTileOptions()).addTo(holder.map);
-      holder.marker = L.marker([p.lat, p.lng], { icon: icon, keyboard: false, interactive: false, zIndexOffset: 1000 }).addTo(holder.map);
+      holder.map = new AMap.Map(el, {
+        center: [p.lng, p.lat],
+        zoom: key === 'small' ? 17 : 16,
+        viewMode: '2D',
+        resizeEnable: true,
+        mapStyle: 'amap://styles/normal'
+      });
+      holder.marker = new AMap.Marker({ position: [p.lng, p.lat], content: content, anchor: 'bottom-center', zIndex: 1000 });
+      holder.map.add(holder.marker);
       holder.coordKey = coordKey;
+      applyMapLayerFor(key);
     } else {
-      holder.map.invalidateSize();
-      if (holder.marker && icon) holder.marker.setIcon(icon);
+      holder.map.resize();
+      if (holder.marker) holder.marker.setContent(content);
       if (holder.coordKey !== coordKey) {
         holder.coordKey = coordKey;
-        holder.map.setView([p.lat, p.lng], holder.map.getZoom() || 16);
+        holder.map.setCenter([p.lng, p.lat]);
       }
     }
-  }
-  function applyMapLayer() {
-    ['small', 'full'].forEach(function (key) {
-      var holder = state.leaflet[key];
-      if (!holder.map || typeof L === 'undefined') return;
-      if (holder.tile) holder.map.removeLayer(holder.tile);
-      holder.tile = L.tileLayer(mapTileURL(), mapTileOptions()).addTo(holder.map);
-    });
   }
   function linkHTML() {
     var expanded = state.link.mapExpanded;
