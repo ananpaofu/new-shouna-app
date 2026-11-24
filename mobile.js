@@ -6,7 +6,7 @@
   'use strict';
 
   /* ---------------- 常量 ---------------- */
-  var APP_VERSION = '2.54';
+  var APP_VERSION = '2.57';
   var DB_KEY = 'organizer_local_v2';
   var PREF_KEY = 'organizer_pref_v2';
   var HISTORY_KEY = 'organizer_search_history_v2';
@@ -21,8 +21,27 @@
   var LOCATOR_DIRECT_OBJ = '482db427-68d2-4d53-85cb-3c55fd4dfa81';
   var DEFAULT_DEVICE_NO = '672305585540';
   var DEFAULT_DEVICE_PWD = '123456';
+  var DEFAULT_DEVICE_API = 'https://device-api.xieta1371.workers.dev';
 
   var APP_VERSION_CHANGELOG = [
+    { version: '2.57', date: '2026-11-24', title: '物品卡片布局调整', items: [
+      '物品卡片基础标签固定为分类、库存、位置，最多三个',
+      '已过期物品在卡片右侧单独显示红色“已过期”标签，与基础标签分开且水平对齐',
+      '普通物品不再显示临期 / 已开封附加标签，卡片信息更统一'
+    ] },
+    { version: '2.56', date: '2026-11-24', title: '标签数量与云端地址内置', items: [
+      '物品卡片最多显示三个标签：分类、库存、状态优先，位置作为补充标签',
+      '云端设备 API 地址内置到程序，绑定和连接设备时用户只需填写设备号与密码 / 分享码',
+      '绑定弹层删除“云端 API 地址”输入项，说明文字同步简化'
+    ] },
+    { version: '2.55', date: '2026-11-24', title: '标签与分类导航优化', items: [
+      '删除物品卡片重复的“剩余 X 件”标签，只保留绿色“库存 X 件”',
+      '物品卡片新增存放位置与临期 / 过期 / 已开封状态标签',
+      '分类筛选、库存总览、分类管理和分类分组页底部导航统一高亮“分类”',
+      '库存总览支持点分类查看物品，返回时回到库存总览',
+      '“物品分类”改为蓝色文件夹样式图标，与库存总览和底部导航区分',
+      '联动页删除电量文字和电量条，设备按钮与联动能力整体上移'
+    ] },
     { version: '2.54', date: '2026-11-24', title: '分类图标统一优化', items: [
       '分类页与侧栏图标改为统一线性 SVG，避免 iOS / Android emoji 显示不一致',
       '全部、状态良好、临近过期、已过期、已开封、库存、回收站图标按文字含义重新设计',
@@ -283,7 +302,7 @@
     opened: '<path d="M4 10 12 5l8 5v9l-8 5-8-5z"/><path d="m4 10 8 5 8-5M12 15v9M8 6.5l8 5"/>',
     stock: '<path d="M3 21V8l9-5 9 5v13"/><path d="M3 9h18M7 13h3M14 13h3M7 17h3M14 17h3"/>',
     trash: '<path d="M4 7h16M9 7V4h6v3M6 7l1 14h10l1-14"/><path d="M10 11v6M14 11v6"/>',
-    categories: '<rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/>'
+    categories: '<path d="M3 7.5A2.5 2.5 0 0 1 5.5 5H9l2 2h7.5A2.5 2.5 0 0 1 21 9.5v7a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 3 16.5z"/><path d="M3 10h18"/><path d="M8.5 14h7M8.5 17h4"/>'
   };
   function categorySVGHTML(c, cls) {
     var key = c.key || c.icon || 'all';
@@ -452,7 +471,7 @@
       '物品名称': '物品名稱', '请输入名称': '請輸入名稱', '图片': '圖片', '拍照/选图': '拍照/選圖',
       '分类': '分類', '数量': '數量', '单位': '單位', '生产日期': '生產日期', '保质期至': '保質期至',
       '请选择日期': '請選擇日期', '过期提醒': '過期提醒', '到期当天': '到期當天', '天前': '天前',
-      '自定义分类': '自訂分類', '自定义': '自訂', '自定义单位': '自訂單位', '存放位置': '存放位置',
+      '自定义分类': '自訂分類', '自定义': '自訂', '自定义单位': '自訂單位', '存放位置': '存放位置', '位置': '位置', '临期': '臨期',
       '例如：冰箱第二层': '例如：冰箱第二層', '冰箱': '冰箱', '厨房': '廚房', '药箱': '藥箱',
       '抽屉': '抽屜', '柜子': '櫃子', '衣柜': '衣櫃', '备注': '備註', '补充说明（选填）': '補充說明（選填）',
       '再加一次': '再加一次', '保存并继续': '儲存並繼續', '保存': '儲存', '添加': '新增',
@@ -565,7 +584,7 @@
       '物品名称': 'Item Name', '请输入名称': 'Enter name', '图片': 'Photos', '拍照/选图': 'Take or choose',
       '分类': 'Category', '数量': 'Quantity', '单位': 'Unit', '生产日期': 'Produced', '保质期至': 'Expiry',
       '请选择日期': 'Select date', '过期提醒': 'Reminder', '到期当天': 'On due date', '天前': 'days before',
-      '自定义分类': 'Custom category', '自定义': 'Custom', '自定义单位': 'Custom unit', '存放位置': 'Location',
+      '自定义分类': 'Custom category', '自定义': 'Custom', '自定义单位': 'Custom unit', '存放位置': 'Location', '位置': 'Location', '临期': 'Expiring',
       '例如：冰箱第二层': 'e.g. Fridge shelf 2', '冰箱': 'Fridge', '厨房': 'Kitchen', '药箱': 'Medicine box',
       '抽屉': 'Drawer', '柜子': 'Cabinet', '衣柜': 'Wardrobe', '备注': 'Notes', '补充说明（选填）': 'Optional notes',
       '再加一次': 'Add another', '保存并继续': 'Save and continue', '保存': 'Save', '添加': 'Add',
@@ -727,7 +746,7 @@
     deviceBind: null,
     deviceVerified: false,
     bindDraft: null,
-    deviceApi: '',
+    deviceApi: DEFAULT_DEVICE_API,
     deviceShareCode: '',
     crop: null,
     mapLayerKind: 'road',
@@ -1084,7 +1103,7 @@
     var filtered = state.category !== 'all';
     return '<div class="header-row home-header">' +
       (filtered
-        ? '<button class="icon-btn back-home" data-action="' + (state.categoryFrom === 'categoryManage' || state.categoryFrom === 'quick' ? 'go-back' : 'back-to-all') + '" aria-label="返回" title="返回"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m14 5-7 7 7 7"/></svg></button>'
+        ? '<button class="icon-btn back-home" data-action="' + (state.categoryFrom === 'categoryManage' || state.categoryFrom === 'quick' || state.categoryFrom === 'stock' ? 'go-back' : 'back-to-all') + '" aria-label="返回" title="返回"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m14 5-7 7 7 7"/></svg></button>'
         : '<span class="header-placeholder"></span>') +
       '<div class="home-title">' + escapeHTML(filtered ? categoryLabel() : '寻迹') + '</div>' +
       '<div class="header-actions"></div>' +
@@ -1101,6 +1120,15 @@
     };
     var sw = key === 'home' ? '2' : '1.9';
     return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="' + sw + '" stroke-linecap="round" stroke-linejoin="round">' + (m[key] || '') + '</svg>';
+  }
+  function activeNavKey() {
+    if (state.view === 'search' || state.view === 'categoryManage' || state.view === 'categoryGroup') return 'search';
+    if (state.view === 'home' && state.category !== 'all') return 'search';
+    if (state.view === 'itemDetail' && (state.groupCategory || state.category !== 'all' ||
+        state.categoryFrom === 'quick' || state.categoryFrom === 'stock' || state.categoryFrom === 'categoryManage')) return 'search';
+    if (['prefs', 'tutorial', 'password', 'achievement', 'register', 'notifications'].indexOf(state.view) >= 0) return 'me';
+    if (state.view === 'alerts') return 'home';
+    return state.view;
   }
   function renderNav() {
     if (state.view === 'form') { $('#bottom-nav').innerHTML = ''; return; }
@@ -1119,7 +1147,7 @@
       if (key === 'home' && state.multiSelect) {
         return '<button class="nav-item nav-select-all" data-action="select-all"><span class="select-all-icon">✓</span><span class="nav-label">首页</span></button>';
       }
-      var active = state.view === key ? ' active' : '';
+      var active = activeNavKey() === key ? ' active' : '';
       return '<button class="nav-item' + active + '" data-action="nav" data-view="' + key + '">' + navSVG(key) + '<span class="nav-label">' + t.label + '</span></button>';
     }).join('');
   }
@@ -1175,16 +1203,24 @@
       ? '<div class="item-thumb"><img src="' + escapeHTML(it.image) + '" alt=""></div>'
       : '<div class="item-thumb art-thumb">' + itemArtHTML(it) + '</div>';
     var stock = '<span class="stock-chip">' + tr('库存') + ' ' + (Number(it.quantity) || 1) + ' ' + escapeHTML(tr(it.unit || '件')) + '</span>';
-    var tags = '<span class="tag-yellow">' + escapeHTML(it.folder || '未分类') + '</span>' +
-      '<span class="tag-gray">' + tr('剩余') + ' ' + (it.quantity || 1) + ' ' + escapeHTML(tr(it.unit || '件')) + '</span>' + stock;
+    var locationTag = it.location ? '<span class="tag-blue">' + tr('位置') + ' ' + escapeHTML(it.location) + '</span>' : '';
+    var tagList = ['<span class="tag-yellow">' + escapeHTML(it.folder || '未分类') + '</span>', stock];
+    if (locationTag) tagList.push(locationTag);
+    var tags = tagList.slice(0, 3).join('');
+    var days = daysUntil(it.expiry);
+    var expiredBadge = days != null && days < 0
+      ? '<span class="item-expired-badge">' + tr('已过期') + '</span>' : '';
     var time = timeAgo(it.updatedAt || it.createdAt);
+    var side = (expiredBadge || time)
+      ? '<div class="item-side">' + expiredBadge + (time ? '<div class="item-time">' + escapeHTML(time) + '</div>' : '') + '</div>'
+      : '';
     return '<div class="item-card' + (selected ? ' selected' : '') + (state.compact ? ' compact' : '') + '" data-action="' + (state.multiSelect ? 'toggle-select' : 'open-item') + '" data-id="' + it.id + '">' +
       circle + thumb +
       '<div class="item-main"><div class="item-name">' + escapeHTML(it.name) + '</div>' +
         '<div class="item-tags">' + tags + '</div>' +
         '<div class="item-expiry">' + tr('过期日期') + ' ' + escapeHTML(formatDotDate(it.expiry)) + '</div>' +
       '</div>' +
-      (time ? '<div class="item-time">' + escapeHTML(time) + '</div>' : '') +
+      side +
     '</div>';
   }
   function searchItemsByQuery(q) {
@@ -1204,7 +1240,9 @@
       var groups = {};
       list.forEach(function (it) { var k = it.folder || '未分类'; groups[k] = (groups[k] || 0) + (Number(it.quantity) || 1); });
       body = Object.keys(groups).map(function (k) {
-        return '<div class="link-row"><span class="bold">' + escapeHTML(k) + '</span><span class="muted small">' + groups[k] + ' 件</span></div>';
+        return '<div class="link-row stock-folder-row" data-action="open-stock-folder" data-cat="' + escapeHTML(k) + '">' +
+          '<span class="bold">' + escapeHTML(k) + '</span>' +
+          '<span class="muted small">' + groups[k] + ' 件</span><span class="me-arrow">›</span></div>';
       }).join('') || '<div class="empty"><div class="empty-emoji">📦</div><div class="empty-text">暂无库存</div></div>';
       body = '<div class="link-card" style="margin-top:4px">' + body + '</div>';
     } else if (state.category === 'history') {
@@ -1270,7 +1308,7 @@
         '</div>' +
         '<div class="sidebar-body">' +
           '<div class="side-group">' + MAIN_CATEGORIES.map(sideItem).join('') + '</div>' +
-          '<div class="side-group"><div class="side-item" data-action="manage-categories">' + categoryIconHTML({ key: 'categories', color: '#7959c7' }) + '<span>物品分类</span><span class="side-arrow">›</span></div></div>' +
+          '<div class="side-group"><div class="side-item" data-action="manage-categories">' + categoryIconHTML({ key: 'categories', color: '#2479c4' }) + '<span>物品分类</span><span class="side-arrow">›</span></div></div>' +
         '</div>' +
       '</aside>';
   }
@@ -1417,7 +1455,7 @@
     }
     var tiles = MAIN_CATEGORIES.map(function (c) {
       return tile(categorySVGHTML(c, 'quick-emoji'), c.label, counts[c.key], 'quick-category', c.key);
-    }).join('') + tile(categorySVGHTML({ key: 'categories', color: '#7959c7' }, 'quick-emoji'), '物品分类', null, 'manage-categories', '');
+    }).join('') + tile(categorySVGHTML({ key: 'categories', color: '#2479c4' }, 'quick-emoji'), '物品分类', null, 'manage-categories', '');
     return '<div class="page quick-page">' +
       '<div class="quick-grid">' + tiles + '</div>' +
       '<div class="quick-foot">' + tr('按状态快速查看物品') + '</div>' +
@@ -1776,9 +1814,9 @@
     try {
       var raw = localStorage.getItem(DEVICE_API_KEY);
       var d = raw ? JSON.parse(raw) : {};
-      state.deviceApi = normalizeDeviceApi(d.api);
+      state.deviceApi = normalizeDeviceApi(d.api) || DEFAULT_DEVICE_API;
       state.deviceShareCode = String(d.shareCode || '').trim().toUpperCase();
-    } catch (e) { state.deviceApi = ''; state.deviceShareCode = ''; }
+    } catch (e) { state.deviceApi = DEFAULT_DEVICE_API; state.deviceShareCode = ''; }
   }
   function saveDeviceApi() {
     try {
@@ -2332,9 +2370,6 @@
     var deviceIcon = bind.photo
       ? '<img src="' + escapeHTML(bind.photo) + '" alt="">'
       : escapeHTML(state.link.icon || '🐱');
-    var batteryRaw = state.locatorFix && state.locatorFix.battery != null && state.locatorFix.battery !== '' ? String(state.locatorFix.battery) : '0';
-    var batteryNum = Math.max(0, Math.min(100, Number(batteryRaw) || 0));
-    var batteryText = state.locatorFix && state.locatorFix.battery != null && state.locatorFix.battery !== '' ? batteryNum + '%' : '--';
     var deviceSelected = !!(state.deleteMode && state.selectedDevices[bind.deviceNo]);
     var mapInner = state.locatorFix && state.locatorFix.lat && state.locatorFix.lng
       ? '<div class="leaflet-map" id="leaflet-map"></div>' + mapLayerSwitchHTML()
@@ -2343,8 +2378,7 @@
     var mapInfo = state.locatorLoading ? tr('正在读取位置…') :
       (state.locatorFix
         ? '<div>纬度 <b>' + state.locatorFix.lat + '</b> · 经度 <b>' + state.locatorFix.lng + '</b></div>' +
-          '<div class="muted small">' + tr('定位时间：') + escapeHTML(locatorTimeText(state.locatorFix.time)) +
-          (state.locatorFix.battery !== '' && state.locatorFix.battery != null ? ' · ' + tr('电量：') + escapeHTML(String(state.locatorFix.battery)) : '') + '</div>' +
+          '<div class="muted small">' + tr('定位时间：') + escapeHTML(locatorTimeText(state.locatorFix.time)) + '</div>' +
           (state.locatorDistance != null ? '<div class="muted small">' + tr('我到物品距离：约 ') + '<b>' + distanceText(state.locatorDistance) + '</b> · ' + tr(motion) + '</div>' : '')
         : '<div class="muted small">' + tr('正在读取位置…') + '</div>');
     var deviceTools = '<span class="device-tools">' +
@@ -2360,7 +2394,6 @@
           (state.deleteMode ? '<span class="device-select-circle' + (deviceSelected ? ' selected' : '') + '" data-action="toggle-device-select"></span>' : '') +
           '<div class="device-icon" data-action="pick-device-icon">' + deviceIcon + '</div>' +
           '<div class="device-main"><div class="bold">' + escapeHTML(deviceName) + '</div><div class="muted small">' + escapeHTML(deviceSub) + '</div></div><span class="online">在线</span></div>' +
-        '<div class="device-stats"><div><span>' + tr('电量') + ' ' + escapeHTML(batteryText) + '</span><div class="battery"><i style="width:' + batteryNum + '%"></i></div></div></div>' +
         '<div class="device-actions">' +
           '<button data-action="find-me">查找位置</button>' +
           '<button data-action="pick-device-icon">选择图案</button>' +
@@ -2475,12 +2508,11 @@
   function syncBindDraft() {
     var d = state.bindDraft || (state.bindDraft = {});
     var sel = $('#bind-item-select'), name = $('#bind-item-name');
-    var no = $('#bind-device-no'), pw = $('#bind-device-pwd'), api = $('#bind-api');
+    var no = $('#bind-device-no'), pw = $('#bind-device-pwd');
     if (sel) d.selectedId = sel.value;
     if (name) d.name = name.value;
     if (no) d.deviceNo = no.value;
     if (pw) d.devicePwd = pw.value;
-    if (api) d.api = api.value;
     return d;
   }
   function openBindSheet() {
@@ -2491,7 +2523,7 @@
     d.photo = d.photo || b.photo || '';
     d.deviceNo = d.deviceNo || '';
     d.devicePwd = d.devicePwd || '';
-    d.api = d.api || state.deviceApi || '';
+    d.api = state.deviceApi || DEFAULT_DEVICE_API;
     state.overlay = { type: 'deviceBind' };
     renderOverlay();
   }
@@ -2513,9 +2545,7 @@
         '<div class="bind-step">2. 设备编号和密码</div>' +
         '<input id="bind-device-no" class="bind-input" placeholder="设备编号" value="' + escapeHTML(d.deviceNo || '') + '">' +
         '<input id="bind-device-pwd" class="bind-input" type="password" placeholder="设备密码" value="' + escapeHTML(d.devicePwd || '') + '">' +
-        '<div class="bind-step">3. 云端 API 地址（可选，部署 Worker 后填写）</div>' +
-        '<input id="bind-api" class="bind-input" placeholder="https://xxx.workers.dev" value="' + escapeHTML(d.api || state.deviceApi || '') + '">' +
-        '<div class="bind-tip">请填写设备号和密码，验证正确后才会显示定位地图。填写 API 地址后会同步到云端并生成分享码。</div>' +
+        '<div class="bind-tip">云端服务地址已内置，只需填写设备号和密码。验证正确后会显示定位地图，并自动生成分享码。</div>' +
         '<div class="bind-foot"><button class="btn" data-action="close-overlay">取消</button>' +
           '<button class="btn btn-primary" data-action="save-device-bind">完成绑定</button></div>' +
       '</div>');
@@ -2535,7 +2565,7 @@
     var shareUrl = normalizeLocatorLink(DEFAULT_LOCATOR_LINK);
     if (!shareUrl) shareUrl = DEFAULT_LOCATOR_LINK;
 
-    var api = normalizeDeviceApi(d.api || state.deviceApi || '');
+    var api = normalizeDeviceApi(d.api || state.deviceApi || DEFAULT_DEVICE_API);
     var local = {
       itemId: d.selectedId || '',
       itemName: name,
@@ -2586,8 +2616,6 @@
   function deviceAccessHTML() {
     return sheetShell('连接别人的设备',
       '<div class="bind-sheet">' +
-        '<div class="bind-step">云端 API 地址</div>' +
-        '<input id="access-api" class="bind-input" placeholder="https://xxx.workers.dev" value="' + escapeHTML(state.deviceApi || '') + '">' +
         '<div class="bind-step">推荐：输入机主给你的分享码</div>' +
         '<input id="access-code" class="bind-input" placeholder="分享码" value="' + escapeHTML(state.deviceShareCode || '') + '">' +
         '<div class="bind-step">或者输入设备号和密码</div>' +
@@ -2599,12 +2627,11 @@
       '</div>');
   }
   function saveDeviceAccess() {
-    var apiEl = $('#access-api'), codeEl = $('#access-code'), noEl = $('#access-no'), pwEl = $('#access-pwd');
-    var api = normalizeDeviceApi(apiEl ? apiEl.value : '');
+    var codeEl = $('#access-code'), noEl = $('#access-no'), pwEl = $('#access-pwd');
+    var api = normalizeDeviceApi(state.deviceApi || DEFAULT_DEVICE_API);
     var code = String(codeEl ? codeEl.value : '').trim().toUpperCase();
     var no = String(noEl ? noEl.value : '').trim();
     var pwd = String(pwEl ? pwEl.value : '');
-    if (!api) { toast('请先填写云端 API 地址'); return; }
     if (!code && (!no || !pwd)) { toast('请输入分享码，或设备号和密码'); return; }
     state.deviceApi = api;
     saveDeviceApi();
@@ -2940,7 +2967,10 @@
 
   /* ---------------- 操作集合 ---------------- */
   function pushView() {
-    state.viewStack.push({ view: state.view, category: state.category, sidebarOpen: state.sidebarOpen });
+    state.viewStack.push({
+      view: state.view, category: state.category, categoryFrom: state.categoryFrom,
+      groupCategory: state.groupCategory, sidebarOpen: state.sidebarOpen
+    });
     if (state.viewStack.length > 20) state.viewStack.shift();
   }
   function openView(view) {
@@ -2977,15 +3007,18 @@
     if (prev) {
       state.view = prev.view;
       state.category = prev.category;
+      state.categoryFrom = prev.categoryFrom || '';
+      state.groupCategory = prev.groupCategory || '';
       state.sidebarOpen = !!prev.sidebarOpen;
     } else {
       state.view = 'home';
       state.category = 'all';
+      state.categoryFrom = '';
+      state.groupCategory = '';
     }
     state.editingId = null;
     state.formDraft = null;
     state.searchFocused = false;
-    state.categoryFrom = '';
     render();
   }
   function setCategory(cat, from) {
@@ -3220,7 +3253,14 @@
       case 'open-sidebar': state.sidebarOpen = true; renderSidebar(); break;
       case 'close-sidebar': state.sidebarOpen = false; renderSidebar(); break;
       case 'go-back': goBack(); break;
-      case 'nav': openView(el.getAttribute('data-view')); break;
+      case 'nav':
+        var navView = el.getAttribute('data-view');
+        if (navView === 'home') {
+          state.category = 'all'; state.categoryFrom = ''; state.groupCategory = '';
+          state.multiSelect = false; state.selectedIds = [];
+        }
+        openView(navView);
+        break;
       case 'go-search': openView('search'); break;
       case 'focus-home-search': focusHomeSearch(); break;
       case 'clear-home-search': clearHomeSearch(); break;
@@ -3238,6 +3278,7 @@
       case 'select-all': selectAll(); break;
       case 'delete-selected': deleteSelected(); break;
       case 'set-category': setCategory(el.getAttribute('data-cat')); break;
+      case 'open-stock-folder': setCategory(el.getAttribute('data-cat'), 'stock'); break;
       case 'quick-category':
         var qcat = el.getAttribute('data-cat');
         if (isMainCategory(qcat)) setCategory(qcat, 'quick'); else openCategoryGroup(qcat);
