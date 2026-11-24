@@ -63,7 +63,7 @@
 2. **Workers & Pages → Create Worker** → 粘贴 `device-worker.js` 全部内容 → Deploy
 3. 进入这个 Worker → **Settings → Variables → KV Namespace Bindings** → 添加：变量名 `DEVICE_KV`，值选刚建的 `device_kv` → 再 Deploy
 4. 浏览器打开 `https://你的worker.workers.dev/api/device`，看到 `{"ok":false,"error":"缺少 code 参数"}` 说明部署成功
-5. App 里「绑定设备」→ 选物品、照片，只填设备编号和密码（默认 `672305585540` / `123456`）→ 完成后会显示分享码；云端 API 地址已内置为 `https://device-api.xieta1371.workers.dev`，用户不用填写；绑定弹层标题略微下移，拍照预览框与右侧按钮边框等高对齐
+5. App 里「绑定设备」→ 选物品、照片，只填设备编号和密码（默认 `672305585540` / `123456`）→ 完成后会显示分享码；云端 API 地址已内置为 `https://device-api.xieta1371.workers.dev`，用户不用填写；绑定弹层标题略微下移，所有输入框、选择框、拍照预览框、拍照按钮和底部按钮统一为 46px 高度
 6. 设备编号和密码是机主自己设定的 App 绑定凭证，不是商家账号
 7. 朋友在设备卡片点「连接设备」→ 直接填机主给的分享码，也可以填设备号 + 密码；云端 API 地址同样已内置
 8. 连接后「刷新位置」走云端接口，云端每次实时解析内置定位源，并把最新位置缓存到 KV；每部手机都会请求自身定位，地图和距离按各自当前位置计算
