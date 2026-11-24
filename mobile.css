@@ -631,6 +631,16 @@ a { color: inherit; text-decoration: none; }
 .map-pin { position: absolute; left: 50%; top: 48%; width: 16px; height: 16px; border-radius: 50%; background: #3b82f6; border: 3px solid #fff; box-shadow: 0 0 0 6px rgba(59,130,246,.2); transform: translate(-50%,-50%); }
 .map-bubble { position: absolute; left: 50%; top: calc(48% + 18px); transform: translateX(-50%); background: #3b82f6; color: #fff; font-size: 11px; padding: 3px 9px; border-radius: 6px; white-space: nowrap; }
 .map-address { margin: 10px 0; display: inline-block; padding: 6px 10px; border: 1px solid #cfe0ee; border-radius: 8px; color: #2f6fa8; font-size: 12px; background: #f4f9fd; }
+.map-placeholder { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; color: var(--ink-4); font-size: 13px; text-align: center; padding: 20px; box-sizing: border-box; }
+.map-full-overlay { position: absolute; inset: 0; z-index: 80; background: var(--bg); display: flex; flex-direction: column; }
+.map-full-head { flex: 0 0 auto; height: 48px; padding: 0 14px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--line); }
+.map-full-head b { font-size: 14px; }
+.map-full-head button { padding: 8px 10px; border-radius: 8px; background: var(--bg-soft); color: var(--ink-2); font-size: 12px; }
+.map-full-overlay .map-iframe, .map-full-overlay .map-placeholder { flex: 1 1 auto; min-height: 0; }
+.bind-prompt { text-align: center; padding: 28px 18px; }
+.bind-prompt-icon { width: 64px; height: 64px; margin: 0 auto 14px; border-radius: 18px; background: var(--green-soft); color: var(--green); display: flex; align-items: center; justify-content: center; font-size: 28px; }
+.bind-prompt .bold { font-size: 16px; margin-bottom: 6px; }
+.bind-prompt .link-btn { margin-top: 16px; }
 .map-actions { display: flex; gap: 10px; margin-bottom: 8px; }
 .map-providers { display: flex; gap: 8px; margin-bottom: 12px; }
 .map-providers button { flex: 1; padding: 9px 4px; border-radius: 9px; background: var(--green-soft); color: var(--green); font-size: 12px; }
