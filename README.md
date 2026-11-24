@@ -104,7 +104,8 @@ powershell -NoProfile -ExecutionPolicy Bypass -File "C:\Users\Xieta\Desktop\Trac
 
 | 文件 | 说明 |
 |------|------|
-| `index.html` | 入口页面，只加载纯前端逻辑 |
+| `index.html` | 入口页面，只加载纯前端逻辑和本地地图脚本 |
+| `leaflet.js` / `leaflet.css` | 本地 Leaflet 地图库，避免外部 CDN 被拦截导致地图加载失败 |
 | `mobile.css` | 黑白极简样式、底部导航、侧栏、弹窗、表单 |
 | `mobile.js` | 全部页面与本地存储逻辑 |
 | `sw.js` | Service Worker 离线缓存 |
