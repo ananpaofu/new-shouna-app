@@ -6,7 +6,7 @@
   'use strict';
 
   /* ---------------- 常量 ---------------- */
-  var APP_VERSION = '2.38';
+  var APP_VERSION = '2.40';
   var DB_KEY = 'organizer_local_v2';
   var PREF_KEY = 'organizer_pref_v2';
   var HISTORY_KEY = 'organizer_search_history_v2';
@@ -22,6 +22,15 @@
   var DEFAULT_DEVICE_PWD = '123456';
 
   var APP_VERSION_CHANGELOG = [
+    { version: '2.40', date: '2026-11-24', title: '导航按钮仅全屏显示', items: [
+      '小地图和下拉展开地图都会裁掉页面底部的导航选择按钮',
+      '只有点“全屏地图”时才显示地图下方的导航选择按钮'
+    ] },
+    { version: '2.39', date: '2026-11-24', title: '实时定位标签', items: [
+      '内嵌地图改为百度标记地图，去掉高德标记页底部的“查看路线 / 去高德导航”弹窗',
+      '物品照片气泡增加实时距离、状态和定位时间，刷新位置后会同步变化',
+      '地图信息窗口内容也改为实时距离 / 状态 / 时间，不再显示设备编号和加载失败的图片'
+    ] },
     { version: '2.38', date: '2026-11-24', title: '高德标记地图', items: [
       '内嵌地图改为高德标记地图，不再显示旧页面里的设备编号和加载失败的图片',
       '取消拖动地图图层的方案，恢复地图原生拖动、缩放和放大缩小按钮，平移时不会出现空白',
@@ -1949,15 +1958,27 @@
       if (!silent) toast(err && err.code === 1 ? '请允许浏览器获取位置' : '无法获取当前位置，请开启手机定位');
     }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 30000 });
   }
+  function locatorLiveText(fullTime) {
+    var f = state.locatorFix;
+    if (!f) return fullTime ? '等待刷新定位' : '等待刷新定位';
+    var speed = Number(f.speed) || 0;
+    var status = speed > 0 ? '移动中' : '静止';
+    var dist = state.locatorDistance != null ? '约 ' + distanceText(state.locatorDistance) : '获取中';
+    var time = locatorTimeText(f.time);
+    if (!fullTime && time.length >= 8) time = time.slice(-8);
+    return '距你' + dist + ' · ' + status + (time ? ' · ' + time : '');
+  }
   function locatorEmbedURL() {
     var f = state.locatorFix;
     var fallback = normalizeLocatorLink(state.locatorShare || DEFAULT_LOCATOR_LINK);
     if (!f || !f.lat || !f.lng) return fallback;
     var name = (state.deviceBind && state.deviceBind.itemName) || '物品';
-    var p = mapCoords(f.lat, f.lng, 'amap');
+    var p = mapCoords(f.lat, f.lng, 'baidu');
     if (!p.lat || !p.lng) return fallback;
-    return 'https://uri.amap.com/marker?position=' + p.lng + ',' + p.lat +
-      '&name=' + encodeURIComponent(name) + '&src=organizer&coordinate=gaode&callnative=0&zoom=16';
+    return 'https://api.map.baidu.com/marker?location=' + p.lat + ',' + p.lng +
+      '&title=' + encodeURIComponent(name) +
+      '&content=' + encodeURIComponent(locatorLiveText(true)) +
+      '&output=html&coord_type=gcj02&src=organizer';
   }
   function mapHeaderPhotoHTML() {
     var b = state.deviceBind || {};
@@ -1968,11 +1989,19 @@
   }
   function mapItemBadgeHTML() {
     var b = state.deviceBind || {};
+    var f = state.locatorFix;
     var icon = b.photo
       ? '<img src="' + escapeHTML(b.photo) + '" alt="">'
       : escapeHTML(state.link.icon || '🐱');
+    var speed = Number(f && f.speed) || 0;
+    var status = f ? (speed > 0 ? '移动中' : '静止') : '等待刷新';
+    var dist = state.locatorDistance != null ? '距你约 ' + distanceText(state.locatorDistance) : '距离获取中';
+    var time = f ? locatorTimeText(f.time) : '';
+    if (time.length >= 8) time = time.slice(-8);
     return '<div class="map-item-badge"><span class="map-item-icon">' + icon + '</span>' +
-      '<span class="map-item-text"><b>' + escapeHTML(b.itemName || '物品') + '</b><small>' + tr('物品位置') + '</small></span></div>';
+      '<span class="map-item-text"><b>' + escapeHTML(b.itemName || '物品') + '</b>' +
+      '<span class="map-item-live">' + escapeHTML(dist + ' · ' + status) + '</span>' +
+      '<small>' + escapeHTML(time || '等待刷新定位') + '</small></span></div>';
   }
   function linkHTML() {
     var expanded = state.link.mapExpanded;
