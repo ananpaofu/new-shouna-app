@@ -6,7 +6,7 @@
   'use strict';
 
   /* ---------------- 常量 ---------------- */
-  var APP_VERSION = '2.34';
+  var APP_VERSION = '2.35';
   var DB_KEY = 'organizer_local_v2';
   var PREF_KEY = 'organizer_pref_v2';
   var HISTORY_KEY = 'organizer_search_history_v2';
@@ -22,6 +22,11 @@
   var DEFAULT_DEVICE_PWD = '123456';
 
   var APP_VERSION_CHANGELOG = [
+    { version: '2.35', date: '2026-11-24', title: '定位地图与地图选择', items: [
+      '联动页小窗恢复为设备实时定位地图，与云知行设备定位页面一致，不再显示高德路线页',
+      '删除底部“展开”按钮，只保留右上角展开；新增“选择地图”入口，可选择高德 / 百度 / 腾讯 / 谷歌',
+      '距离仍按手机当前位置和设备位置实时计算'
+    ] },
     { version: '2.33', date: '2026-11-24', title: '设备验证与多地图直开', items: [
       '设备号和密码必须由用户输入并验证正确，验证失败不会显示地图',
       '高德地图加入国内坐标纠偏，全国范围可用；距离用手机当前位置与设备位置实时计算',
@@ -1940,27 +1945,21 @@
     var deviceIcon = bind.photo
       ? '<img src="' + escapeHTML(bind.photo) + '" alt="">'
       : escapeHTML(state.link.icon || '🐱');
-    var routeURL = locatorAmapURL(true);
-    var mapInner = routeURL
-      ? '<iframe class="map-iframe" src="' + escapeHTML(routeURL) + '" title="' + tr('物品实时地图') + '"></iframe>'
-      : '<div class="map-placeholder">' + tr(state.locatorLoading ? '正在读取物品位置…' : '物品位置读取中，请稍后刷新') + '</div>';
+    var liveMapURL = normalizeLocatorLink(state.locatorShare || DEFAULT_LOCATOR_LINK);
+    var mapInner = liveMapURL
+      ? '<iframe class="map-iframe" src="' + escapeHTML(liveMapURL) + '" title="' + tr('物品实时地图') + '" allow="geolocation; fullscreen"></iframe>'
+      : '<div class="map-placeholder">' + tr('物品位置读取中，请稍后刷新') + '</div>';
     return '<div class="page link-page">' +
       '<div class="link-card">' +
-        '<div class="link-card-head"><div><div class="bold">物品实时地图</div><div class="muted small">我的位置 → 物品位置 · 实时路线</div></div>' +
+        '<div class="link-card-head"><div><div class="bold">物品实时地图</div><div class="muted small">设备实时位置 · 手机当前位置</div></div>' +
           '<button class="map-toggle" data-action="toggle-map">' + (expanded ? '收起地图 ›' : '下拉展开地图 ›') + '</button></div>' +
         '<div class="map-actions">' +
           '<button class="map-primary" data-action="open-amap"><span>📍</span> 用高德导航打开</button>' +
           '<button class="map-ghost" data-action="fullscreen-map">全屏地图</button>' +
-          '<button class="map-ghost" data-action="toggle-map">' + (expanded ? '收起' : '展开') + '</button>' +
-        '</div>' +
-        '<div class="map-providers">' +
-          '<button data-action="open-map" data-map="amap"' + (routeURL ? '' : ' disabled') + '>高德</button>' +
-          '<button data-action="open-map" data-map="baidu"' + (routeURL ? '' : ' disabled') + '>百度</button>' +
-          '<button data-action="open-map" data-map="qq"' + (routeURL ? '' : ' disabled') + '>腾讯</button>' +
-          '<button data-action="open-map" data-map="google"' + (routeURL ? '' : ' disabled') + '>谷歌</button>' +
+          '<button class="map-ghost" data-action="choose-map">选择地图</button>' +
         '</div>' +
         '<div class="map-box' + (expanded ? ' expanded' : '') + '">' + mapInner + '</div>' +
-        '<div class="map-address">' + tr('路线和距离按你手机当前位置计算，请允许定位权限') + '</div>' +
+        '<div class="map-address">' + tr('地图显示设备实时位置，距离按你手机当前位置计算，请允许定位权限') + '</div>' +
       '</div>' +
       '<div class="link-card locator-card">' +
         '<div class="bold">物品实时位置</div>' +
@@ -2295,14 +2294,21 @@
     if (o.type === 'deviceBind') { return deviceBindHTML(); }
     if (o.type === 'deviceAccess') { return deviceAccessHTML(); }
     if (o.type === 'mapFull') {
-      var fullURL = locatorAmapURL(true);
+      var fullURL = normalizeLocatorLink(state.locatorShare || DEFAULT_LOCATOR_LINK);
       return '<div class="sheet-mask show" data-action="close-overlay"></div>' +
         '<div class="map-full-overlay"><div class="map-full-head"><b>' + tr('物品实时地图') + '</b>' +
         '<button data-action="close-overlay">✕ ' + tr('关闭') + '</button></div>' +
-        (fullURL
-          ? '<iframe class="map-iframe" src="' + escapeHTML(fullURL) + '" title="' + tr('物品实时地图') + '"></iframe>'
-          : '<div class="map-placeholder">' + tr('物品位置读取中，请稍后刷新') + '</div>') +
+        '<iframe class="map-iframe" src="' + escapeHTML(fullURL) + '" title="' + tr('物品实时地图') + '" allow="geolocation; fullscreen"></iframe>' +
         '</div>';
+    }
+    if (o.type === 'mapChoose') {
+      return sheetShell(tr('选择地图'),
+        '<div class="map-choose-grid">' +
+          '<button data-action="open-map" data-map="amap">高德地图</button>' +
+          '<button data-action="open-map" data-map="baidu">百度地图</button>' +
+          '<button data-action="open-map" data-map="qq">腾讯地图</button>' +
+          '<button data-action="open-map" data-map="google">谷歌地图</button>' +
+        '</div>');
     }
     if (o.type === 'photoChoice') {
       return sheetShell('添加照片',
@@ -2877,10 +2883,11 @@
         break;
       case 'find-me': showMyDistance(); break;
       case 'fullscreen-map':
-        if (!locatorAmapURL(true)) { toast('请先绑定并刷新物品位置'); break; }
+        if (!state.locatorShare) { toast('请先绑定并刷新物品位置'); break; }
         state.overlay = { type: 'mapFull' };
         renderOverlay();
         break;
+      case 'choose-map': state.overlay = { type: 'mapChoose' }; renderOverlay(); break;
       case 'map-plan':
         openInfo('地图方案', '绑定后地图按你手机当前位置规划到物品位置的路线，并可全屏查看；距离按当前位置计算。直接打开高德 / 百度 / 腾讯 / 谷歌地图不需要额外密钥；如果要内嵌这些地图或调用它们的路线 API，才需要各自申请密钥。');
         break;
