@@ -6,7 +6,7 @@
   'use strict';
 
   /* ---------------- 常量 ---------------- */
-  var APP_VERSION = '2.58';
+  var APP_VERSION = '2.59';
   var DB_KEY = 'organizer_local_v2';
   var PREF_KEY = 'organizer_pref_v2';
   var HISTORY_KEY = 'organizer_search_history_v2';
@@ -24,6 +24,11 @@
   var DEFAULT_DEVICE_API = 'https://device-api.xieta1371.workers.dev';
 
   var APP_VERSION_CHANGELOG = [
+    { version: '2.59', date: '2026-11-24', title: '绑定弹层与分类全部优化', items: [
+      '绑定设备标题略微下移，拍照预览框与右侧按钮边框等高对齐',
+      '分类页“全部”入口不再跳到首页，仍留在分类导航，顶部标题显示“全部”',
+      '分类“全部”列表底部导航继续高亮“分类”，点击底部“首页”才回到真正首页'
+    ] },
     { version: '2.58', date: '2026-11-24', title: '标签与弹层细节优化', items: [
       '已过期标签改为紧跟绿色库存标签并列显示，过期物品最多显示分类 / 库存 / 已过期三个标签',
       '物品分类图标改为青绿色，避免与临近过期等其他七个图标颜色重复',
@@ -738,6 +743,7 @@
     homeQuery: '',
     homeFocused: false,
     categoryFrom: '',
+    categoryAllFromQuick: false,
     groupCategory: '',
     locatorShare: '',
     locatorApi: '',
@@ -1107,7 +1113,7 @@
         '</div>' +
         '<div class="ms-sub"><span>已选择 ' + n + ' 项</span><button data-action="exit-multiselect">退出多选</button></div>';
     }
-    var filtered = state.category !== 'all';
+    var filtered = state.category !== 'all' || state.categoryAllFromQuick;
     return '<div class="header-row home-header">' +
       (filtered
         ? '<button class="icon-btn back-home" data-action="' + (state.categoryFrom === 'categoryManage' || state.categoryFrom === 'quick' || state.categoryFrom === 'stock' ? 'go-back' : 'back-to-all') + '" aria-label="返回" title="返回"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m14 5-7 7 7 7"/></svg></button>'
@@ -1130,8 +1136,8 @@
   }
   function activeNavKey() {
     if (state.view === 'search' || state.view === 'categoryManage' || state.view === 'categoryGroup') return 'search';
-    if (state.view === 'home' && state.category !== 'all') return 'search';
-    if (state.view === 'itemDetail' && (state.groupCategory || state.category !== 'all' ||
+    if (state.view === 'home' && (state.category !== 'all' || state.categoryAllFromQuick)) return 'search';
+    if (state.view === 'itemDetail' && (state.groupCategory || state.categoryAllFromQuick || state.category !== 'all' ||
         state.categoryFrom === 'quick' || state.categoryFrom === 'stock' || state.categoryFrom === 'categoryManage')) return 'search';
     if (['prefs', 'tutorial', 'password', 'achievement', 'register', 'notifications'].indexOf(state.view) >= 0) return 'me';
     if (state.view === 'alerts') return 'home';
@@ -2980,7 +2986,8 @@
   function pushView() {
     state.viewStack.push({
       view: state.view, category: state.category, categoryFrom: state.categoryFrom,
-      groupCategory: state.groupCategory, sidebarOpen: state.sidebarOpen
+      categoryAllFromQuick: state.categoryAllFromQuick, groupCategory: state.groupCategory,
+      sidebarOpen: state.sidebarOpen
     });
     if (state.viewStack.length > 20) state.viewStack.shift();
   }
@@ -3019,12 +3026,14 @@
       state.view = prev.view;
       state.category = prev.category;
       state.categoryFrom = prev.categoryFrom || '';
+      state.categoryAllFromQuick = !!prev.categoryAllFromQuick;
       state.groupCategory = prev.groupCategory || '';
       state.sidebarOpen = !!prev.sidebarOpen;
     } else {
       state.view = 'home';
       state.category = 'all';
       state.categoryFrom = '';
+      state.categoryAllFromQuick = false;
       state.groupCategory = '';
     }
     state.editingId = null;
@@ -3033,8 +3042,10 @@
     render();
   }
   function setCategory(cat, from) {
+    var fromSearch = state.view === 'search';
     pushView();
     state.categoryFrom = from || 'sidebar';
+    state.categoryAllFromQuick = cat === 'all' && (fromSearch || from === 'quick' || from === 'sidebar' || state.categoryAllFromQuick);
     state.category = cat;
     state.view = 'home';
     state.sidebarOpen = false;
@@ -3267,7 +3278,7 @@
       case 'nav':
         var navView = el.getAttribute('data-view');
         if (navView === 'home') {
-          state.category = 'all'; state.categoryFrom = ''; state.groupCategory = '';
+          state.category = 'all'; state.categoryFrom = ''; state.categoryAllFromQuick = false; state.groupCategory = '';
           state.multiSelect = false; state.selectedIds = [];
         }
         openView(navView);
@@ -3601,7 +3612,7 @@
         var cardKey = el.getAttribute('data-card');
         if (cardKey) { state.meCollapsed[cardKey] = !state.meCollapsed[cardKey]; render(); }
         break;
-      case 'back-to-all': state.category = 'all'; state.categoryFrom = ''; state.sidebarOpen = false; state.multiSelect = false; state.selectedIds = []; render(); break;
+      case 'back-to-all': state.category = 'all'; state.categoryFrom = ''; state.categoryAllFromQuick = true; state.sidebarOpen = false; state.multiSelect = false; state.selectedIds = []; render(); break;
       case 'go-alerts': case 'open-alerts': openView('alerts'); break;
       case 'delete-alert':
         var aid = el.getAttribute('data-id');
