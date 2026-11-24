@@ -6,7 +6,7 @@
   'use strict';
 
   /* ---------------- 常量 ---------------- */
-  var APP_VERSION = '2.29';
+  var APP_VERSION = '2.30';
   var DB_KEY = 'organizer_local_v2';
   var PREF_KEY = 'organizer_pref_v2';
   var HISTORY_KEY = 'organizer_search_history_v2';
@@ -14,11 +14,17 @@
   var LOCATOR_KEY = 'organizer_locator_share_v1';
   var LOCATOR_API_KEY = 'organizer_locator_api_v1';
   var DEVICE_BIND_KEY = 'organizer_device_bind_v1';
+  var DEVICE_API_KEY = 'organizer_device_api_v1';
   var DEFAULT_LOCATOR_LINK = 'https://vipapi.18gps.net//CheTT/CheTTgetPosition.aspx?id=7c730550-a968-49ab-a054-4578cd7a571c&lang=cn';
   var DEFAULT_LOCATOR_API = 'https://twilight-butterfly-f2a8.xieta1371.workers.dev';
   var LOCATOR_DIRECT_OBJ = '482db427-68d2-4d53-85cb-3c55fd4dfa81';
 
   var APP_VERSION_CHANGELOG = [
+    { version: '2.30', date: '2026-11-24', title: '云端绑定与分享码', items: [
+      '新增 Cloudflare Worker + KV 云端接口：设备绑定只存密码哈希，生成分享码，朋友可用分享码或设备号密码连接',
+      'App 填入云端 API 地址后，刷新位置改走云端接口；云端实时解析 18gps 分享页参数并缓存最新位置',
+      '机主绑定成功后直接显示分享码；朋友连接后自动显示物品照片和到设备的距离'
+    ] },
     { version: '2.29', date: '2026-11-24', title: '分类修复与设备绑定演示', items: [
       '分类管理页可正常上下滑动；全部 / 最佳 / 已过期等入口改为状态筛选，中文显示中文，全部能看到所有未删除物品',
       '设备联动新增本地绑定流程：选物品或新建、拍照或从相册选图、填设备号和密码，绑定后卡片和地图圆圈显示物品照片',
@@ -602,6 +608,8 @@
     locatingMe: false,
     deviceBind: null,
     bindDraft: null,
+    deviceApi: '',
+    deviceShareCode: '',
     crop: null
   };
 
@@ -1608,6 +1616,20 @@
       else localStorage.removeItem(DEVICE_BIND_KEY);
     } catch (e) {}
   }
+  function normalizeDeviceApi(raw) { return String(raw || '').trim().replace(/\/+$/, ''); }
+  function loadDeviceApi() {
+    try {
+      var raw = localStorage.getItem(DEVICE_API_KEY);
+      var d = raw ? JSON.parse(raw) : {};
+      state.deviceApi = normalizeDeviceApi(d.api);
+      state.deviceShareCode = String(d.shareCode || '').trim().toUpperCase();
+    } catch (e) { state.deviceApi = ''; state.deviceShareCode = ''; }
+  }
+  function saveDeviceApi() {
+    try {
+      localStorage.setItem(DEVICE_API_KEY, JSON.stringify({ api: state.deviceApi, shareCode: state.deviceShareCode }));
+    } catch (e) {}
+  }
   function parseLocatorPayload(payload) {
     if (payload && payload.success === false) {
       return { ok: false, error: payload.errorCode === '403' ? '分享已过期或参数无效' : '定位接口返回异常' };
@@ -1673,7 +1695,7 @@
   }
   function refreshLocator() {
     var id = locatorId();
-    if (!id) { toast('分享链接无效'); return; }
+    if (!id && !(state.deviceApi && state.deviceShareCode)) { toast('分享链接无效'); return; }
     state.locatorLoading = true;
     render();
     var finished = false;
@@ -1686,10 +1708,25 @@
         toast('读取位置失败：' + ((d && d.error) || '网络错误'));
         return;
       }
+      if (d.itemName || d.photo) {
+        var bound = state.deviceBind || {};
+        if (d.itemName) bound.itemName = d.itemName;
+        if (d.photo) bound.photo = d.photo;
+        if (d.deviceNo) bound.deviceNo = d.deviceNo;
+        state.deviceBind = bound;
+        persistDeviceBind();
+      }
       state.locatorFix = d;
       state.locatorDistance = null;
       render();
       toast('位置已更新');
+    }
+    if (state.deviceApi && state.deviceShareCode) {
+      fetch(state.deviceApi + '/api/locate?code=' + encodeURIComponent(state.deviceShareCode) + '&t=' + Date.now(), { cache: 'no-store' })
+        .then(function (r) { return r.json(); })
+        .then(finish)
+        .catch(function () { finish({ ok: false, error: '云端位置读取失败' }); });
+      return;
     }
     function workerFallback() {
       var api = state.locatorApi;
@@ -1828,7 +1865,7 @@
           '<div><span>信号强度</span><div class="signal"><i></i><i></i><i></i></div></div></div>' +
         '<div class="device-actions">' +
           '<button data-action="find-me">查找位置</button>' +
-          '<button data-action="pick-device-icon">自定义标签</button>' +
+          '<button data-action="bind-access">连接设备</button>' +
           '<button data-action="bind-device">' + tr('绑定物品') + '</button>' +
           '<button data-action="device-hint" data-name="离位提醒">离位提醒<br>开</button>' +
         '</div>' +
@@ -1928,11 +1965,12 @@
   function syncBindDraft() {
     var d = state.bindDraft || (state.bindDraft = {});
     var sel = $('#bind-item-select'), name = $('#bind-item-name');
-    var no = $('#bind-device-no'), pw = $('#bind-device-pwd');
+    var no = $('#bind-device-no'), pw = $('#bind-device-pwd'), api = $('#bind-api');
     if (sel) d.selectedId = sel.value;
     if (name) d.name = name.value;
     if (no) d.deviceNo = no.value;
     if (pw) d.devicePwd = pw.value;
+    if (api) d.api = api.value;
     return d;
   }
   function openBindSheet() {
@@ -1943,6 +1981,7 @@
     d.photo = d.photo || b.photo || '';
     d.deviceNo = d.deviceNo || b.deviceNo || '';
     d.devicePwd = d.devicePwd || b.devicePwd || '';
+    d.api = d.api || state.deviceApi || '';
     state.overlay = { type: 'deviceBind' };
     renderOverlay();
   }
@@ -1963,7 +2002,9 @@
         '<div class="bind-step">2. 输入设备编号和密码</div>' +
         '<input id="bind-device-no" class="bind-input" placeholder="设备编号" value="' + escapeHTML(d.deviceNo || '') + '">' +
         '<input id="bind-device-pwd" class="bind-input" type="password" placeholder="设备密码" value="' + escapeHTML(d.devicePwd || '') + '">' +
-        '<div class="bind-tip">本机演示版：密码只保存在本机；联网版会改为只存哈希，并用分享令牌读取位置。</div>' +
+        '<div class="bind-step">3. 云端 API 地址（可选，部署 Worker 后填写）</div>' +
+        '<input id="bind-api" class="bind-input" placeholder="https://xxx.workers.dev" value="' + escapeHTML(d.api || state.deviceApi || '') + '">' +
+        '<div class="bind-tip">填写 API 地址后会同步到云端，生成分享码；不填则只保存在本机。云端只存密码哈希，不存明文。</div>' +
         '<div class="bind-foot"><button class="btn" data-action="close-overlay">取消</button>' +
           '<button class="btn btn-primary" data-action="save-device-bind">完成绑定</button></div>' +
       '</div>');
@@ -1978,7 +2019,9 @@
     }
     if (!name) { toast('请选择物品或填写物品名称'); return; }
     if (!String(d.deviceNo || '').trim()) { toast('请输入设备编号'); return; }
-    state.deviceBind = {
+
+    var api = normalizeDeviceApi(d.api || state.deviceApi || '');
+    var local = {
       itemId: d.selectedId || '',
       itemName: name,
       photo: photo,
@@ -1986,11 +2029,83 @@
       devicePwd: String(d.devicePwd || ''),
       boundAt: Date.now()
     };
+    state.deviceBind = local;
+    state.deviceApi = api;
     persistDeviceBind();
+    saveDeviceApi();
     state.overlay = null;
     state.bindDraft = null;
     render();
-    toast('设备已绑定');
+    if (!api) { toast('设备已保存到本机'); return; }
+
+    toast('正在同步云端…');
+    fetch(api + '/api/bind', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        deviceNo: local.deviceNo,
+        password: local.devicePwd,
+        itemName: local.itemName,
+        photo: local.photo,
+        shareUrl: state.locatorShare
+      })
+    }).then(function (r) { return r.json(); }).then(function (res) {
+      if (!res.ok) throw new Error(res.error || '云端绑定失败');
+      state.deviceShareCode = String(res.shareCode || '').toUpperCase();
+      saveDeviceApi();
+      render();
+      toast('云端绑定成功，分享码：' + state.deviceShareCode);
+    }).catch(function (err) {
+      toast('本机已保存，云端失败：' + (err && err.message || err));
+    });
+  }
+  function openAccessSheet() {
+    state.overlay = { type: 'deviceAccess' };
+    renderOverlay();
+  }
+  function deviceAccessHTML() {
+    return sheetShell('连接别人的设备',
+      '<div class="bind-sheet">' +
+        '<div class="bind-step">云端 API 地址</div>' +
+        '<input id="access-api" class="bind-input" placeholder="https://xxx.workers.dev" value="' + escapeHTML(state.deviceApi || '') + '">' +
+        '<div class="bind-step">推荐：输入机主给你的分享码</div>' +
+        '<input id="access-code" class="bind-input" placeholder="分享码" value="' + escapeHTML(state.deviceShareCode || '') + '">' +
+        '<div class="bind-step">或者输入设备号和密码</div>' +
+        '<input id="access-no" class="bind-input" placeholder="设备编号">' +
+        '<input id="access-pwd" class="bind-input" type="password" placeholder="设备密码">' +
+        '<div class="bind-tip">连接成功后，刷新位置会直接读取这台设备的实时位置，并显示你到设备的距离。</div>' +
+        '<div class="bind-foot"><button class="btn" data-action="close-overlay">取消</button>' +
+          '<button class="btn btn-primary" data-action="save-device-access">连接设备</button></div>' +
+      '</div>');
+  }
+  function saveDeviceAccess() {
+    var apiEl = $('#access-api'), codeEl = $('#access-code'), noEl = $('#access-no'), pwEl = $('#access-pwd');
+    var api = normalizeDeviceApi(apiEl ? apiEl.value : '');
+    var code = String(codeEl ? codeEl.value : '').trim().toUpperCase();
+    var no = String(noEl ? noEl.value : '').trim();
+    var pwd = String(pwEl ? pwEl.value : '');
+    if (!api) { toast('请先填写云端 API 地址'); return; }
+    if (!code && (!no || !pwd)) { toast('请输入分享码，或设备号和密码'); return; }
+    state.deviceApi = api;
+    saveDeviceApi();
+    toast('正在连接设备…');
+    fetch(api + '/api/access', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(code ? { shareCode: code } : { deviceNo: no, password: pwd })
+    }).then(function (r) { return r.json(); }).then(function (res) {
+      if (!res.ok) throw new Error(res.error || '连接失败');
+      state.deviceShareCode = String(res.shareCode || '').toUpperCase();
+      state.deviceBind = { itemName: res.itemName || '', photo: res.photo || '', deviceNo: res.deviceNo || '' };
+      persistDeviceBind();
+      saveDeviceApi();
+      state.overlay = null;
+      render();
+      toast('已连接：' + (res.itemName || '设备'));
+      refreshLocator();
+    }).catch(function (err) {
+      toast('连接失败：' + (err && err.message || err));
+    });
   }
   function calendarPickerHTML(o) {
     var value = o.value || todayStr();
@@ -2048,6 +2163,7 @@
     }
     if (o.type === 'time') { return '<div class="sheet-mask show" data-action="close-overlay"></div><div class="sheet show">' + timePickerHTML(o) + '</div>'; }
     if (o.type === 'deviceBind') { return deviceBindHTML(); }
+    if (o.type === 'deviceAccess') { return deviceAccessHTML(); }
     if (o.type === 'photoChoice') {
       return sheetShell('添加照片',
         '<div class="photo-choice"><img src="' + escapeHTML(o.src) + '" alt="">' +
@@ -2638,8 +2754,10 @@
         render(); toast('已清除定位器链接');
         break;
       case 'add-device-hint': case 'bind-device': openBindSheet(); break;
+      case 'bind-access': openAccessSheet(); break;
       case 'bind-pick-photo': var bindFile = $('#bind-photo-file'); if (bindFile) bindFile.click(); break;
       case 'save-device-bind': saveDeviceBind(); break;
+      case 'save-device-access': saveDeviceAccess(); break;
       case 'device-hint': toast((el.getAttribute('data-name') || '该功能') + '在本机版为演示'); break;
       case 'me-info': openInfo(el.getAttribute('data-title') || '提示', el.getAttribute('data-body') || ''); break;
       case 'toggle-me-setting':
@@ -2977,6 +3095,7 @@
     } catch (e) { state.alertDeletedIds = []; }
     loadLocatorLink();
     loadDeviceBind();
+    loadDeviceApi();
     if (typeof window !== 'undefined' && window.location && window.location.hash === '#register') state.view = 'register';
     bindEvents();
     applyTheme();
