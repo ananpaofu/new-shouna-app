@@ -604,6 +604,7 @@ a { color: inherit; text-decoration: none; }
 .map-toggle { font-size: 11px; color: var(--ink-3); }
 .map-box { position: relative; height: 200px; border-radius: 12px; background: #eef5f5; overflow: hidden; border: 1px solid #e5eeee; }
 .map-box.expanded { height: 320px; }
+.map-iframe { width: 100%; height: 100%; border: 0; display: block; background: var(--bg-soft); }
 .map-blob { position: absolute; border-radius: 50%; opacity: .65; }
 .blob-a { width: 150px; height: 150px; background: #d8ecd8; left: -30px; top: -20px; }
 .blob-b { width: 170px; height: 170px; background: #dcebf2; right: -40px; top: 10px; }
