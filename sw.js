@@ -1,8 +1,10 @@
 /* 收纳小管家 · Service Worker（缓存优先，支持离线打开） */
-const CACHE = 'organizer-v2.41';
+const CACHE = 'organizer-v2.42';
 const ASSETS = [
   './',
   './index.html',
+  './leaflet.css',
+  './leaflet.js',
   './mobile.css',
   './mobile.js',
   './manifest.webmanifest',
@@ -36,7 +38,7 @@ self.addEventListener('fetch', function (e) {
 
   // 核心文件网络优先：每次先取线上最新版，失败才用缓存
   const path = url.pathname;
-  const isCore = /\/(index\.html|mobile\.js|mobile\.css|sw\.js)$/.test(path)
+  const isCore = /\/(index\.html|leaflet\.js|leaflet\.css|mobile\.js|mobile\.css|sw\.js)$/.test(path)
     || path.endsWith('/');
   if (isCore) {
     e.respondWith(
