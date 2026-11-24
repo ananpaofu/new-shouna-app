@@ -617,6 +617,19 @@ a { color: inherit; text-decoration: none; }
 .map-box { position: relative; height: 200px; border-radius: 12px; background: #eef5f5; overflow: hidden; border: 1px solid #e5eeee; }
 .map-box.expanded { height: 320px; }
 .map-iframe { width: 100%; height: 100%; border: 0; display: block; background: var(--bg-soft); }
+.leaflet-map { width: 100%; height: 100%; background: #eef5f5; }
+.map-full-canvas { flex: 1 1 auto; min-height: 0; }
+.leaflet-container .leaflet-control-attribution { display: none; }
+.leaflet-container .leaflet-control-zoom { border: 1px solid var(--line); box-shadow: 0 2px 8px rgba(0,0,0,.12); }
+.leaflet-container .leaflet-control-zoom a { background: var(--bg); color: var(--ink); border-bottom-color: var(--line); }
+.map-layer-switch { position: absolute; right: 10px; top: 10px; z-index: 500; display: flex; gap: 2px;
+  padding: 3px; border-radius: 8px; border: 1px solid var(--line); background: rgba(255,255,255,.94); box-shadow: 0 2px 8px rgba(0,0,0,.12); }
+:root[data-theme='dark'] .map-layer-switch { background: rgba(36,36,36,.94); }
+.map-layer-switch button { padding: 4px 9px; border-radius: 6px; font-size: 11px; color: var(--ink-3); }
+.map-layer-switch button.active { background: var(--green); color: #fff; }
+.leaflet-item-icon { width: 0 !important; height: 0 !important; }
+.leaflet-item-marker { position: relative; width: 0; height: 0; }
+.leaflet-item-marker .map-item-badge { position: absolute; left: 0; bottom: 14px; transform: translateX(-50%); }
 .map-item-badge {
   --badge-bg: rgba(255,255,255,.96); --badge-border: rgba(31,157,85,.35);
   position: absolute; left: 50%; top: 26%; transform: translate(-50%,-50%); z-index: 3;
@@ -829,7 +842,6 @@ input[type='time'], input[type='date'] { accent-color: var(--green); color-schem
 .link-page .map-card .map-primary, .link-page .map-card .map-ghost { padding: 8px 2px; font-size: 12px; }
 .link-page .map-card .map-box { height: 150px; }
 .link-page .map-card .map-box.expanded { height: 290px; }
-.link-page .map-card .map-iframe { height: calc(100% + 72px); }
 .link-page .map-card .map-live-info { margin: 6px 0 0; padding: 6px 8px; line-height: 1.55; }
 .link-page .section-title { margin-top: 10px; margin-bottom: 6px; }
 .link-page .device-card { padding: 10px 12px; }
