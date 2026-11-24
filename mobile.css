@@ -617,6 +617,10 @@ a { color: inherit; text-decoration: none; }
 .map-box { position: relative; height: 200px; border-radius: 12px; background: #eef5f5; overflow: hidden; border: 1px solid #e5eeee; }
 .map-box.expanded { height: 320px; }
 .map-iframe { width: 100%; height: 100%; border: 0; display: block; background: var(--bg-soft); }
+.map-layer { position: absolute; inset: -32px; touch-action: none; cursor: grab; }
+.map-layer.dragging { cursor: grabbing; }
+.map-layer .map-iframe { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.map-full-overlay .map-layer { inset: -48px; }
 .map-item-badge {
   --badge-bg: rgba(255,255,255,.96); --badge-border: rgba(31,157,85,.35);
   position: absolute; left: 50%; top: 26%; transform: translate(-50%,-50%); z-index: 3;
@@ -804,7 +808,7 @@ input[type='time'], input[type='date'] { accent-color: var(--green); color-schem
 .me-page .me-row { padding: 12px 14px; }
 .me-page .me-card-title { padding: 12px 14px 8px; cursor: pointer; display: flex; justify-content: space-between; }
 .me-page .me-collapse { color: var(--green); font-size: 14px; }
-.me-page .me-hero { padding: 34px 0 12px; }
+.me-page .me-hero { padding: 8px 0 12px; }
 .me-page .me-avatar { width: 64px; height: 64px; font-size: 22px; margin-bottom: 8px; }
 .me-page .me-foot { margin: 14px 0; }
 
@@ -823,13 +827,21 @@ input[type='time'], input[type='date'] { accent-color: var(--green); color-schem
   -ms-overflow-style: none; -webkit-overflow-scrolling: touch; padding-bottom: 26px; }
 .link-page::-webkit-scrollbar { display: none; }
 .link-page > * { flex-shrink: 0; }
-.link-page .link-card { margin-bottom: 12px; padding: 14px; }
-.link-page .map-box { height: 200px; }
-.link-page .map-box.expanded { height: 320px; }
+.link-page .link-card { margin-bottom: 10px; padding: 12px; }
+.link-page .map-card { padding: 10px 12px; }
+.link-page .map-card .link-card-head { margin-bottom: 6px; }
+.link-page .map-card .map-actions { gap: 6px; margin-bottom: 6px; }
+.link-page .map-card .map-primary, .link-page .map-card .map-ghost { padding: 8px 2px; font-size: 12px; }
+.link-page .map-card .map-box { height: 150px; }
+.link-page .map-card .map-box.expanded { height: 290px; }
+.link-page .map-card .map-live-info { margin: 6px 0 0; padding: 6px 8px; line-height: 1.55; }
+.link-page .section-title { margin-top: 10px; margin-bottom: 6px; }
+.link-page .device-card { padding: 10px 12px; }
+.link-page .device-stats { margin: 8px 0; }
+.link-page .device-actions button { padding: 8px 2px; }
 .link-page .ability-card { padding: 14px; }
 .link-page .ability-card p { line-height: 1.6; margin-top: 10px; }
 .link-page .desc { line-height: 1.7; margin: 10px 0; }
-.link-page .device-stats { margin: 14px 0; }
 .prefs-page .pref-block { margin-bottom: 10px; }
 .prefs-page .pref-radio-row { padding: 7px 2px; }
 .prefs-page .pref-preview { padding: 10px; margin-bottom: 10px; }
