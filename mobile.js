@@ -6,7 +6,7 @@
   'use strict';
 
   /* ---------------- 常量 ---------------- */
-  var APP_VERSION = '2.76';
+  var APP_VERSION = '2.77';
   var DB_KEY = 'organizer_local_v2';
   var PREF_KEY = 'organizer_pref_v2';
   var HISTORY_KEY = 'organizer_search_history_v2';
@@ -26,6 +26,12 @@
   var DEFAULT_MAP_POINT = { lat: 39.9087, lng: 116.3975 };
 
   var APP_VERSION_CHANGELOG = [
+    { version: '2.77', date: '2026-11-25', title: '声音页精简与地图优化', items: [
+      '声音页简化为左对齐普通布局，去掉复杂装饰',
+      '修改绑定按钮移入设备卡片操作行',
+      '隐藏腾讯/百度地图水印文字并清理 undefined 文案',
+      '百度地图切换后延迟刷新，版本号更新到 2.77'
+    ] },
     { version: '2.76', date: '2026-11-25', title: '地图常显与声音页焕新', items: [
       '设备页直接显示完整地图，无需先绑定设备',
       '地图默认使用展开后的高度，并移除联动能力板块',
@@ -2458,6 +2464,12 @@
           holder.map.addOverlay(holder.userMarker);
         }
         applyBaiduLayerFor(key);
+        setTimeout(function () {
+          if (holder.map && holder.provider === 'baidu') {
+            if (holder.map.checkResize) holder.map.checkResize();
+            holder.map.centerAndZoom(new BMap.Point(p.lng, p.lat), key === 'small' ? 17 : 16);
+          }
+        }, 350);
       } else {
         if (holder.map.checkResize) holder.map.checkResize();
         if (!hasFix && holder.marker) { holder.map.removeOverlay(holder.marker); holder.marker = null; }
@@ -2667,9 +2679,24 @@
       }
     }
   }
+  function cleanMapLabels(el) {
+    if (!el) return;
+    setTimeout(function () {
+      var nodes = el.querySelectorAll('div,span,p');
+      Array.prototype.forEach.call(nodes, function (n) {
+        if (n === el || n.children.length) return;
+        var t = (n.textContent || '').trim();
+        if (!t) return;
+        if (t === 'undefined' || /腾讯地图|Tencent|GS\(20\d{2}\)|百度地图|Baidu/i.test(t)) {
+          n.style.setProperty('display', 'none', 'important');
+        }
+      });
+    }, 400);
+  }
   function syncLeafletMap(id) {
     var el = document.getElementById(id);
     if (!el) return;
+    cleanMapLabels(el);
     if (state.mapProvider === 'baidu') {
       syncBaiduMap(id, el);
       return;
@@ -2801,12 +2828,13 @@
         '<div class="device-actions">' +
           '<button data-action="find-me">查找位置</button>' +
           '<button data-action="pick-device-icon">选择图案</button>' +
+          '<button data-action="bind-device">修改绑定</button>' +
           '<button class="leave-alert-btn' + (state.leaveAlertEnabled ? ' active' : '') + '" data-action="toggle-leave-alert">' + tr('离开提醒') + '</button>' +
         '</div>' +
       '</div>';
-    var bindCardHTML = '<div class="link-card bind-card">' +
-      '<div class="muted small">' + (bound ? tr('已绑定') + '：' + escapeHTML(deviceName) : tr('绑定后显示物品实时位置和距离')) + '</div>' +
-      '<button class="link-btn" data-action="bind-device">' + (bound ? tr('修改绑定') : tr('物品绑定')) + '</button>' +
+    var bindCardHTML = bound ? '' : '<div class="link-card bind-card">' +
+      '<div class="muted small">' + tr('绑定后显示物品实时位置和距离') + '</div>' +
+      '<button class="link-btn" data-action="bind-device">' + tr('物品绑定') + '</button>' +
     '</div>';
     var leaveBanner = state.leaveAlertTriggered
       ? '<div class="leave-alert-banner">⚠ 离开提醒：' + escapeHTML(deviceName) + ' 距离手机已超过 60 米</div>'
@@ -2845,14 +2873,12 @@
       : '';
     var reply = String((state.pref && state.pref.soundReply) || DEFAULT_PREF.soundReply);
     return '<div class="page sound-page">' +
-      '<div class="sound-hero">' +
-        '<div class="sound-orb"><span class="sound-pulse p1"></span><span class="sound-pulse p2"></span><span class="sound-orb-core">' + navSVG('sound') + '</span></div>' +
-        '<div class="sound-eyebrow">VOICE FINDER</div>' +
-        '<div class="sound-title">' + tr('呼唤物品') + '</div>' +
-        '<div class="sound-sub">' + tr('当人呼唤物品时，标签会发声回应，帮助你快速找到它。') + '</div>' +
+      '<div class="sound-head">' +
+        '<div class="sound-head-icon">' + navSVG('sound') + '</div>' +
+        '<div><div class="sound-head-title">' + tr('呼唤物品') + '</div>' +
+        '<div class="muted small">' + tr('当人呼唤物品时，标签会发声回应，帮助你快速找到它。') + '</div></div>' +
       '</div>' +
-      '<div class="link-card sound-card sound-step">' +
-        '<div class="sound-step-head"><span class="sound-step-no">01</span><div><div class="sound-step-title">' + tr('呼唤物品') + '</div><div class="muted small">' + tr('输入名称，或直接说出物品') + '</div></div></div>' +
+      '<div class="link-card sound-card">' +
         '<label class="form-label" for="sound-item-name">' + tr('物品名称') + '</label>' +
         '<input class="form-input" id="sound-item-name" placeholder="' + tr('输入物品名称，例如：防晒霜') + '">' +
         '<div class="sound-btn-row">' +
@@ -2861,9 +2887,10 @@
         '</div>' +
         '<div class="sound-status" id="sound-status">' + tr('未绑定物品时，可直接输入名称试听。') + '</div>' +
       '</div>' +
-      '<div class="link-card sound-card sound-step">' +
-        '<div class="sound-step-head"><span class="sound-step-no">02</span><div><div class="sound-step-title">' + tr('回应声音') + '</div><div class="muted small">' + tr('用 {物品} 代表呼唤的物品名称') + '</div></div></div>' +
+      '<div class="link-card sound-card">' +
+        '<label class="form-label" for="sound-reply">' + tr('回应声音') + '</label>' +
         '<input class="form-input" id="sound-reply" value="' + escapeHTML(reply) + '" placeholder="' + tr('例如：我在这里，{物品}，请来找我') + '">' +
+        '<div class="muted small">' + tr('用 {物品} 代表呼唤的物品名称') + '</div>' +
         '<div class="sound-btn-row">' +
           '<button class="link-btn" data-action="save-sound-reply">' + tr('保存回应声音') + '</button>' +
           '<button class="link-btn ghost" data-action="preview-sound-reply">' + tr('试听') + '</button>' +
