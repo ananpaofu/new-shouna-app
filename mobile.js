@@ -6,7 +6,7 @@
   'use strict';
 
   /* ---------------- 常量 ---------------- */
-  var APP_VERSION = '2.80';
+  var APP_VERSION = '2.81';
   var DB_KEY = 'organizer_local_v2';
   var PREF_KEY = 'organizer_pref_v2';
   var HISTORY_KEY = 'organizer_search_history_v2';
@@ -26,6 +26,12 @@
   var DEFAULT_MAP_POINT = { lat: 39.9087, lng: 116.3975 };
 
   var APP_VERSION_CHANGELOG = [
+    { version: '2.81', date: '2026-11-26', title: '声音设置页与地图标记修复', items: [
+      '声音自定义从弹窗改为独立页面，长文本使用多行输入框',
+      '地图默认标记改为手机小标签',
+      '修正腾讯地图手机定位重复坐标转换问题',
+      '百度地图瓦片加载失败时自动切换高德地图'
+    ] },
     { version: '2.80', date: '2026-11-26', title: '地图浮层与弹窗遮挡修复', items: [
       '地图按钮改为单行，修复弹窗打开时的文字与设备面板遮挡',
       '修正腾讯地图用户定位坐标和切换地图后无法点击的问题',
@@ -1269,7 +1275,7 @@
     }
 
     var titles = {
-      me: '我的', sound: '声音', prefs: '显示偏好', categoryManage: '分类管理', categoryGroup: state.groupCategory || '分类',
+      me: '我的', sound: '声音', soundSettings: '声音自定义', prefs: '显示偏好', categoryManage: '分类管理', categoryGroup: state.groupCategory || '分类',
       form: state.editingId ? '编辑物品' : '新增物品', itemDetail: '物品详情',
       tutorial: '新手教程', password: '修改密码', achievement: '成就等级', register: '注册',
       notifications: '通知中心', alerts: '到期提醒'
@@ -1324,6 +1330,7 @@
     if (state.view === 'search' || state.view === 'home' || state.view === 'categoryManage' ||
         state.view === 'categoryGroup' || state.view === 'itemDetail' || state.view === 'alerts') return 'link';
     if (['prefs', 'tutorial', 'password', 'achievement', 'register', 'notifications'].indexOf(state.view) >= 0) return 'me';
+    if (state.view === 'soundSettings') return 'sound';
     return state.view;
   }
   function renderNav() {
@@ -1573,6 +1580,7 @@
     else if (state.view === 'notifications') view.innerHTML = notificationHTML();
     else if (state.view === 'link') view.innerHTML = linkHTML();
     else if (state.view === 'sound') view.innerHTML = soundHTML();
+    else if (state.view === 'soundSettings') view.innerHTML = soundSettingsPageHTML();
     else if (state.view === 'me') view.innerHTML = meHTML();
     else if (state.view === 'form') view.innerHTML = formHTML();
     else if (state.view === 'prefs') view.innerHTML = prefsHTML();
@@ -2361,7 +2369,7 @@
     var b = state.deviceBind || {};
     var icon = b.photo
       ? '<img src="' + escapeHTML(b.photo) + '" alt="">'
-      : escapeHTML(state.link.icon || '🐱');
+      : '📱';
     return '<div class="map-item-pin"><span class="map-item-photo">' + icon + '</span>' +
       '<span class="map-pin-stem"></span><span class="map-pin-dot"></span></div>';
   }
@@ -2506,15 +2514,23 @@
         }, 350);
         setTimeout(function () {
           if (!holder.map || holder.provider !== 'baidu') return;
-          if (!el.querySelectorAll('img').length) {
+          var imgs = el.querySelectorAll('img');
+          var loaded = false;
+          for (var i = 0; i < imgs.length; i++) {
+            if (imgs[i].complete && imgs[i].naturalWidth > 0) { loaded = true; break; }
+          }
+          if (!loaded) {
             state.baiduFailed = true;
+            state.mapProvider = 'amap';
+            try { localStorage.setItem(MAP_PROVIDER_KEY, 'amap'); } catch (e) {}
             holder.map = null;
             holder.marker = null;
             holder.userMarker = null;
             el.innerHTML = '';
             syncFallbackMap(id, el);
+            toast('百度地图未能加载，已切换高德地图');
           }
-        }, 1800);
+        }, 2200);
       } else {
         if (holder.map.checkResize) holder.map.checkResize();
         if (!hasFix && holder.marker) { holder.map.removeOverlay(holder.marker); holder.marker = null; }
@@ -2611,8 +2627,8 @@
       var p = mapCoords(base.lat, base.lng, 'qq');
       var point = new TMap.LatLng(p.lat, p.lng);
       var coordKey = hasFix ? (p.lat + ',' + p.lng) : 'default';
-      var up = userMapPoint();
-      var upP = up ? mapCoords(up.lat, up.lng, 'qq') : null;
+      var upRaw = state.myPos && state.myPos.lat && state.myPos.lng ? state.myPos : null;
+      var up = upRaw ? mapCoords(upRaw.lat, upRaw.lng, 'qq') : null;
       var itemHTML = '<div class="amap-item-marker">' + mapItemBadgeHTML() + '</div>';
       var phoneHTML = mapPhoneMarkerHTML();
       if (!holder.map || holder.provider !== 'tencent') {
@@ -2635,7 +2651,7 @@
         if (hasFix) holder.marker = tencentHTMLMarker(holder.map, point, itemHTML, 1000);
         holder.coordKey = coordKey;
         if (up) {
-          holder.userMarker = tencentHTMLMarker(holder.map, new TMap.LatLng(upP.lat, upP.lng), phoneHTML, 900);
+          holder.userMarker = tencentHTMLMarker(holder.map, new TMap.LatLng(up.lat, up.lng), phoneHTML, 900);
         }
       } else {
         if (holder.map.resize) holder.map.resize();
@@ -2653,7 +2669,7 @@
           }
         }
         if (up) {
-          var phonePoint = new TMap.LatLng(upP.lat, upP.lng);
+          var phonePoint = new TMap.LatLng(up.lat, up.lng);
           if (holder.userMarker) {
             if (holder.userMarker.setHtml) holder.userMarker.setHtml(phoneHTML);
             if (holder.userMarker.setPosition) holder.userMarker.setPosition(phonePoint);
@@ -3145,6 +3161,43 @@
       '<div class="sheet-head"><h2>' + tr('声音自定义') + '</h2>' +
       '<button class="sheet-close" data-action="close-sheet">✕</button></div>' +
       '<div class="sound-settings">' + grid + editor +
+      '<div class="sound-btn-row"><button class="link-btn" data-action="save-sound-setting">' + tr('保存') + '</button>' +
+      '<button class="link-btn ghost" data-action="preview-sound-setting">' + tr('试听') + '</button></div></div></div>';
+  }
+
+  function soundSettingsPageHTML() {
+    var p = state.pref || DEFAULT_PREF;
+    var key = state.soundSettingKey;
+    var tabs = [
+      { key: 'wake', label: '唤醒词' }, { key: 'reply', label: '回复内容' }, { key: 'voice', label: '音色' },
+      { key: 'welcome', label: '欢迎语音' }, { key: 'exit', label: '退出语音' }, { key: 'lang', label: '识别语言' }
+    ];
+    var grid = '<div class="sound-settings-grid">' + tabs.map(function (t) {
+      return '<button class="' + (key === t.key ? 'active' : '') + '" data-action="sound-setting-tab" data-key="' + t.key + '">' + tr(t.label) + '</button>';
+    }).join('') + '</div>';
+    var editor = '';
+    if (key === 'voice') {
+      editor = '<div class="sound-option-row">' +
+        ['default', 'female', 'male'].map(function (v, i) {
+          var labels = ['默认', '女声', '男声'];
+          return '<button class="' + ((p.soundVoice || 'default') === v ? 'active' : '') + '" data-action="sound-voice" data-value="' + v + '">' + tr(labels[i]) + '</button>';
+        }).join('') + '</div>';
+    } else if (key === 'lang') {
+      editor = '<div class="sound-option-row">' +
+        [['auto', '中英自动'], ['zh-CN', '中文'], ['en-US', '英文']].map(function (o) {
+          return '<button class="' + ((p.soundLang || 'auto') === o[0] ? 'active' : '') + '" data-action="sound-lang" data-value="' + o[0] + '">' + tr(o[1]) + '</button>';
+        }).join('') + '</div>';
+    } else {
+      var presets = key === 'wake' ? (p.soundWakeWords || DEFAULT_PREF.soundWakeWords)
+        : (key === 'reply' ? (p.soundReplies || DEFAULT_PREF.soundReplies) : []);
+      var chips = presets.length ? '<div class="sound-preset-title">' + tr((key === 'wake' ? '常用唤醒词' : '常用回复')) + '</div><div class="sound-chips">' + presets.map(function (v) {
+        var active = v === soundSettingValue() ? ' active' : '';
+        return '<button class="sound-chip' + active + '" data-action="sound-preset" data-value="' + escapeHTML(v) + '">' + escapeHTML(v) + '</button>';
+      }).join('') + '</div>' : '';
+      editor = '<label class="form-label">' + tr(key === 'wake' ? '唤醒词' : (key === 'reply' ? '回复内容' : (key === 'welcome' ? '欢迎语音' : '退出语音'))) + '</label>' +
+        '<textarea class="form-input sound-textarea" id="sound-setting-value" rows="3">' + escapeHTML(soundSettingValue()) + '</textarea>' + chips;
+    }
+    return '<div class="page sound-settings-page"><div class="sound-settings">' + grid + editor +
       '<div class="sound-btn-row"><button class="link-btn" data-action="save-sound-setting">' + tr('保存') + '</button>' +
       '<button class="link-btn ghost" data-action="preview-sound-setting">' + tr('试听') + '</button></div></div></div>';
   }
@@ -4028,13 +4081,13 @@
       case 'call-item': callItem(); break;
       case 'call-item-by-name': callItemByName(el.getAttribute('data-name')); break;
       case 'voice-call': startVoiceCall(); break;
-      case 'open-sound-settings': state.sheet = 'soundSettings'; renderSheet(); break;
+      case 'open-sound-settings': openView('soundSettings'); break;
       case 'open-device-sheet': state.sheet = 'device'; renderSheet(); break;
-      case 'sound-setting-tab': syncSoundSetting(); state.soundSettingKey = key; renderSheet(); break;
-      case 'sound-preset': var pv = el.getAttribute('data-value'); var pi = $('#sound-setting-value'); if (pi && pv) { pi.value = pv; syncSoundSetting(); renderSheet(); } break;
-      case 'sound-voice': state.pref.soundVoice = el.getAttribute('data-value') || 'default'; savePref(); renderSheet(); toast('音色已保存'); break;
-      case 'sound-lang': state.pref.soundLang = el.getAttribute('data-value') || 'auto'; savePref(); renderSheet(); toast('识别语言已保存'); break;
-      case 'save-sound-setting': syncSoundSetting(); state.sheet = null; renderSheet(); toast('声音设置已保存'); break;
+      case 'sound-setting-tab': syncSoundSetting(); state.soundSettingKey = key; render(); break;
+      case 'sound-preset': var pv = el.getAttribute('data-value'); var pi = $('#sound-setting-value'); if (pi && pv) { pi.value = pv; syncSoundSetting(); render(); } break;
+      case 'sound-voice': state.pref.soundVoice = el.getAttribute('data-value') || 'default'; savePref(); render(); toast('音色已保存'); break;
+      case 'sound-lang': state.pref.soundLang = el.getAttribute('data-value') || 'auto'; savePref(); render(); toast('识别语言已保存'); break;
+      case 'save-sound-setting': syncSoundSetting(); render(); toast('声音设置已保存'); break;
       case 'preview-sound-setting':
         syncSoundSetting();
         var pkey = state.soundSettingKey;
