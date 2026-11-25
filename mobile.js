@@ -6,7 +6,7 @@
   'use strict';
 
   /* ---------------- 常量 ---------------- */
-  var APP_VERSION = '2.73';
+  var APP_VERSION = '2.74';
   var DB_KEY = 'organizer_local_v2';
   var PREF_KEY = 'organizer_pref_v2';
   var HISTORY_KEY = 'organizer_search_history_v2';
@@ -25,6 +25,12 @@
   var DEFAULT_DEVICE_API = 'https://device-api.xieta1371.workers.dev';
 
   var APP_VERSION_CHANGELOG = [
+    { version: '2.74', date: '2026-11-25', title: '导航精简与声音页', items: [
+      '底部导航改为联动 / 声音 / 我的，移除首页、分类和加号',
+      '新增声音页，呼唤物品时由标签发声回应',
+      '我的页移除个人信息板块',
+      '版本号从 2.73 更新到 2.74'
+    ] },
     { version: '2.73', date: '2026-11-25', title: '地图选项排版优化', items: [
       '“选择地图”弹层从两列改为一排三列，三个选项更对称',
       '顺序调整为高德 / 腾讯 / 百度，默认高德放第一位',
@@ -545,7 +551,7 @@
     'zh-TW': {
       '全部': '全部', '状态良好': '状态良好', '临近过期': '臨近過期', '已过期': '已過期', '已开封': '已開封',
       '活动历史': '活動歷史', '库存总览': '庫存總覽', '回收站': '回收站', '我的': '我的', '首页': '首頁',
-      '搜索': '搜尋', '联动': '聯動', '设备联动': '設備聯動', '新增物品': '新增物品', '编辑物品': '編輯物品',
+      '搜索': '搜尋', '联动': '聯動', '声音': '聲音', '设备联动': '設備聯動', '新增物品': '新增物品', '编辑物品': '編輯物品',
       '物品详情': '物品詳情', '显示偏好': '顯示偏好', '分类管理': '分類管理', '寻迹': '尋跡',
       '物品名称': '物品名稱', '请输入名称': '請輸入名稱', '图片': '圖片', '拍照/选图': '拍照/選圖',
       '分类': '分類', '数量': '數量', '单位': '單位', '生产日期': '生產日期', '保质期至': '保質期至',
@@ -570,6 +576,9 @@
       '英文': '英文', '老年模式': '老年模式', '超大字体 · 高对比 · 简化功能': '超大字體 · 高對比 · 簡化功能',
       '消息通知': '訊息通知', '接收提醒与聊天消息': '接收提醒與聊天訊息', '通知时间': '通知時間',
       '提示音': '提示音', '查找标签时播放声音': '查找標籤時播放聲音', '账号安全': '帳號安全',
+      '呼唤物品': '呼喚物品', '输入物品名称，例如：防晒霜': '輸入物品名稱，例如：防曬霜', '呼唤': '呼喚',
+      '当人呼唤物品时，标签会发声回应，帮助你快速找到它。': '當人呼喚物品時，標籤會發出聲音回應，幫助你快速找到它。',
+      '常用物品': '常用物品', '未绑定物品时，可直接输入名称试听。': '未綁定物品時，可直接輸入名稱試聽。',
       '登录验证与密码保护': '登入驗證與密碼保護', '修改密码': '修改密碼', '更新登录密码': '更新登入密碼',
       '使用指南': '使用指南', '操作步骤与颜色说明': '操作步驟與顏色說明', '版本与更新': '版本與更新',
       '查看历史更新内容': '查看歷史更新內容', '注册于': '註冊於', '已收纳': '已收納', '件物品': '件物品',
@@ -672,7 +681,7 @@
     'en': {
       '全部': 'All', '状态良好': 'Good', '临近过期': 'Expiring', '已过期': 'Expired', '已开封': 'Opened',
       '活动历史': 'History', '库存总览': 'Stock', '回收站': 'Trash', '我的': 'Me', '首页': 'Home',
-      '搜索': 'Search', '联动': 'Link', '设备联动': 'Device Link', '新增物品': 'New Item', '编辑物品': 'Edit Item',
+      '搜索': 'Search', '联动': 'Link', '声音': 'Sound', '设备联动': 'Device Link', '新增物品': 'New Item', '编辑物品': 'Edit Item',
       '物品详情': 'Item Details', '显示偏好': 'Preferences', '分类管理': 'Categories', '寻迹': 'Xunji',
       '物品名称': 'Item Name', '请输入名称': 'Enter name', '图片': 'Photos', '拍照/选图': 'Take or choose',
       '分类': 'Category', '数量': 'Quantity', '单位': 'Unit', '生产日期': 'Produced', '保质期至': 'Expiry',
@@ -697,6 +706,9 @@
       '英文': 'English', '老年模式': 'Elder mode', '超大字体 · 高对比 · 简化功能': 'Larger text, higher contrast, simpler UI',
       '消息通知': 'Notifications', '接收提醒与聊天消息': 'Receive reminders', '通知时间': 'Notify time',
       '提示音': 'Sound', '查找标签时播放声音': 'Play sound when finding tag', '账号安全': 'Account security',
+      '呼唤物品': 'Call item', '输入物品名称，例如：防晒霜': 'Enter item name, e.g. Sunscreen', '呼唤': 'Call',
+      '当人呼唤物品时，标签会发声回应，帮助你快速找到它。': 'When you call an item, its tag sounds back to help you find it quickly.',
+      '常用物品': 'Frequent items', '未绑定物品时，可直接输入名称试听。': 'Without a bound item, enter a name to preview the sound.',
       '登录验证与密码保护': 'Sign-in and password protection', '修改密码': 'Change password', '更新登录密码': 'Update password',
       '使用指南': 'Guide', '操作步骤与颜色说明': 'Steps and colors', '版本与更新': 'Version and updates',
       '查看历史更新内容': 'View changelog', '注册于': 'Joined', '已收纳': 'Stored', '件物品': 'items',
@@ -809,13 +821,13 @@
 
   /* ---------------- 状态 ---------------- */
   var state = {
-    view: 'home',            // home / search / link / me / form / prefs / categoryManage / itemDetail
+    view: 'link',            // link / sound / me / form / prefs / categoryManage / itemDetail
     category: 'all',
     searchQuery: '',
     searchHistory: [],
     searchHistoryExpanded: false,
     notificationTab: 'all',
-    meCollapsed: { personal: false, ui: false, features: false },
+    meCollapsed: { ui: false, features: false },
     searchFocused: false,
     recognizing: false,
     sidebarOpen: false,
@@ -1194,7 +1206,7 @@
     }
 
     var titles = {
-      me: '我的', prefs: '显示偏好', categoryManage: '分类管理', categoryGroup: state.groupCategory || '分类',
+      me: '我的', sound: '声音', prefs: '显示偏好', categoryManage: '分类管理', categoryGroup: state.groupCategory || '分类',
       form: state.editingId ? '编辑物品' : '新增物品', itemDetail: '物品详情',
       tutorial: '新手教程', password: '修改密码', achievement: '成就等级', register: '注册',
       notifications: '通知中心', alerts: '到期提醒'
@@ -1239,39 +1251,28 @@
       home: '<path d="M4 10 12 3.5 20 10v9h-5.5v-5.5h-5V19H4z"/>',
       search: '<rect x="4" y="4" width="7" height="7" rx="1.6"/><rect x="13" y="4" width="7" height="7" rx="1.6"/><rect x="4" y="13" width="7" height="7" rx="1.6"/><rect x="13" y="13" width="7" height="7" rx="1.6"/>',
       link: '<circle cx="12" cy="12" r="2"/><path d="M8.5 8.5a5 5 0 0 0 0 7M15.5 8.5a5 5 0 0 1 0 7M5.5 5.5a9 9 0 0 0 0 13M18.5 5.5a9 9 0 0 1 0 13"/>',
+      sound: '<path d="M11 5 6 9H3v6h3l5 4z"/><path d="M15 9a4 4 0 0 1 0 6M18 6a8 8 0 0 1 0 12"/>',
       me: '<circle cx="12" cy="8" r="3.6"/><path d="M5 20a7 7 0 0 1 14 0"/>'
     };
     var sw = key === 'home' ? '2' : '1.9';
     return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="' + sw + '" stroke-linecap="round" stroke-linejoin="round">' + (m[key] || '') + '</svg>';
   }
   function activeNavKey() {
-    if (state.view === 'search' || state.view === 'categoryManage' || state.view === 'categoryGroup') return 'search';
-    if (state.view === 'home' && (state.category !== 'all' || state.categoryAllFromQuick)) return 'search';
-    if (state.view === 'itemDetail' && (state.groupCategory || state.categoryAllFromQuick || state.category !== 'all' ||
-        state.categoryFrom === 'quick' || state.categoryFrom === 'stock' || state.categoryFrom === 'categoryManage')) return 'search';
+    if (state.view === 'search' || state.view === 'home' || state.view === 'categoryManage' ||
+        state.view === 'categoryGroup' || state.view === 'itemDetail' || state.view === 'alerts') return 'link';
     if (['prefs', 'tutorial', 'password', 'achievement', 'register', 'notifications'].indexOf(state.view) >= 0) return 'me';
-    if (state.view === 'alerts') return 'home';
     return state.view;
   }
   function renderNav() {
     if (state.view === 'form') { $('#bottom-nav').innerHTML = ''; return; }
     var tabs = [
-      { key: 'home', label: '首页' },
-      { key: 'search', label: '分类' },
-      { key: 'add', label: '' },
       { key: 'link', label: '联动' },
+      { key: 'sound', label: '声音' },
       { key: 'me', label: '我的' }
     ];
     $('#bottom-nav').innerHTML = tabs.map(function (t) {
-      var key = t.key;
-      if (key === 'add') {
-        return '<button class="nav-item nav-add" data-action="add-new" aria-label="新增"><span class="add-circle"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span></button>';
-      }
-      if (key === 'home' && state.multiSelect) {
-        return '<button class="nav-item nav-select-all" data-action="select-all"><span class="select-all-icon">✓</span><span class="nav-label">首页</span></button>';
-      }
-      var active = activeNavKey() === key ? ' active' : '';
-      return '<button class="nav-item' + active + '" data-action="nav" data-view="' + key + '">' + navSVG(key) + '<span class="nav-label">' + t.label + '</span></button>';
+      var active = activeNavKey() === t.key ? ' active' : '';
+      return '<button class="nav-item' + active + '" data-action="nav" data-view="' + t.key + '">' + navSVG(t.key) + '<span class="nav-label">' + t.label + '</span></button>';
     }).join('');
   }
 
@@ -1508,6 +1509,7 @@
     else if (state.view === 'alerts') view.innerHTML = alertDetailHTML();
     else if (state.view === 'notifications') view.innerHTML = notificationHTML();
     else if (state.view === 'link') view.innerHTML = linkHTML();
+    else if (state.view === 'sound') view.innerHTML = soundHTML();
     else if (state.view === 'me') view.innerHTML = meHTML();
     else if (state.view === 'form') view.innerHTML = formHTML();
     else if (state.view === 'prefs') view.innerHTML = prefsHTML();
@@ -1667,11 +1669,6 @@
   function meHTML() {
     var p = state.pref;
     var s = p.meSettings || { elder: false, notification: true, sound: true, security: true };
-    var level = getLevel();
-    function editRow(key, icon, title, value) {
-      return '<div class="me-row" data-action="edit-profile" data-key="' + key + '" data-title="' + escapeHTML(title) + '" data-value="' + escapeHTML(value || '') + '">' +
-        '<span class="me-icon">' + icon + '</span><div class="me-row-main"><div class="me-row-title">' + title + '</div><div class="me-row-sub">' + escapeHTML(value || '未填写') + '</div></div><span class="me-arrow">›</span></div>';
-    }
     function optionRow(action, icon, title, sub, extra) {
       return '<div class="me-row" data-action="' + action + '"' + (extra || '') + '>' +
         '<span class="me-icon">' + icon + '</span><div class="me-row-main"><div class="me-row-title">' + title + '</div><div class="me-row-sub">' + escapeHTML(sub) + '</div></div><span class="me-arrow">›</span></div>';
@@ -1691,11 +1688,6 @@
         (String(p.avatar || '').indexOf('data:') === 0 ? '<img src="' + escapeHTML(p.avatar) + '" alt="">' : escapeHTML(p.avatar || '我')) +
         '<span class="me-edit">✎</span></div>' +
         '<div class="me-name">' + escapeHTML(p.nickname || '我的收纳') + '</div><div class="me-id">@local_user · ID 963221</div></div>' +
-      meCard('个人信息', 'personal',
-        editRow('nickname', '👤', '昵称', p.nickname || '我的收纳') +
-        editRow('contact', '💬', '联系方式', p.contact || '未填写') +
-        editRow('signature', '📝', '个性签名', p.signature || '未填写') +
-        optionRow('go-achievement', '🏆', '成就等级', tr('第 ' + level.level + ' 级 · ' + level.name) + ' · ' + tr('装扮管理'))) +
       meCard('界面设置', 'ui',
         optionRow('pref-list', '▦', '字体大小', labelOf(FONT_SIZE_OPTIONS, p.fontSize), ' data-key="fontSize" data-title="字体大小"') +
         optionRow('pref-list', '✏️', '字体粗细', labelOf(FONT_WEIGHT_OPTIONS, p.fontWeight), ' data-key="fontWeight" data-title="字体粗细"') +
@@ -2807,6 +2799,84 @@
     '</div>';
   }
 
+  /* ---------------- 声音 ---------------- */
+  function soundHTML() {
+    var boundName = state.deviceBind && state.deviceBind.itemName;
+    var names = [];
+    if (boundName && names.indexOf(boundName) < 0) names.push(boundName);
+    getItems().filter(function (it) { return !it.trashed && it.name; }).slice(0, 6).forEach(function (it) {
+      if (names.indexOf(it.name) < 0) names.push(it.name);
+    });
+    var quick = names.length
+      ? '<div class="sound-quick"><div class="muted small">' + tr('常用物品') + '</div><div class="sound-chips">' + names.map(function (n) {
+          return '<button class="chip" data-action="call-item-by-name" data-name="' + escapeHTML(n) + '">' + escapeHTML(n) + '</button>';
+        }).join('') + '</div></div>'
+      : '';
+    return '<div class="page sound-page">' +
+      '<div class="sound-hero"><div class="sound-wave">' + navSVG('sound') + '</div>' +
+        '<div class="bold">' + tr('呼唤物品') + '</div>' +
+        '<div class="muted small">' + tr('当人呼唤物品时，标签会发声回应，帮助你快速找到它。') + '</div>' +
+      '</div>' +
+      '<div class="link-card sound-card">' +
+        '<label class="form-label" for="sound-item-name">' + tr('物品名称') + '</label>' +
+        '<input class="form-input" id="sound-item-name" placeholder="' + tr('输入物品名称，例如：防晒霜') + '">' +
+        '<button class="link-btn" data-action="call-item">' + tr('呼唤') + '</button>' +
+        '<div class="sound-status" id="sound-status">' + tr('未绑定物品时，可直接输入名称试听。') + '</div>' +
+      '</div>' +
+      quick +
+    '</div>';
+  }
+  function setSoundStatus(msg) {
+    var el = $('#sound-status');
+    if (el) el.textContent = msg;
+  }
+  function playBeepFallback(name) {
+    try {
+      var AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if (!AudioCtx) { setSoundStatus('当前浏览器不支持发声，请换用手机浏览器'); return; }
+      var ctx = new AudioCtx();
+      var osc = ctx.createOscillator();
+      var gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(880, ctx.currentTime);
+      osc.frequency.setValueAtTime(1180, ctx.currentTime + 0.15);
+      gain.gain.setValueAtTime(0.18, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.6);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.6);
+      setSoundStatus('已发出提示音：' + name);
+    } catch (e) {
+      setSoundStatus('发声失败，请检查浏览器声音权限');
+    }
+  }
+  function callItemByName(name) {
+    name = String(name || '').trim();
+    if (!name) { toast('请输入要呼唤的物品名称'); return; }
+    var input = $('#sound-item-name');
+    if (input) input.value = name;
+    setSoundStatus('正在呼唤 ' + name + '…');
+    try {
+      if ('speechSynthesis' in window && window.SpeechSynthesisUtterance) {
+        window.speechSynthesis.cancel();
+        var u = new window.SpeechSynthesisUtterance('我在这里，' + name + '，请来找我');
+        u.lang = 'zh-CN';
+        u.rate = 1;
+        u.pitch = 1;
+        u.onend = function () { setSoundStatus('已发出声音回应：' + name); };
+        u.onerror = function () { playBeepFallback(name); };
+        window.speechSynthesis.speak(u);
+        return;
+      }
+    } catch (e) {}
+    playBeepFallback(name);
+  }
+  function callItem() {
+    var input = $('#sound-item-name');
+    callItemByName(input ? input.value : '');
+  }
+
   /* ---------------- 分类管理 ---------------- */
   function categoryManageHTML() {
     var items = getItems().filter(function (it) { return !it.trashed; });
@@ -3408,7 +3478,7 @@
       state.groupCategory = prev.groupCategory || '';
       state.sidebarOpen = !!prev.sidebarOpen;
     } else {
-      state.view = 'home';
+      state.view = 'link';
       state.category = 'all';
       state.categoryFrom = '';
       state.categoryAllFromQuick = false;
@@ -3661,6 +3731,8 @@
         }
         openView(navView);
         break;
+      case 'call-item': callItem(); break;
+      case 'call-item-by-name': callItemByName(el.getAttribute('data-name')); break;
       case 'go-search': openView('search'); break;
       case 'focus-home-search': focusHomeSearch(); break;
       case 'clear-home-search': clearHomeSearch(); break;
