@@ -643,6 +643,8 @@ body.device-bind-open .bind-tip { margin: 2px 0 6px; }
 .link-card-head { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 10px; }
 .link-card-head .bold { font-size: 14px; }
 .map-toggle { font-size: 11px; color: var(--ink-3); }
+.location-permit-btn { margin-top: 4px; padding: 2px 7px; border: 1px solid var(--green); border-radius: 6px; background: var(--green-soft); color: var(--green); font-size: 11px; }
+.location-permit-btn:active { opacity: .75; }
 .map-box { position: relative; height: 200px; border-radius: 12px; background: #eef5f5; overflow: hidden; border: 1px solid #e5eeee; }
 .map-box.expanded { height: 320px; }
 .map-iframe { width: 100%; height: 100%; border: 0; display: block; background: var(--bg-soft); }
