@@ -6,7 +6,7 @@
   'use strict';
 
   /* ---------------- 常量 ---------------- */
-  var APP_VERSION = '2.84';
+  var APP_VERSION = '2.85';
   var DB_KEY = 'organizer_local_v2';
   var PREF_KEY = 'organizer_pref_v2';
   var HISTORY_KEY = 'organizer_search_history_v2';
@@ -26,6 +26,13 @@
   var DEFAULT_MAP_POINT = { lat: 39.9087, lng: 116.3975 };
 
   var APP_VERSION_CHANGELOG = [
+    { version: '2.85', date: '2026-11-26', title: '百度原图与声音交互优化', items: [
+      '百度地图保持原地图，不再自动跳高德；失败时提示检查 Referer 白名单并可重试',
+      '跨端地图显示手机与设备双定位，苹果/安卓/PC 使用浏览器定位权限',
+      '呼唤物品标题放大，输入框旁增加保存按钮',
+      '声音自定义支持新建常用唤醒词/回复，试听与保存位置互换',
+      '通知中心改为定位移动提醒；底部我的改为设置；新增手机在哪里语音问答'
+    ] },
     { version: '2.84', date: '2026-11-26', title: '设备把手与手机定位气泡修复', items: [
       '恢复设备底部白色方框，隐藏未打开弹层产生的白条',
       '手机定位增加“我的手机”蓝色气泡并延迟重挂载确保显示',
@@ -570,6 +577,7 @@
     theme: 'mono',
     language: 'system',
     soundReply: '我在这里，{物品}，请来找我',
+    lastCallItem: '',
     soundWakeWord: '寻迹',
     soundWakeWords: ['寻迹', '小寻', '喂寻迹'],
     soundReplies: ['我在这里，{物品}，请来找我', '来了，请稍等', '我马上到'],
@@ -650,6 +658,7 @@
       '语音呼唤': '語音呼喚', '回应声音': '回應聲音', '保存回应声音': '儲存回應聲音', '试听': '試聽',
       '输入名称，或直接说出物品': '輸入名稱，或直接說出物品',
       '自定义': '自訂', '点击呼唤': '點擊呼喚', '说出唤醒词和物品名称即可呼唤': '說出喚醒詞和物品名稱即可呼喚', '声音自定义': '聲音自訂',
+      '设置': '設定', '新建': '新建', '例如：水杯、防晒霜': '例如：水杯、防曬霜', '说出唤醒词和物品名称即可呼唤，也可问手机在哪里': '說出喚醒詞和物品名稱即可呼喚，也可問手機在哪裡',
       '唤醒词': '喚醒詞', '回复内容': '回覆內容', '音色': '音色', '欢迎语音': '歡迎語音', '退出语音': '退出語音',
       '识别语言': '辨識語言', '常用唤醒词': '常用喚醒詞', '常用回复': '常用回覆',
       '默认': '預設', '女声': '女聲', '男声': '男聲', '中英自动': '中英自動', '中文': '中文', '英文': '英文',
@@ -788,6 +797,7 @@
       '语音呼唤': 'Voice call', '回应声音': 'Reply sound', '保存回应声音': 'Save reply sound', '试听': 'Preview',
       '输入名称，或直接说出物品': 'Type a name, or just say it aloud',
       '自定义': 'Custom', '点击呼唤': 'Tap to call', '说出唤醒词和物品名称即可呼唤': 'Say the wake word and item name to call', '声音自定义': 'Sound settings',
+      '设置': 'Settings', '新建': 'New', '例如：水杯、防晒霜': 'e.g. Cup, sunscreen', '说出唤醒词和物品名称即可呼唤，也可问手机在哪里': 'Say the wake word and item name, or ask where your phone is',
       '唤醒词': 'Wake word', '回复内容': 'Reply', '音色': 'Voice tone', '欢迎语音': 'Welcome voice', '退出语音': 'Exit voice',
       '识别语言': 'Recognition language', '常用唤醒词': 'Common wake words', '常用回复': 'Common replies',
       '默认': 'Default', '女声': 'Female', '男声': 'Male', '中英自动': 'Auto CN/EN', '中文': 'Chinese', '英文': 'English',
@@ -1338,7 +1348,7 @@
       search: '<rect x="4" y="4" width="7" height="7" rx="1.6"/><rect x="13" y="4" width="7" height="7" rx="1.6"/><rect x="4" y="13" width="7" height="7" rx="1.6"/><rect x="13" y="13" width="7" height="7" rx="1.6"/>',
       link: '<circle cx="12" cy="12" r="2"/><path d="M8.5 8.5a5 5 0 0 0 0 7M15.5 8.5a5 5 0 0 1 0 7M5.5 5.5a9 9 0 0 0 0 13M18.5 5.5a9 9 0 0 1 0 13"/>',
       sound: '<path d="M11 5 6 9H3v6h3l5 4z"/><path d="M15 9a4 4 0 0 1 0 6M18 6a8 8 0 0 1 0 12"/>',
-      me: '<circle cx="12" cy="8" r="3.6"/><path d="M5 20a7 7 0 0 1 14 0"/>'
+      me: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-2.7 1.1V21a2 2 0 1 1-4 0v-.1A1.6 1.6 0 0 0 7.5 19.4l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1A1.6 1.6 0 0 0 3.6 14H3a2 2 0 1 1 0-4h.1A1.6 1.6 0 0 0 4.6 7.5l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1A1.6 1.6 0 0 0 10 4.6V4a2 2 0 1 1 4 0v.1a1.6 1.6 0 0 0 2.5 1.5l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1A1.6 1.6 0 0 0 20.4 10H21a2 2 0 1 1 0 4h-.1a1.6 1.6 0 0 0-1.5 1z"/>'
     };
     var sw = key === 'home' ? '2' : '1.9';
     return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="' + sw + '" stroke-linecap="round" stroke-linejoin="round">' + (m[key] || '') + '</svg>';
@@ -1355,11 +1365,11 @@
     var tabs = [
       { key: 'link', label: '设备' },
       { key: 'sound', label: '声音' },
-      { key: 'me', label: '我的' }
+      { key: 'me', label: '设置' }
     ];
     $('#bottom-nav').innerHTML = tabs.map(function (t) {
       var active = activeNavKey() === t.key ? ' active' : '';
-      return '<button class="nav-item' + active + '" data-action="nav" data-view="' + t.key + '">' + navSVG(t.key) + '<span class="nav-label">' + t.label + '</span></button>';
+      return '<button class="nav-item' + active + '" data-action="nav" data-view="' + t.key + '">' + navSVG(t.key) + '<span class="nav-label">' + tr(t.label) + '</span></button>';
     }).join('');
   }
 
@@ -1731,24 +1741,11 @@
     return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
   }
   function notificationHTML() {
-    var all = buildNotifications();
-    var list = state.notificationTab === 'all' ? all : all.filter(function (n) { return n.type === state.notificationTab; });
-    var groups = {};
-    list.forEach(function (n) { var g = notifGroup(n.time); (groups[g] = groups[g] || []).push(n); });
-    var body = Object.keys(groups).map(function (g) {
-      return '<div class="section-title notif-date">' + escapeHTML(g) + '</div>' + groups[g].map(function (n) {
-        var thumb = n.it ? '<span class="notif-thumb">' + itemArtHTML(n.it) + '</span>' : '<span class="notif-thumb">' + n.icon + '</span>';
-        return '<div class="notif-row"' + (n.it ? ' data-action="open-item" data-id="' + escapeHTML(n.it.id) + '"' : '') + '>' +
-          '<span class="notif-icon notif-' + n.type + '">' + n.icon + '</span>' +
-          '<span class="notif-main"><span class="notif-text">' + notifText(n) + '</span>' +
-            '<span class="notif-time">' + escapeHTML(timeAgo(n.time)) + '</span></span>' + thumb + '</div>';
-      }).join('');
-    }).join('');
     return '<div class="page notif-page">' +
-      '<div class="notif-tabs">' + NOTIF_TABS.map(function (t) {
-        return '<button class="chip' + (state.notificationTab === t.key ? ' active' : '') + '" data-action="notification-tab" data-tab="' + t.key + '">' + tr(t.label) + '</button>';
-      }).join('') + '</div>' +
-      (list.length ? body : '<div class="empty"><div class="empty-emoji">🔔</div><div class="empty-text">' + tr('暂无通知') + '</div></div>') +
+      '<div class="notif-simple"><div class="notif-simple-icon">📍</div>' +
+        '<div class="notif-simple-title">定位移动提醒</div>' +
+        '<div class="notif-simple-text">物品定位更新移动了的话，会收到提醒。</div>' +
+      '</div>' +
     '</div>';
   }
 
@@ -2539,14 +2536,11 @@
           }
           if (!loaded) {
             state.baiduFailed = true;
-            state.mapProvider = 'amap';
-            try { localStorage.setItem(MAP_PROVIDER_KEY, 'amap'); } catch (e) {}
             holder.map = null;
             holder.marker = null;
             holder.userMarker = null;
-            el.innerHTML = '';
-            syncFallbackMap(id, el);
-            toast('百度地图未能加载，已切换高德地图');
+            showBaiduLoadError(el);
+            toast('百度地图瓦片加载失败，请检查 Referer 白名单');
           }
         }, 1200);
       } else {
@@ -2787,6 +2781,12 @@
     setTimeout(scrub, 400);
     setTimeout(scrub, 1400);
   }
+  function showBaiduLoadError(el) {
+    if (!el) return;
+    el.innerHTML = '<div class="map-error"><div class="map-error-title">百度地图未能加载</div>' +
+      '<div class="map-error-text">请在百度地图开放平台把 Referer 白名单设为 ananpaofu.github.io（不要引号）</div>' +
+      '<button class="link-btn" data-action="retry-baidu">重试百度地图</button></div>';
+  }
   function syncLeafletMap(id) {
     var el = document.getElementById(id);
     if (!el) return;
@@ -2797,7 +2797,8 @@
       syncFallbackMap(id, el);
       return;
     }
-    if (state.mapProvider === 'baidu' && !state.baiduFailed) {
+    if (state.mapProvider === 'baidu') {
+      if (state.baiduFailed) { showBaiduLoadError(el); return; }
       syncBaiduMap(id, el);
       return;
     }
@@ -2975,19 +2976,31 @@
 
   /* ---------------- 声音 ---------------- */
   function soundHTML() {
+    var last = String((state.pref && state.pref.lastCallItem) || '');
     return '<div class="page sound-page">' +
       '<div class="link-card sound-card">' +
         '<div class="sound-card-title">' + tr('呼唤物品') + '</div>' +
-        '<label class="form-label" for="sound-item-name">' + tr('物品名称') + '</label>' +
-        '<input class="form-input" id="sound-item-name" placeholder="' + tr('输入物品名称，例如：防晒霜') + '">' +
+        '<div class="sound-input-row">' +
+          '<input class="form-input" id="sound-item-name" value="' + escapeHTML(last) + '" placeholder="' + tr('例如：水杯、防晒霜') + '">' +
+          '<button class="link-btn small" data-action="save-call-item">' + tr('保存') + '</button>' +
+        '</div>' +
         '<div class="sound-btn-row three">' +
           '<button class="link-btn" data-action="call-item">' + tr('点击呼唤') + '</button>' +
           '<button class="link-btn ghost" data-action="voice-call">' + tr('语音呼唤') + '</button>' +
           '<button class="link-btn ghost" data-action="open-sound-settings">' + tr('自定义') + '</button>' +
         '</div>' +
-        '<div class="sound-status" id="sound-status">' + tr('说出唤醒词和物品名称即可呼唤') + '</div>' +
+        '<div class="sound-status" id="sound-status">' + tr('说出唤醒词和物品名称即可呼唤，也可问手机在哪里') + '</div>' +
       '</div>' +
     '</div>';
+  }
+  function saveCallItem() {
+    var input = $('#sound-item-name');
+    var v = input ? String(input.value || '').trim() : '';
+    if (!v) { toast('请先输入物品名称'); return; }
+    state.pref.lastCallItem = v;
+    savePref();
+    setSoundStatus('已保存：' + v);
+    toast('已保存物品名称');
   }
   function setSoundStatus(msg) {
     var el = $('#sound-status');
@@ -3101,6 +3114,16 @@
     }
     return t;
   }
+  function handleAssistantQuery(text) {
+    var t = String(text || '').toLowerCase();
+    var isPhone = /手机|phone|iphone|安卓机/.test(t);
+    var isWhere = /在哪里|在哪儿|在哪|哪里|哪儿|where/.test(t);
+    if (!isPhone || !isWhere) return false;
+    var reply = /where/i.test(t) ? 'Your phone is right here.' : '手机在这里，请来找我';
+    setSoundStatus(reply);
+    speakText(reply);
+    return true;
+  }
   function startVoiceCall() {
     var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SR) { setSoundStatus('当前浏览器不支持语音识别，请用 Chrome 或 Safari 打开'); return; }
@@ -3117,6 +3140,7 @@
     setSoundStatus('正在聆听，请说出唤醒词和物品名称…');
     recognition.onresult = function (e) {
       var raw = e.results && e.results[0] && e.results[0][0] ? String(e.results[0][0].transcript || '') : '';
+      if (handleAssistantQuery(raw)) return;
       var text = stripWakeWord(raw.replace(/[。！？!?]/g, '').trim());
       if (text) callItemByName(text);
       else setSoundStatus('没有听清，请再说一次');
@@ -3216,13 +3240,13 @@
       var chips = presets.length ? '<div class="sound-preset-title">' + tr((key === 'wake' ? '常用唤醒词' : '常用回复')) + '</div><div class="sound-chips">' + presets.map(function (v) {
         var active = v === soundSettingValue() ? ' active' : '';
         return '<button class="sound-chip' + active + '" data-action="sound-preset" data-value="' + escapeHTML(v) + '">' + escapeHTML(v) + '</button>';
-      }).join('') + '</div>' : '';
+      }).join('') + '<button class="sound-chip add" data-action="sound-add-preset">＋ ' + tr('新建') + '</button></div>' : '';
       editor = '<label class="form-label">' + tr(key === 'wake' ? '唤醒词' : (key === 'reply' ? '回复内容' : (key === 'welcome' ? '欢迎语音' : '退出语音'))) + '</label>' +
         '<textarea class="form-input sound-textarea" id="sound-setting-value" rows="3">' + escapeHTML(soundSettingValue()) + '</textarea>' + chips;
     }
     return '<div class="page sound-settings-page"><div class="sound-settings">' + grid + editor +
-      '<div class="sound-btn-row"><button class="link-btn" data-action="save-sound-setting">' + tr('保存') + '</button>' +
-      '<button class="link-btn ghost" data-action="preview-sound-setting">' + tr('试听') + '</button></div></div></div>';
+      '<div class="sound-btn-row"><button class="link-btn ghost" data-action="preview-sound-setting">' + tr('试听') + '</button>' +
+      '<button class="link-btn" data-action="save-sound-setting">' + tr('保存') + '</button></div></div></div>';
   }
 
   /* ---------------- 分类管理 ---------------- */
@@ -4108,6 +4132,19 @@
       case 'open-device-sheet': state.sheet = 'device'; renderSheet(); break;
       case 'sound-setting-tab': syncSoundSetting(); state.soundSettingKey = key; render(); break;
       case 'sound-preset': var pv = el.getAttribute('data-value'); var pi = $('#sound-setting-value'); if (pi && pv) { pi.value = pv; syncSoundSetting(); render(); } break;
+      case 'sound-add-preset':
+        var addInput = $('#sound-setting-value');
+        var addValue = addInput ? String(addInput.value || '').trim() : '';
+        if (!addValue) { toast('请先输入要新建的内容'); break; }
+        var addListKey = state.soundSettingKey === 'wake' ? 'soundWakeWords' : 'soundReplies';
+        var addList = (state.pref[addListKey] || []).slice();
+        if (addList.indexOf(addValue) < 0) addList.push(addValue);
+        state.pref[addListKey] = addList;
+        savePref();
+        render();
+        toast('已新建并保存');
+        break;
+      case 'save-call-item': saveCallItem(); break;
       case 'sound-voice': state.pref.soundVoice = el.getAttribute('data-value') || 'default'; savePref(); render(); toast('音色已保存'); break;
       case 'sound-lang': state.pref.soundLang = el.getAttribute('data-value') || 'auto'; savePref(); render(); toast('识别语言已保存'); break;
       case 'save-sound-setting': syncSoundSetting(); render(); toast('声音设置已保存'); break;
@@ -4204,6 +4241,11 @@
         renderOverlay();
         break;
       case 'choose-map': state.overlay = { type: 'mapChoose' }; renderOverlay(); break;
+      case 'retry-baidu':
+        state.baiduFailed = false;
+        state.leaflet = { small: {}, full: {} };
+        render();
+        break;
       case 'set-map-provider':
         var provider = el.getAttribute('data-map');
         if (['amap', 'baidu', 'qq'].indexOf(provider) >= 0) {
