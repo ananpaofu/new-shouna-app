@@ -6,7 +6,7 @@
   'use strict';
 
   /* ---------------- 常量 ---------------- */
-  var APP_VERSION = '2.77';
+  var APP_VERSION = '2.78';
   var DB_KEY = 'organizer_local_v2';
   var PREF_KEY = 'organizer_pref_v2';
   var HISTORY_KEY = 'organizer_search_history_v2';
@@ -26,6 +26,12 @@
   var DEFAULT_MAP_POINT = { lat: 39.9087, lng: 116.3975 };
 
   var APP_VERSION_CHANGELOG = [
+    { version: '2.78', date: '2026-11-25', title: '声音自定义与设备电量', items: [
+      '声音页只保留置顶呼唤卡片和三个按钮，删除常用物品',
+      '新增声音自定义小窗口：唤醒词、回复、音色、欢迎/退出语音、中英识别',
+      '绑定设备新增本地 AI 识别物品名称',
+      '设备卡片显示可充电定位传声装置电量，版本号更新到 2.78'
+    ] },
     { version: '2.77', date: '2026-11-25', title: '声音页精简与地图优化', items: [
       '声音页简化为左对齐普通布局，去掉复杂装饰',
       '修改绑定按钮移入设备卡片操作行',
@@ -529,6 +535,13 @@
     theme: 'mono',
     language: 'system',
     soundReply: '我在这里，{物品}，请来找我',
+    soundWakeWord: '寻迹',
+    soundWakeWords: ['寻迹', '小寻', '喂寻迹'],
+    soundReplies: ['我在这里，{物品}，请来找我', '来了，请稍等', '我马上到'],
+    soundVoice: 'default',
+    soundWelcome: '你好，寻迹已就绪',
+    soundExit: '再见，已退出寻迹',
+    soundLang: 'auto',
     meSettings: { elder: false, notification: true, sound: true, security: true }
   };
 
@@ -601,6 +614,10 @@
       '常用物品': '常用物品', '未绑定物品时，可直接输入名称试听。': '未綁定物品時，可直接輸入名稱試聽。',
       '语音呼唤': '語音呼喚', '回应声音': '回應聲音', '保存回应声音': '儲存回應聲音', '试听': '試聽',
       '输入名称，或直接说出物品': '輸入名稱，或直接說出物品',
+      '自定义': '自訂', '说出唤醒词和物品名称即可呼唤': '說出喚醒詞和物品名稱即可呼喚', '声音自定义': '聲音自訂',
+      '唤醒词': '喚醒詞', '回复内容': '回覆內容', '音色': '音色', '欢迎语音': '歡迎語音', '退出语音': '退出語音',
+      '识别语言': '辨識語言', '常用唤醒词': '常用喚醒詞', '常用回复': '常用回覆',
+      '默认': '預設', '女声': '女聲', '男声': '男聲', '中英自动': '中英自動', '中文': '中文', '英文': '英文',
       '例如：我在这里，{物品}，请来找我': '例如：我在這裡，{物品}，請來找我', '用 {物品} 代表呼唤的物品名称': '用 {物品} 代表呼喚的物品名稱',
       '物品绑定': '物品綁定', '绑定后显示物品实时位置和距离': '綁定後顯示物品即時位置和距離', '绑定设备后显示实时位置': '綁定設備後顯示即時位置',
       '登录验证与密码保护': '登入驗證與密碼保護', '修改密码': '修改密碼', '更新登录密码': '更新登入密碼',
@@ -735,6 +752,10 @@
       '常用物品': 'Frequent items', '未绑定物品时，可直接输入名称试听。': 'Without a bound item, enter a name to preview the sound.',
       '语音呼唤': 'Voice call', '回应声音': 'Reply sound', '保存回应声音': 'Save reply sound', '试听': 'Preview',
       '输入名称，或直接说出物品': 'Type a name, or just say it aloud',
+      '自定义': 'Custom', '说出唤醒词和物品名称即可呼唤': 'Say the wake word and item name to call', '声音自定义': 'Sound settings',
+      '唤醒词': 'Wake word', '回复内容': 'Reply', '音色': 'Voice tone', '欢迎语音': 'Welcome voice', '退出语音': 'Exit voice',
+      '识别语言': 'Recognition language', '常用唤醒词': 'Common wake words', '常用回复': 'Common replies',
+      '默认': 'Default', '女声': 'Female', '男声': 'Male', '中英自动': 'Auto CN/EN', '中文': 'Chinese', '英文': 'English',
       '例如：我在这里，{物品}，请来找我': 'e.g. I am here, {item}, come find me', '用 {物品} 代表呼唤的物品名称': 'Use {item} for the called item name',
       '物品绑定': 'Bind item', '绑定后显示物品实时位置和距离': 'Bind a device to show live location and distance', '绑定设备后显示实时位置': 'Live location appears after binding',
       '登录验证与密码保护': 'Sign-in and password protection', '修改密码': 'Change password', '更新登录密码': 'Update password',
@@ -898,6 +919,7 @@
     deviceShareCode: '',
     crop: null,
     mapLayerKind: 'road',
+    soundSettingKey: 'wake',
     mapProvider: (function () {
       try {
         var v = localStorage.getItem(MAP_PROVIDER_KEY);
@@ -1201,7 +1223,7 @@
   function renderHeader() {
     var status = '';
     var header = $('#app-header');
-    var embedded = state.view === 'home' || state.view === 'me';
+    var embedded = state.view === 'home' || state.view === 'me' || state.view === 'sound';
     header.style.display = embedded ? 'none' : '';
     if (embedded) { header.innerHTML = status; return; }
 
@@ -1587,6 +1609,7 @@
     var root = $('#sheet-root');
     if (!root) return;
     if (state.sheet === 'sort') root.innerHTML = sortSheetHTML();
+    else if (state.sheet === 'soundSettings') root.innerHTML = soundSettingsSheetHTML();
     else root.innerHTML = '';
     applyI18n(root);
   }
@@ -2793,6 +2816,13 @@
     render();
     toast('绑定已删除');
   }
+  function deviceBatteryText() {
+    var raw = state.locatorFix && state.locatorFix.battery;
+    if (raw === '' || raw == null) return '电量 --';
+    var n = Number(raw);
+    if (isFinite(n)) return '电量 ' + Math.max(0, Math.min(100, Math.round(n))) + '%';
+    return '电量 ' + String(raw);
+  }
   function linkHTML() {
     var bound = !!(state.deviceBind && state.deviceVerified && state.deviceBind.deviceNo && state.deviceBind.itemName);
     var bind = state.deviceBind || {};
@@ -2824,7 +2854,8 @@
         '<div class="device-top">' +
           (state.deleteMode ? '<span class="device-select-circle' + (deviceSelected ? ' selected' : '') + '" data-action="toggle-device-select"></span>' : '') +
           '<div class="device-icon" data-action="pick-device-icon">' + deviceIcon + '</div>' +
-          '<div class="device-main"><div class="bold">' + escapeHTML(deviceName) + '</div><div class="muted small">' + escapeHTML(deviceSub) + '</div></div><span class="online">在线</span></div>' +
+          '<div class="device-main"><div class="bold">' + escapeHTML(deviceName) + '</div><div class="muted small">' + escapeHTML(deviceSub) + '</div></div>' +
+          '<span class="battery-chip">🔋 ' + deviceBatteryText() + '</span><span class="online">在线</span></div>' +
         '<div class="device-actions">' +
           '<button data-action="find-me">查找位置</button>' +
           '<button data-action="pick-device-icon">选择图案</button>' +
@@ -2860,43 +2891,18 @@
 
   /* ---------------- 声音 ---------------- */
   function soundHTML() {
-    var boundName = state.deviceBind && state.deviceBind.itemName;
-    var names = [];
-    if (boundName && names.indexOf(boundName) < 0) names.push(boundName);
-    getItems().filter(function (it) { return !it.trashed && it.name; }).slice(0, 6).forEach(function (it) {
-      if (names.indexOf(it.name) < 0) names.push(it.name);
-    });
-    var quick = names.length
-      ? '<div class="sound-quick"><div class="sound-quick-title">' + tr('常用物品') + '</div><div class="sound-chips">' + names.map(function (n) {
-          return '<button class="sound-chip" data-action="call-item-by-name" data-name="' + escapeHTML(n) + '"><span class="sound-chip-dot"></span>' + escapeHTML(n) + '</button>';
-        }).join('') + '</div></div>'
-      : '';
-    var reply = String((state.pref && state.pref.soundReply) || DEFAULT_PREF.soundReply);
     return '<div class="page sound-page">' +
-      '<div class="sound-head">' +
-        '<div class="sound-head-icon">' + navSVG('sound') + '</div>' +
-        '<div><div class="sound-head-title">' + tr('呼唤物品') + '</div>' +
-        '<div class="muted small">' + tr('当人呼唤物品时，标签会发声回应，帮助你快速找到它。') + '</div></div>' +
-      '</div>' +
       '<div class="link-card sound-card">' +
+        '<div class="sound-card-title">' + tr('呼唤物品') + '</div>' +
         '<label class="form-label" for="sound-item-name">' + tr('物品名称') + '</label>' +
         '<input class="form-input" id="sound-item-name" placeholder="' + tr('输入物品名称，例如：防晒霜') + '">' +
-        '<div class="sound-btn-row">' +
+        '<div class="sound-btn-row three">' +
           '<button class="link-btn" data-action="call-item">' + tr('呼唤') + '</button>' +
           '<button class="link-btn ghost" data-action="voice-call">' + tr('语音呼唤') + '</button>' +
+          '<button class="link-btn ghost" data-action="open-sound-settings">' + tr('自定义') + '</button>' +
         '</div>' +
-        '<div class="sound-status" id="sound-status">' + tr('未绑定物品时，可直接输入名称试听。') + '</div>' +
+        '<div class="sound-status" id="sound-status">' + tr('说出唤醒词和物品名称即可呼唤') + '</div>' +
       '</div>' +
-      '<div class="link-card sound-card">' +
-        '<label class="form-label" for="sound-reply">' + tr('回应声音') + '</label>' +
-        '<input class="form-input" id="sound-reply" value="' + escapeHTML(reply) + '" placeholder="' + tr('例如：我在这里，{物品}，请来找我') + '">' +
-        '<div class="muted small">' + tr('用 {物品} 代表呼唤的物品名称') + '</div>' +
-        '<div class="sound-btn-row">' +
-          '<button class="link-btn" data-action="save-sound-reply">' + tr('保存回应声音') + '</button>' +
-          '<button class="link-btn ghost" data-action="preview-sound-reply">' + tr('试听') + '</button>' +
-        '</div>' +
-      '</div>' +
-      quick +
     '</div>';
   }
   function setSoundStatus(msg) {
@@ -2928,22 +2934,53 @@
       setSoundStatus('发声失败，请检查浏览器声音权限');
     }
   }
-  function speakReply(reply, name) {
-    setSoundStatus('正在回应：' + reply);
+  function soundLangValue() {
+    var v = state.pref && state.pref.soundLang;
+    if (v === 'en-US') return 'en-US';
+    if (v === 'zh-TW') return 'zh-TW';
+    if (v === 'auto') return '';
+    return 'zh-CN';
+  }
+  function voiceForTone(lang) {
+    try {
+      var voices = window.speechSynthesis && window.speechSynthesis.getVoices ? window.speechSynthesis.getVoices() : [];
+      var tone = (state.pref && state.pref.soundVoice) || 'default';
+      if (tone === 'default' || !voices.length) return null;
+      var prefix = (lang || 'zh').slice(0, 2).toLowerCase();
+      var list = voices.filter(function (v) { return (v.lang || '').toLowerCase().indexOf(prefix) === 0; });
+      if (!list.length) list = voices;
+      var re = tone === 'female'
+        ? /female|woman|xiaoxiao|huihui|tingting|mei|zira|samantha/i
+        : /male|man|yunxi|yunjian|david|daniel|alex/i;
+      return list.filter(function (v) { return re.test(v.name || ''); })[0] || list[0] || null;
+    } catch (e) { return null; }
+  }
+  function speakText(text, onDone) {
     try {
       if ('speechSynthesis' in window && window.SpeechSynthesisUtterance) {
         window.speechSynthesis.cancel();
-        var u = new window.SpeechSynthesisUtterance(reply);
-        u.lang = currentLang() === 'en' ? 'en-US' : (currentLang() === 'zh-TW' ? 'zh-TW' : 'zh-CN');
+        var lang = soundLangValue() || 'zh-CN';
+        var u = new window.SpeechSynthesisUtterance(text);
+        u.lang = lang;
         u.rate = 1;
         u.pitch = 1;
-        u.onend = function () { setSoundStatus('已发出声音回应：' + reply); };
-        u.onerror = function () { playBeepFallback(name, reply); };
+        var voice = voiceForTone(lang);
+        if (voice) u.voice = voice;
+        if (onDone) u.onend = onDone;
         window.speechSynthesis.speak(u);
-        return;
+        return true;
       }
     } catch (e) {}
+    return false;
+  }
+  function speakReply(reply, name) {
+    setSoundStatus('正在回应：' + reply);
+    if (speakText(reply, function () { setSoundStatus('已发出声音回应：' + reply); })) return;
     playBeepFallback(name, reply);
+  }
+  function speakSystem(text) {
+    if (!String(text || '').trim()) return;
+    speakText(String(text));
   }
   function callItemByName(name) {
     name = String(name || '').trim();
@@ -2957,21 +2994,17 @@
     var input = $('#sound-item-name');
     callItemByName(input ? input.value : '');
   }
-  function saveSoundReply() {
-    var input = $('#sound-reply');
-    var v = input ? String(input.value || '').trim() : '';
-    if (!v) { toast('请输入回应内容'); return; }
-    state.pref.soundReply = v;
-    savePref();
-    toast('回应声音已保存');
-  }
-  function previewSoundReply() {
-    var input = $('#sound-reply');
-    var tpl = input ? String(input.value || '').trim() : '';
-    if (!tpl) { toast('请先输入回应内容'); return; }
-    var nameInput = $('#sound-item-name');
-    var name = nameInput ? String(nameInput.value || '').trim() || '物品' : '物品';
-    speakReply(tpl.replace(/\{物品\}/g, name), name);
+  function stripWakeWord(text) {
+    var p = state.pref || DEFAULT_PREF;
+    var words = (p.soundWakeWords || []).slice();
+    var custom = String(p.soundWakeWord || '').trim();
+    if (custom && words.indexOf(custom) < 0) words.unshift(custom);
+    var t = String(text || '').trim();
+    for (var i = 0; i < words.length; i++) {
+      var w = String(words[i] || '').trim();
+      if (w && t.indexOf(w) === 0) return t.slice(w.length).replace(/^[，,。！!\s]+/, '').trim();
+    }
+    return t;
   }
   function startVoiceCall() {
     var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -2982,14 +3015,14 @@
       }).catch(function () {});
     }
     var recognition = new SR();
-    recognition.lang = currentLang() === 'en' ? 'en-US' : (currentLang() === 'zh-TW' ? 'zh-TW' : 'zh-CN');
+    recognition.lang = soundLangValue() || navigator.language || 'zh-CN';
     recognition.continuous = false;
     recognition.interimResults = false;
     recognition.maxAlternatives = 1;
-    setSoundStatus('正在聆听，请说出物品名称…');
+    setSoundStatus('正在聆听，请说出唤醒词和物品名称…');
     recognition.onresult = function (e) {
-      var text = e.results && e.results[0] && e.results[0][0] ? String(e.results[0][0].transcript || '') : '';
-      text = text.replace(/[，。！？、,.!?]/g, '').trim();
+      var raw = e.results && e.results[0] && e.results[0][0] ? String(e.results[0][0].transcript || '') : '';
+      var text = stripWakeWord(raw.replace(/[。！？!?]/g, '').trim());
       if (text) callItemByName(text);
       else setSoundStatus('没有听清，请再说一次');
     };
@@ -2999,6 +3032,64 @@
       if (el && el.textContent.indexOf('正在聆听') === 0) setSoundStatus('已结束聆听');
     };
     try { recognition.start(); } catch (e) { setSoundStatus('无法启动语音识别'); }
+  }
+  function syncSoundSetting() {
+    var input = $('#sound-setting-value');
+    if (!input) return;
+    var v = String(input.value || '').trim();
+    if (!v) return;
+    var key = state.soundSettingKey;
+    if (key === 'wake') state.pref.soundWakeWord = v;
+    else if (key === 'reply') state.pref.soundReply = v;
+    else if (key === 'welcome') state.pref.soundWelcome = v;
+    else if (key === 'exit') state.pref.soundExit = v;
+    savePref();
+  }
+  function soundSettingValue() {
+    var p = state.pref || DEFAULT_PREF;
+    var key = state.soundSettingKey;
+    if (key === 'wake') return String(p.soundWakeWord || DEFAULT_PREF.soundWakeWord);
+    if (key === 'reply') return String(p.soundReply || DEFAULT_PREF.soundReply);
+    if (key === 'welcome') return String(p.soundWelcome || DEFAULT_PREF.soundWelcome);
+    if (key === 'exit') return String(p.soundExit || DEFAULT_PREF.soundExit);
+    return '';
+  }
+  function soundSettingsSheetHTML() {
+    var p = state.pref || DEFAULT_PREF;
+    var key = state.soundSettingKey;
+    var tabs = [
+      { key: 'wake', label: '唤醒词' }, { key: 'reply', label: '回复内容' }, { key: 'voice', label: '音色' },
+      { key: 'welcome', label: '欢迎语音' }, { key: 'exit', label: '退出语音' }, { key: 'lang', label: '识别语言' }
+    ];
+    var grid = '<div class="sound-settings-grid">' + tabs.map(function (t) {
+      return '<button class="' + (key === t.key ? 'active' : '') + '" data-action="sound-setting-tab" data-key="' + t.key + '">' + tr(t.label) + '</button>';
+    }).join('') + '</div>';
+    var editor = '';
+    if (key === 'voice') {
+      editor = '<div class="sound-option-row">' +
+        ['default', 'female', 'male'].map(function (v, i) {
+          var labels = ['默认', '女声', '男声'];
+          return '<button class="' + ((p.soundVoice || 'default') === v ? 'active' : '') + '" data-action="sound-voice" data-value="' + v + '">' + tr(labels[i]) + '</button>';
+        }).join('') + '</div>';
+    } else if (key === 'lang') {
+      editor = '<div class="sound-option-row">' +
+        [['auto', '中英自动'], ['zh-CN', '中文'], ['en-US', '英文']].map(function (o) {
+          return '<button class="' + ((p.soundLang || 'auto') === o[0] ? 'active' : '') + '" data-action="sound-lang" data-value="' + o[0] + '">' + tr(o[1]) + '</button>';
+        }).join('') + '</div>';
+    } else {
+      var presets = key === 'wake' ? (p.soundWakeWords || DEFAULT_PREF.soundWakeWords) : (key === 'reply' ? (p.soundReplies || DEFAULT_PREF.soundReplies) : []);
+      var chips = presets.length ? '<div class="sound-preset-title">' + tr((key === 'wake' ? '常用唤醒词' : '常用回复')) + '</div><div class="sound-chips">' + presets.map(function (v) {
+        return '<button class="sound-chip" data-action="sound-preset" data-value="' + escapeHTML(v) + '">' + escapeHTML(v) + '</button>';
+      }).join('') + '</div>' : '';
+      editor = '<input class="form-input" id="sound-setting-value" value="' + escapeHTML(soundSettingValue()) + '">' + chips;
+    }
+    return '<div class="sheet-mask show" data-action="close-sheet"></div>' +
+      '<div class="sheet show"><div class="sheet-handle"></div>' +
+      '<div class="sheet-head"><h2>' + tr('声音自定义') + '</h2>' +
+      '<button class="sheet-close" data-action="close-sheet">✕</button></div>' +
+      '<div class="sound-settings">' + grid + editor +
+      '<div class="sound-btn-row"><button class="link-btn" data-action="save-sound-setting">' + tr('保存') + '</button>' +
+      '<button class="link-btn ghost" data-action="preview-sound-setting">' + tr('试听') + '</button></div></div></div>';
   }
 
   /* ---------------- 分类管理 ---------------- */
@@ -3114,6 +3205,7 @@
         '<div class="bind-photo-row"><div class="bind-photo-preview">' + (d.photo ? '<img src="' + escapeHTML(d.photo) + '" alt="">' : '📷') + '</div>' +
           '<button type="button" class="btn" data-action="bind-pick-photo">拍照 / 从相册选择（可裁剪）</button></div>' +
         '<div class="bind-photo-tip">选好照片后可选择“直接使用”或“自定义裁剪”，裁剪后会显示在物品定位旁边。</div>' +
+        '<button type="button" class="btn bind-ai-btn" data-action="ai-recognize-item">AI 识别物品名称</button>' +
         '<input type="file" id="bind-photo-file" accept="image/*" style="display:none">' +
         '<div class="bind-step">2. 设备编号和密码</div>' +
         '<input id="bind-device-no" class="bind-input" placeholder="设备编号" value="' + escapeHTML(d.deviceNo || '') + '">' +
@@ -3122,6 +3214,26 @@
         '<div class="bind-foot"><button class="btn" data-action="close-overlay">取消</button>' +
           '<button class="btn btn-primary" data-action="save-device-bind">完成绑定</button></div>' +
       '</div>');
+  }
+  function aiRecognizeItem() {
+    var d = syncBindDraft();
+    if (!d.photo) { toast('请先拍照或选择物品照片'); return; }
+    var seed = String(d.aiFileName || '').toLowerCase();
+    var dict = [
+      ['水杯|杯子|cup|bottle', '水杯'], ['牛奶|酸奶|milk|yogurt', '牛奶'],
+      ['面包|蛋糕|bread|cake', '面包'], ['药|维生素|pill|medicine', '药品'],
+      ['钥匙|key', '钥匙'], ['耳机|headphone', '耳机'], ['防晒|霜|cream', '防晒霜'],
+      ['水果|苹果|apple', '苹果'], ['书|book', '书籍']
+    ];
+    var guess = '';
+    for (var i = 0; i < dict.length; i++) {
+      if (new RegExp(dict[i][0]).test(seed)) { guess = dict[i][1]; break; }
+    }
+    if (!guess) guess = '未识别物品';
+    var nameInput = $('#bind-item-name');
+    if (nameInput) nameInput.value = guess;
+    d.name = guess;
+    toast(guess === '未识别物品' ? '本地识别未匹配，请手动填写名称' : 'AI 识别为：' + guess);
   }
   function saveDeviceBind() {
     var d = syncBindDraft();
@@ -3564,6 +3676,7 @@
     if (state.viewStack.length > 20) state.viewStack.shift();
   }
   function openView(view) {
+    var wasSound = state.view === 'sound';
     if (view !== state.view) pushView();
     state.view = view;
     state.sheet = null;
@@ -3573,6 +3686,8 @@
     state.selectedIds = [];
     state.searchFocused = false;
     render();
+    if (view === 'sound') setTimeout(function () { speakSystem(state.pref.soundWelcome); }, 200);
+    else if (wasSound) setTimeout(function () { speakSystem(state.pref.soundExit); }, 120);
   }
   function openFromMe(view) {
     if (state.view !== 'me') {
@@ -3589,6 +3704,7 @@
     render();
   }
   function goBack() {
+    var wasSound = state.view === 'sound';
     if (state.overlay) { state.overlay = null; renderOverlay(); return; }
     if (state.sheet) { state.sheet = null; renderSheet(); return; }
     if (state.multiSelect) { exitMultiSelect(); return; }
@@ -3612,6 +3728,7 @@
     state.formDraft = null;
     state.searchFocused = false;
     render();
+    if (wasSound && state.view !== 'sound') setTimeout(function () { speakSystem(state.pref.soundExit); }, 120);
   }
   function setCategory(cat, from) {
     var fromSearch = state.view === 'search';
@@ -3858,8 +3975,17 @@
       case 'call-item': callItem(); break;
       case 'call-item-by-name': callItemByName(el.getAttribute('data-name')); break;
       case 'voice-call': startVoiceCall(); break;
-      case 'save-sound-reply': saveSoundReply(); break;
-      case 'preview-sound-reply': previewSoundReply(); break;
+      case 'open-sound-settings': state.sheet = 'soundSettings'; renderSheet(); break;
+      case 'sound-setting-tab': syncSoundSetting(); state.soundSettingKey = key; renderSheet(); break;
+      case 'sound-preset': var pv = el.getAttribute('data-value'); var pi = $('#sound-setting-value'); if (pi && pv) { pi.value = pv; syncSoundSetting(); renderSheet(); } break;
+      case 'sound-voice': state.pref.soundVoice = el.getAttribute('data-value') || 'default'; savePref(); renderSheet(); toast('音色已保存'); break;
+      case 'sound-lang': state.pref.soundLang = el.getAttribute('data-value') || 'auto'; savePref(); renderSheet(); toast('识别语言已保存'); break;
+      case 'save-sound-setting': syncSoundSetting(); state.sheet = null; renderSheet(); toast('声音设置已保存'); break;
+      case 'preview-sound-setting':
+        syncSoundSetting();
+        var pkey = state.soundSettingKey;
+        speakSystem(pkey === 'welcome' ? state.pref.soundWelcome : (pkey === 'exit' ? state.pref.soundExit : (pkey === 'reply' ? soundReplyText($('#sound-item-name') ? $('#sound-item-name').value : '物品') : soundSettingValue())));
+        break;
       case 'go-search': openView('search'); break;
       case 'focus-home-search': focusHomeSearch(); break;
       case 'clear-home-search': clearHomeSearch(); break;
@@ -4019,6 +4145,7 @@
       case 'add-device-hint': case 'bind-device': openBindSheet(); break;
       case 'bind-access': openAccessSheet(); break;
       case 'bind-pick-photo': var bindFile = $('#bind-photo-file'); if (bindFile) bindFile.click(); break;
+      case 'ai-recognize-item': aiRecognizeItem(); break;
       case 'save-device-bind': saveDeviceBind(); break;
       case 'save-device-access': saveDeviceAccess(); break;
       case 'device-hint': toast((el.getAttribute('data-name') || '该功能') + '在本机版为演示'); break;
@@ -4327,6 +4454,7 @@
       }
       if (e.target && e.target.id === 'bind-photo-file' && e.target.files && e.target.files[0]) {
         syncBindDraft();
+        state.bindDraft.aiFileName = e.target.files[0].name || '';
         var bindReader = new FileReader();
         bindReader.onload = function () {
           state.overlay = { type: 'photoChoice', src: String(bindReader.result), target: 'bind' };
