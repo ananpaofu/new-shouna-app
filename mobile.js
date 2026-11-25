@@ -6,7 +6,7 @@
   'use strict';
 
   /* ---------------- 常量 ---------------- */
-  var APP_VERSION = '2.67';
+  var APP_VERSION = '2.73';
   var DB_KEY = 'organizer_local_v2';
   var PREF_KEY = 'organizer_pref_v2';
   var HISTORY_KEY = 'organizer_search_history_v2';
@@ -16,6 +16,7 @@
   var DEVICE_BIND_KEY = 'organizer_device_bind_v1';
   var DEVICE_API_KEY = 'organizer_device_api_v1';
   var LEAVE_ALERT_KEY = 'organizer_leave_alert_v1';
+  var MAP_PROVIDER_KEY = 'organizer_map_provider_v1';
   var DEFAULT_LOCATOR_LINK = 'https://vipapi.18gps.net//CheTT/CheTTgetPosition.aspx?id=7c730550-a968-49ab-a054-4578cd7a571c&lang=cn';
   var DEFAULT_LOCATOR_API = 'https://twilight-butterfly-f2a8.xieta1371.workers.dev';
   var LOCATOR_DIRECT_OBJ = '482db427-68d2-4d53-85cb-3c55fd4dfa81';
@@ -24,6 +25,36 @@
   var DEFAULT_DEVICE_API = 'https://device-api.xieta1371.workers.dev';
 
   var APP_VERSION_CHANGELOG = [
+    { version: '2.73', date: '2026-11-25', title: '地图选项排版优化', items: [
+      '“选择地图”弹层从两列改为一排三列，三个选项更对称',
+      '顺序调整为高德 / 腾讯 / 百度，默认高德放第一位',
+      '选中项继续保持绿底白字，未选中项为浅灰底深灰字'
+    ] },
+    { version: '2.72', date: '2026-11-25', title: '移除谷歌地图选项', items: [
+      '“选择地图”移除谷歌地图，只保留高德 / 百度 / 腾讯三家官方底图',
+      '物品导航不再提供谷歌地图入口，避免打开不稳定的替代底图',
+      '旧版本保存的谷歌地图选择会自动回退到高德地图'
+    ] },
+    { version: '2.71', date: '2026-11-25', title: '无卡地图替代', items: [
+      '选择谷歌地图时，小窗口和全屏地图改用无 Key 的开放地图底图，不需要 Google 账号或绑定银行卡',
+      '谷歌地图导航仍打开 Google Maps；物品标记、手机位置、地图 / 卫星切换和距离状态保持不变',
+      '开放地图底图受网络环境影响，国内加载速度可能不如高德 / 百度 / 腾讯'
+    ] },
+    { version: '2.70', date: '2026-11-25', title: '腾讯地图内嵌接入', items: [
+      '选择腾讯地图后，小窗口和全屏地图切换为腾讯官方底图',
+      '保留物品照片标记、手机位置标记、地图 / 卫星切换和现有导航逻辑',
+      '腾讯地图使用你提供的 JavaScript API Key，未加载时自动回退到高德备用地图'
+    ] },
+    { version: '2.69', date: '2026-11-25', title: '百度地图内嵌接入', items: [
+      '选择百度地图后，小窗口和全屏地图切换为百度官方底图',
+      '保留物品照片标记、手机位置标记、地图 / 卫星切换和现有导航逻辑',
+      '百度地图使用浏览器端 AK，并通过 Referer 白名单限制调用域名'
+    ] },
+    { version: '2.68', date: '2026-11-25', title: '地图来源选择', items: [
+      '“选择地图”改为设置当前地图来源，默认高德；选中项绿底白字，其他项浅灰底深灰字',
+      '当前地图来源会保存到本机，物品导航按所选地图生成导航链接',
+      '直接打开百度 / 腾讯 / 谷歌地图导航不需要密钥；若要切换内嵌地图底图才需要各自 JS API Key'
+    ] },
     { version: '2.67', date: '2026-11-25', title: '编辑按钮尺寸微调', items: [
       '物品详情右上角“编辑”按钮加大到与新建物品页“保存”按钮一致'
     ] },
@@ -634,7 +665,9 @@
       '查找位置': '尋找位置', '选择图案': '選擇圖案', '修改绑定': '修改綁定', '离开提醒': '離開提醒', '删除绑定': '刪除綁定', '已绑定': '已綁定',
       '打开地图，按你当前位置到物品位置规划路线。': '開啟地圖，依你目前位置到物品位置規劃路線。',
       '一键打开地图，直接导航到物品当前位置。': '一鍵開啟地圖，直接導航到物品目前位置。',
-      '更新': '更新', '显示补货数量标签': '顯示補貨數量標籤', '补货': '補貨', '查看照片': '查看照片'
+      '更新': '更新', '显示补货数量标签': '顯示補貨數量標籤', '补货': '補貨', '查看照片': '查看照片',
+      '高德地图': '高德地圖', '百度地图': '百度地圖', '腾讯地图': '騰訊地圖',
+      '打开': '開啟', '导航到物品当前位置': '導航到物品目前位置', '已切换地图': '已切換地圖'
     },
     'en': {
       '全部': 'All', '状态良好': 'Good', '临近过期': 'Expiring', '已过期': 'Expired', '已开封': 'Opened',
@@ -768,7 +801,9 @@
       '查找位置': 'Find me', '选择图案': 'Choose icon', '修改绑定': 'Edit binding', '离开提醒': 'Away alert', '删除绑定': 'Remove binding', '已绑定': 'Bound',
       '打开地图，按你当前位置到物品位置规划路线。': 'Open the map and plan a route from your location to the item.',
       '一键打开地图，直接导航到物品当前位置。': 'Open the map with one tap and navigate to the item.',
-      '更新': 'Update', '显示补货数量标签': 'Show restock label', '补货': 'Restock', '查看照片': 'View photo'
+      '更新': 'Update', '显示补货数量标签': 'Show restock label', '补货': 'Restock', '查看照片': 'View photo',
+      '高德地图': 'Amap', '百度地图': 'Baidu Maps', '腾讯地图': 'Tencent Maps',
+      '打开': 'Open', '导航到物品当前位置': ' to the item', '已切换地图': 'Map switched'
     }
   };
 
@@ -823,6 +858,14 @@
     deviceShareCode: '',
     crop: null,
     mapLayerKind: 'road',
+    mapProvider: (function () {
+      try {
+        var v = localStorage.getItem(MAP_PROVIDER_KEY);
+        if (['amap', 'baidu', 'qq'].indexOf(v) >= 0) return v;
+        localStorage.setItem(MAP_PROVIDER_KEY, 'amap');
+        return 'amap';
+      } catch (e) { return 'amap'; }
+    })(),
     leaflet: { small: {}, full: {} },
     leaveAlertEnabled: (function () { try { return localStorage.getItem(LEAVE_ALERT_KEY) === '1'; } catch (e) { return false; } })(),
     leaveAlertTriggered: false,
@@ -2087,8 +2130,20 @@
     return { lat: lat + dLat, lng: lng + dLng };
   }
   function mapCoords(lat, lng, provider) {
-    if (provider === 'google') return { lat: Number(lat) || 0, lng: Number(lng) || 0 };
     return wgs84ToGcj02(lat, lng);
+  }
+  function baiduJSCoords(lat, lng) {
+    var gcj = wgs84ToGcj02(lat, lng);
+    var x = gcj.lng, y = gcj.lat;
+    var pi = Math.PI * 3000.0 / 180.0;
+    var z = Math.sqrt(x * x + y * y) + 0.00002 * Math.sin(y * pi);
+    var theta = Math.atan2(y, x) + 0.000003 * Math.cos(x * pi);
+    return { lat: z * Math.sin(theta) + 0.006, lng: z * Math.cos(theta) + 0.0065 };
+  }
+  function mapProviderLabel(kind) {
+    if (kind === 'baidu') return tr('百度地图');
+    if (kind === 'qq') return tr('腾讯地图');
+    return tr('高德地图');
   }
   function locatorAmapURL(embed) {
     var f = state.locatorFix;
@@ -2119,11 +2174,6 @@
       return 'https://apis.map.qq.com/uri/v1/routeplan?type=drive&from=' + encodeURIComponent('我的位置') +
         '&fromCoord=' + (me ? me.lat + ',' + me.lng : '') + '&to=' + name +
         '&toCoord=' + p.lat + ',' + p.lng + '&policy=0&referer=organizer';
-    }
-    if (kind === 'google') {
-      return 'https://www.google.com/maps/dir/?api=1' +
-        (me ? '&origin=' + me.lat + ',' + me.lng : '') +
-        '&destination=' + p.lat + ',' + p.lng + '&travelmode=driving';
     }
     return locatorAmapURL(false);
   }
@@ -2278,6 +2328,11 @@
     if (!m || !m.lat || !m.lng) return null;
     return mapCoords(m.lat, m.lng, 'amap');
   }
+  function userBaiduPoint() {
+    var m = state.myPos;
+    if (!m || !m.lat || !m.lng) return null;
+    return baiduJSCoords(m.lat, m.lng);
+  }
   function fallbackTileURL(satellite) {
     return satellite
       ? 'https://webst0{s}.is.autonavi.com/appmaptile?style=6&scale=1&x={x}&y={y}&z={z}'
@@ -2287,7 +2342,9 @@
     var holder = state.leaflet[key];
     if (holder && holder.map) {
       try {
-        if (holder.fallback && holder.map.remove) holder.map.remove();
+        if (holder.provider === 'baidu' && holder.map.clearOverlays) holder.map.clearOverlays();
+        else if (holder.provider === 'tencent' && holder.map.destroy) holder.map.destroy();
+        else if (holder.fallback && holder.map.remove) holder.map.remove();
         else if (holder.map.destroy) holder.map.destroy();
         else if (holder.map.remove) holder.map.remove();
       } catch (e) {}
@@ -2297,6 +2354,8 @@
   function applyMapLayerFor(key) {
     var holder = state.leaflet[key];
     if (!holder.map) return;
+    if (holder.provider === 'baidu') { applyBaiduLayerFor(key); return; }
+    if (holder.provider === 'tencent') { applyTencentLayerFor(key); return; }
     if (holder.fallback && typeof L !== 'undefined') {
       if (holder.tile) holder.map.removeLayer(holder.tile);
       holder.tile = L.tileLayer(fallbackTileURL(state.mapLayerKind === 'satellite'),
@@ -2315,6 +2374,214 @@
   }
   function applyMapLayer() {
     ['small', 'full'].forEach(applyMapLayerFor);
+  }
+  function baiduHTMLMarker(point, html, zIndex) {
+    if (typeof BMap === 'undefined') return null;
+    function HTMLMarker(p, markup, zi) {
+      this._point = p;
+      this._html = markup;
+      this._zIndex = zi || 1000;
+    }
+    HTMLMarker.prototype = new BMap.Overlay();
+    HTMLMarker.prototype.initialize = function (map) {
+      this._map = map;
+      this._div = document.createElement('div');
+      this._div.className = 'baidu-html-marker';
+      this._div.innerHTML = this._html;
+      this._map.getPanes().markerPane.appendChild(this._div);
+      return this._div;
+    };
+    HTMLMarker.prototype.draw = function () {
+      if (!this._map || !this._div) return;
+      var pos = this._map.pointToOverlayPixel(this._point);
+      this._div.style.left = pos.x + 'px';
+      this._div.style.top = pos.y + 'px';
+      this._div.style.zIndex = String(this._zIndex);
+    };
+    HTMLMarker.prototype.setPoint = function (p) { this._point = p; this.draw(); };
+    HTMLMarker.prototype.setHtml = function (html) {
+      this._html = html;
+      if (this._div) this._div.innerHTML = html;
+    };
+    return new HTMLMarker(point, html, zIndex);
+  }
+  function applyBaiduLayerFor(key) {
+    var holder = state.leaflet[key];
+    if (!holder.map || holder.provider !== 'baidu') return;
+    if (state.mapLayerKind === 'satellite') {
+      if (typeof BMAP_SATELLITE_MAP !== 'undefined') holder.map.setMapType(BMAP_SATELLITE_MAP);
+    } else if (typeof BMAP_NORMAL_MAP !== 'undefined') {
+      holder.map.setMapType(BMAP_NORMAL_MAP);
+    }
+  }
+  function syncBaiduMap(id, el) {
+    if (typeof BMap === 'undefined') { syncFallbackMap(id, el); return; }
+    var key = id === 'leaflet-map' ? 'small' : 'full';
+    try {
+      var holder = state.leaflet[key];
+      var f = state.locatorFix;
+      if (!f || !f.lat || !f.lng) return;
+      var p = baiduJSCoords(f.lat, f.lng);
+      var point = new BMap.Point(p.lng, p.lat);
+      var coordKey = p.lat + ',' + p.lng;
+      var up = userBaiduPoint();
+      var itemHTML = '<div class="amap-item-marker">' + mapItemBadgeHTML() + '</div>';
+      var phoneHTML = mapPhoneMarkerHTML();
+      if (!holder.map || holder.provider !== 'baidu') {
+        holder.map = new BMap.Map(el, { enableMapClick: false });
+        holder.provider = 'baidu';
+        holder.fallback = false;
+        holder.tile = null;
+        holder.satelliteLayer = null;
+        holder.roadLayer = null;
+        holder.map.centerAndZoom(point, key === 'small' ? 17 : 16);
+        holder.map.enableScrollWheelZoom(true);
+        holder.marker = baiduHTMLMarker(point, itemHTML, 1000);
+        holder.map.addOverlay(holder.marker);
+        holder.coordKey = coordKey;
+        if (up) {
+          holder.userMarker = baiduHTMLMarker(new BMap.Point(up.lng, up.lat), phoneHTML, 900);
+          holder.map.addOverlay(holder.userMarker);
+        }
+        applyBaiduLayerFor(key);
+      } else {
+        if (holder.map.checkResize) holder.map.checkResize();
+        if (holder.marker) {
+          if (holder.marker.setHtml) holder.marker.setHtml(itemHTML);
+          if (holder.marker.setPoint) holder.marker.setPoint(point);
+        }
+        if (up) {
+          var phonePoint = new BMap.Point(up.lng, up.lat);
+          if (holder.userMarker) {
+            if (holder.userMarker.setHtml) holder.userMarker.setHtml(phoneHTML);
+            if (holder.userMarker.setPoint) holder.userMarker.setPoint(phonePoint);
+          } else {
+            holder.userMarker = baiduHTMLMarker(phonePoint, phoneHTML, 900);
+            holder.map.addOverlay(holder.userMarker);
+          }
+        } else if (holder.userMarker) {
+          holder.map.removeOverlay(holder.userMarker);
+          holder.userMarker = null;
+        }
+        if (holder.coordKey !== coordKey) {
+          holder.coordKey = coordKey;
+          holder.map.panTo(point);
+        }
+      }
+    } catch (e) {
+      el.innerHTML = '';
+      state.leaflet[key] = {};
+      syncFallbackMap(id, el);
+    }
+  }
+  function tencentHTMLMarker(map, position, html, zIndex) {
+    if (typeof TMap === 'undefined' || !TMap.DOMOverlay) return null;
+    var Marker = class extends TMap.DOMOverlay {
+      constructor(options) {
+        super(options);
+        this.position = options.position;
+        this.html = options.html;
+        this.zIndex = options.zIndex || 1000;
+      }
+      onInit(options) {
+        this.map = options.map;
+      }
+      createDOM() {
+        var div = document.createElement('div');
+        div.className = 'tencent-html-marker';
+        div.style.position = 'absolute';
+        div.style.top = '0px';
+        div.style.left = '0px';
+        div.style.pointerEvents = 'none';
+        div.innerHTML = this.html;
+        this.dom = div;
+        return div;
+      }
+      updateDOM() {
+        if (!this.map || !this.position || !this.dom || !this.map.projectToContainer) return;
+        var pixel = this.map.projectToContainer(this.position);
+        var w = this.dom.clientWidth || 44;
+        var h = this.dom.clientHeight || 66;
+        this.dom.style.transform = 'translate(' + (pixel.getX() - w / 2) + 'px,' + (pixel.getY() - h) + 'px)';
+        this.dom.style.zIndex = String(this.zIndex);
+      }
+      setPosition(position) {
+        this.position = position;
+        this.updateDOM();
+      }
+      setHtml(html) {
+        this.html = html;
+        if (this.dom) this.dom.innerHTML = html;
+        this.updateDOM();
+      }
+    };
+    return new Marker({ map: map, position: position, html: html, zIndex: zIndex });
+  }
+  function applyTencentLayerFor(key) {
+    var holder = state.leaflet[key];
+    if (!holder.map || holder.provider !== 'tencent' || !holder.map.setBaseMap) return;
+    holder.map.setBaseMap({ type: state.mapLayerKind === 'satellite' ? 'satellite' : 'vector' });
+  }
+  function syncTencentMap(id, el) {
+    if (typeof TMap === 'undefined' || !TMap.Map) { syncFallbackMap(id, el); return; }
+    var key = id === 'leaflet-map' ? 'small' : 'full';
+    try {
+      var holder = state.leaflet[key];
+      var f = state.locatorFix;
+      if (!f || !f.lat || !f.lng) return;
+      var p = mapCoords(f.lat, f.lng, 'qq');
+      var point = new TMap.LatLng(p.lat, p.lng);
+      var coordKey = p.lat + ',' + p.lng;
+      var up = userMapPoint();
+      var itemHTML = '<div class="amap-item-marker">' + mapItemBadgeHTML() + '</div>';
+      var phoneHTML = mapPhoneMarkerHTML();
+      if (!holder.map || holder.provider !== 'tencent') {
+        holder.map = new TMap.Map(el, {
+          center: point,
+          zoom: key === 'small' ? 17 : 16,
+          pitch: 0,
+          rotation: 0,
+          baseMap: { type: state.mapLayerKind === 'satellite' ? 'satellite' : 'vector' }
+        });
+        holder.provider = 'tencent';
+        holder.fallback = false;
+        holder.tile = null;
+        holder.satelliteLayer = null;
+        holder.roadLayer = null;
+        holder.marker = tencentHTMLMarker(holder.map, point, itemHTML, 1000);
+        holder.coordKey = coordKey;
+        if (up) {
+          holder.userMarker = tencentHTMLMarker(holder.map, new TMap.LatLng(up.lat, up.lng), phoneHTML, 900);
+        }
+      } else {
+        if (holder.map.resize) holder.map.resize();
+        if (holder.marker) {
+          if (holder.marker.setHtml) holder.marker.setHtml(itemHTML);
+          if (holder.marker.setPosition) holder.marker.setPosition(point);
+        }
+        if (up) {
+          var phonePoint = new TMap.LatLng(up.lat, up.lng);
+          if (holder.userMarker) {
+            if (holder.userMarker.setHtml) holder.userMarker.setHtml(phoneHTML);
+            if (holder.userMarker.setPosition) holder.userMarker.setPosition(phonePoint);
+          } else {
+            holder.userMarker = tencentHTMLMarker(holder.map, phonePoint, phoneHTML, 900);
+          }
+        } else if (holder.userMarker) {
+          if (holder.userMarker.destroy) holder.userMarker.destroy();
+          else if (holder.userMarker.setMap) holder.userMarker.setMap(null);
+          holder.userMarker = null;
+        }
+        if (holder.coordKey !== coordKey) {
+          holder.coordKey = coordKey;
+          if (holder.map.setCenter) holder.map.setCenter(point);
+        }
+      }
+    } catch (e) {
+      el.innerHTML = '';
+      state.leaflet[key] = {};
+      syncFallbackMap(id, el);
+    }
   }
   function syncFallbackMap(id, el) {
     if (typeof L === 'undefined') {
@@ -2342,6 +2609,7 @@
     }) : null;
     if (!holder.map) {
       holder.fallback = true;
+      holder.provider = 'leaflet';
       holder.map = L.map(el, { zoomControl: true, attributionControl: false, preferCanvas: true, minZoom: 3, maxZoom: 18 }).setView([p.lat, p.lng], key === 'small' ? 17 : 16);
       holder.tile = L.tileLayer(fallbackTileURL(state.mapLayerKind === 'satellite'),
         { subdomains: '1234', tileSize: 128, zoomOffset: 1, minZoom: 3, maxZoom: 18, maxNativeZoom: 17 }).addTo(holder.map);
@@ -2367,6 +2635,14 @@
   function syncLeafletMap(id) {
     var el = document.getElementById(id);
     if (!el) return;
+    if (state.mapProvider === 'baidu') {
+      syncBaiduMap(id, el);
+      return;
+    }
+    if (state.mapProvider === 'qq') {
+      syncTencentMap(id, el);
+      return;
+    }
     if (typeof AMap === 'undefined') {
       syncFallbackMap(id, el);
       return;
@@ -2380,6 +2656,8 @@
     var up = userMapPoint();
     var content = '<div class="amap-item-marker">' + mapItemBadgeHTML() + '</div>';
     if (!holder.map) {
+      holder.provider = 'amap';
+      holder.fallback = false;
       holder.map = new AMap.Map(el, {
         center: [p.lng, p.lat],
         zoom: key === 'small' ? 17 : 16,
@@ -2831,20 +3109,20 @@
         '</div>';
     }
     if (o.type === 'mapChoose') {
+      function mapOption(kind) {
+        return '<button class="' + (state.mapProvider === kind ? 'selected' : '') +
+          '" data-action="set-map-provider" data-map="' + kind + '">' + mapProviderLabel(kind) + '</button>';
+      }
       return sheetShell(tr('选择地图'),
-        '<div class="map-choose-grid">' +
-          '<button data-action="open-map" data-map="amap">高德地图</button>' +
-          '<button data-action="open-map" data-map="baidu">百度地图</button>' +
-          '<button data-action="open-map" data-map="qq">腾讯地图</button>' +
-          '<button data-action="open-map" data-map="google">谷歌地图</button>' +
-        '</div>');
+        '<div class="map-choose-grid">' + mapOption('amap') + mapOption('qq') +
+        mapOption('baidu') + '</div>');
     }
     if (o.type === 'itemNav') {
       var navName = (state.deviceBind && state.deviceBind.itemName) || '物品';
       return sheetShell(tr('选择导航物品'),
         '<div class="sheet-list"><div class="sheet-row" data-action="navigate-item">' +
           '<span class="row-emoji">🧭</span><span class="row-main">' + escapeHTML(navName) +
-          '<span class="row-sub">' + tr('打开高德地图导航到物品当前位置') + '</span></span></div></div>');
+          '<span class="row-sub">' + tr('打开') + mapProviderLabel(state.mapProvider) + tr('导航到物品当前位置') + '</span></span></div></div>');
     }
     if (o.type === 'photoView') {
       return '<div class="sheet-mask show" data-action="close-overlay"></div>' +
@@ -3471,11 +3749,21 @@
         renderOverlay();
         break;
       case 'choose-map': state.overlay = { type: 'mapChoose' }; renderOverlay(); break;
+      case 'set-map-provider':
+        var provider = el.getAttribute('data-map');
+        if (['amap', 'baidu', 'qq'].indexOf(provider) >= 0) {
+          state.mapProvider = provider;
+          try { localStorage.setItem(MAP_PROVIDER_KEY, provider); } catch (e) {}
+          state.overlay = null;
+          render();
+          toast(tr('已切换地图') + '：' + mapProviderLabel(provider));
+        }
+        break;
       case 'item-navigation': state.overlay = { type: 'itemNav' }; renderOverlay(); break;
       case 'navigate-item':
         state.overlay = null;
         renderOverlay();
-        var navURL = locatorAmapURL(false);
+        var navURL = locatorMapURL(state.mapProvider);
         if (!navURL) { toast('请先刷新设备位置'); break; }
         if (typeof window !== 'undefined' && window.location) window.location.href = navURL;
         break;
@@ -3488,7 +3776,7 @@
         applyMapLayer();
         break;
       case 'map-plan':
-        openInfo('地图方案', '绑定后地图按你手机当前位置规划到物品位置的路线，并可全屏查看；距离按当前位置计算。直接打开高德 / 百度 / 腾讯 / 谷歌地图不需要额外密钥；如果要内嵌这些地图或调用它们的路线 API，才需要各自申请密钥。');
+        openInfo('地图方案', '绑定后地图按你手机当前位置规划到物品位置的路线，并可全屏查看；距离按当前位置计算。当前支持高德 / 百度 / 腾讯地图；直接打开导航不需要额外密钥，如果要内嵌或调用对应路线 API，才需要申请密钥。');
         break;
       case 'save-locator-link':
         saveLocatorLink(($('#locator-link') || {}).value || '', ($('#locator-api') || {}).value || '');
