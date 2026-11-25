@@ -6,7 +6,7 @@
   'use strict';
 
   /* ---------------- 常量 ---------------- */
-  var APP_VERSION = '2.66';
+  var APP_VERSION = '2.67';
   var DB_KEY = 'organizer_local_v2';
   var PREF_KEY = 'organizer_pref_v2';
   var HISTORY_KEY = 'organizer_search_history_v2';
@@ -24,6 +24,9 @@
   var DEFAULT_DEVICE_API = 'https://device-api.xieta1371.workers.dev';
 
   var APP_VERSION_CHANGELOG = [
+    { version: '2.67', date: '2026-11-25', title: '编辑按钮尺寸微调', items: [
+      '物品详情右上角“编辑”按钮加大到与新建物品页“保存”按钮一致'
+    ] },
     { version: '2.66', date: '2026-11-25', title: '多语言与详情编辑优化', items: [
       '补齐英文界面翻译，到期提醒、联动页、设置页等不再出现中英混杂',
       '拍照预览改为完整显示不裁剪，物品照片支持点击全屏查看',
