@@ -6,7 +6,7 @@
   'use strict';
 
   /* ---------------- 常量 ---------------- */
-  var APP_VERSION = '2.82';
+  var APP_VERSION = '2.83';
   var DB_KEY = 'organizer_local_v2';
   var PREF_KEY = 'organizer_pref_v2';
   var HISTORY_KEY = 'organizer_search_history_v2';
@@ -26,6 +26,12 @@
   var DEFAULT_MAP_POINT = { lat: 39.9087, lng: 116.3975 };
 
   var APP_VERSION_CHANGELOG = [
+    { version: '2.83', date: '2026-11-26', title: '百度回退与地图细节调整', items: [
+      '百度地图瓦片尺寸检测失败时 1.2 秒内切换高德',
+      '恢复地图小猫设备标记，手机标签仅表示用户定位',
+      '删除全屏地图按钮',
+      '导航物品文字放大、灰字拉开间距，设备把手改为细线'
+    ] },
     { version: '2.82', date: '2026-11-26', title: '腾讯定位与百度地图彻底修复', items: [
       '按腾讯官方 DOMOverlay 写法重写手机定位标签，修复腾讯地图无定位',
       '百度地图监听 tilesloaded 事件，瓦片未真正加载立即切换高德地图',
@@ -2374,7 +2380,7 @@
     var b = state.deviceBind || {};
     var icon = b.photo
       ? '<img src="' + escapeHTML(b.photo) + '" alt="">'
-      : '📱';
+      : escapeHTML(state.link.icon || '🐱');
     return '<div class="map-item-pin"><span class="map-item-photo">' + icon + '</span>' +
       '<span class="map-pin-stem"></span><span class="map-pin-dot"></span></div>';
   }
@@ -2494,10 +2500,6 @@
       var phoneHTML = mapPhoneMarkerHTML();
       if (!holder.map || holder.provider !== 'baidu') {
         holder.map = new BMap.Map(el, { enableMapClick: false });
-        var baiduTilesLoaded = false;
-        if (holder.map.addEventListener) {
-          holder.map.addEventListener('tilesloaded', function () { baiduTilesLoaded = true; });
-        }
         holder.provider = 'baidu';
         holder.fallback = false;
         holder.tile = null;
@@ -2526,9 +2528,9 @@
           var imgs = el.querySelectorAll('img');
           var loaded = false;
           for (var i = 0; i < imgs.length; i++) {
-            if (imgs[i].complete && imgs[i].naturalWidth > 0) { loaded = true; break; }
+            if (imgs[i].complete && imgs[i].naturalWidth > 50 && imgs[i].naturalHeight > 50) { loaded = true; break; }
           }
-          if (!baiduTilesLoaded || !loaded) {
+          if (!loaded) {
             state.baiduFailed = true;
             state.mapProvider = 'amap';
             try { localStorage.setItem(MAP_PROVIDER_KEY, 'amap'); } catch (e) {}
@@ -2539,7 +2541,7 @@
             syncFallbackMap(id, el);
             toast('百度地图未能加载，已切换高德地图');
           }
-        }, 1800);
+        }, 1200);
       } else {
         if (holder.map.checkResize) holder.map.checkResize();
         if (!hasFix && holder.marker) { holder.map.removeOverlay(holder.marker); holder.marker = null; }
@@ -2893,7 +2895,6 @@
         '<div class="map-actions">' +
           '<button class="map-primary" data-action="refresh-locator">' + tr('刷新位置') + '</button>' +
           '<button class="map-ghost" data-action="item-navigation">' + tr('物品导航') + '</button>' +
-          '<button class="map-ghost" data-action="fullscreen-map">' + tr('全屏地图') + '</button>' +
           '<button class="map-ghost" data-action="choose-map">' + tr('选择地图') + '</button>' +
         '</div>' +
         '<div class="map-status">' + escapeHTML(locationStatusText()) + locationActionHTML() + '</div>' +
@@ -3542,7 +3543,7 @@
     if (o.type === 'itemNav') {
       var navName = (state.deviceBind && state.deviceBind.itemName) || '物品';
       return sheetShell(tr('选择导航物品'),
-        '<div class="sheet-list"><div class="sheet-row" data-action="navigate-item">' +
+        '<div class="sheet-list"><div class="sheet-row nav-item-row" data-action="navigate-item">' +
           '<span class="row-emoji">🧭</span><span class="row-main">' + escapeHTML(navName) +
           '<span class="row-sub">' + tr('打开') + mapProviderLabel(state.mapProvider) + tr('导航到物品当前位置') + '</span></span></div></div>');
     }
@@ -4196,7 +4197,7 @@
           state.overlay = null;
           renderOverlay();
           render();
-          toast(tr('已切换地图') + '：' + mapProviderLabel(provider));
+          toast(provider === 'baidu' ? '正在加载百度地图…' : (tr('已切换地图') + '：' + mapProviderLabel(provider)));
         }
         break;
       case 'item-navigation': state.overlay = { type: 'itemNav' }; renderOverlay(); break;
