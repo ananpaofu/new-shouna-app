@@ -6,7 +6,7 @@
   'use strict';
 
   /* ---------------- 常量 ---------------- */
-  var APP_VERSION = '2.62';
+  var APP_VERSION = '2.64';
   var DB_KEY = 'organizer_local_v2';
   var PREF_KEY = 'organizer_pref_v2';
   var HISTORY_KEY = 'organizer_search_history_v2';
@@ -24,6 +24,15 @@
   var DEFAULT_DEVICE_API = 'https://device-api.xieta1371.workers.dev';
 
   var APP_VERSION_CHANGELOG = [
+    { version: '2.64', date: '2026-11-25', title: '定位与上报时间区分', items: [
+      '地图信息区同时显示“定位时间”和“上报时间”，区分设备真实 GPS 时间与最新心跳时间',
+      '定位接口解析 heart_time / sys_time，云知行显示的最新时间可以在 App 中看到',
+      '两个 Worker 同步返回上报时间字段，重新部署 Worker 后云端路径也能显示'
+    ] },
+    { version: '2.63', date: '2026-11-25', title: '电脑端定位回退', items: [
+      '云端分享码读取失败时，自动回退到手机端同款直连定位，不再只显示“分享码已过期”',
+      '电脑端可正常读取物品位置；电脑定位权限只用于“我的位置”和距离，不改变物品定位来源'
+    ] },
     { version: '2.62', date: '2026-11-24', title: '绑定弹层文字对齐', items: [
       '“＋ 新建物品”选择框与物品名称输入框文字统一左对齐',
       '填写任意物品名称时都保持左对齐，视觉起点一致'
@@ -1862,6 +1871,7 @@
       lat: num(rec[idx('lat', idx('weidu', 3))]),
       lng: num(rec[idx('lng', idx('jingdu', 2))]),
       time: rec[idx('datetime', 6)] || null,
+      reportTime: rec[idx('heart_time', idx('sys_time', 7))] || null,
       speed: rec[idx('speed', idx('su', 8))] || '',
       battery: rec[idx('battery', idx('electric', 20))] || '',
       device: rec[idx('device', idx('user_name', 1))] || '',
@@ -1947,13 +1957,6 @@
       render();
       toast('位置已更新');
     }
-    if (state.deviceApi && state.deviceShareCode) {
-      fetch(state.deviceApi + '/api/locate?code=' + encodeURIComponent(state.deviceShareCode) + '&t=' + Date.now(), { cache: 'no-store' })
-        .then(function (r) { return r.json(); })
-        .then(finish)
-        .catch(function () { finish({ ok: false, error: '云端位置读取失败' }); });
-      return;
-    }
     function workerFallback() {
       var api = state.locatorApi;
       if (!api) { finish({ ok: false, error: '定位参数已过期' }); return; }
@@ -1963,12 +1966,26 @@
         .then(finish)
         .catch(function () { finish({ ok: false, error: '分享已过期或网络不可用' }); });
     }
-    fetchLocatorParams(function (params) {
-      if (!params) { workerFallback(); return; }
-      locatorJSONP(params, function (d) {
-        if (d && d.ok) finish(d); else workerFallback();
+    function readDirect() {
+      if (!id) { finish({ ok: false, error: '分享链接无效' }); return; }
+      fetchLocatorParams(function (params) {
+        if (!params) { workerFallback(); return; }
+        locatorJSONP(params, function (d) {
+          if (d && d.ok) finish(d); else workerFallback();
+        });
       });
-    });
+    }
+    function cloudFallback() { readDirect(); }
+    if (state.deviceApi && state.deviceShareCode) {
+      fetch(state.deviceApi + '/api/locate?code=' + encodeURIComponent(state.deviceShareCode) + '&t=' + Date.now(), { cache: 'no-store' })
+        .then(function (r) { return r.json(); })
+        .then(function (res) {
+          if (res && res.ok) finish(res); else cloudFallback();
+        })
+        .catch(cloudFallback);
+      return;
+    }
+    readDirect();
   }
   function locatorTimeText(ts) {
     var n = Number(ts);
@@ -2403,7 +2420,8 @@
     var mapInfo = state.locatorLoading ? tr('正在读取位置…') :
       (state.locatorFix
         ? '<div>纬度 <b>' + state.locatorFix.lat + '</b> · 经度 <b>' + state.locatorFix.lng + '</b></div>' +
-          '<div class="muted small">' + tr('定位时间：') + escapeHTML(locatorTimeText(state.locatorFix.time)) + '</div>' +
+          '<div class="muted small">' + tr('定位时间：') + escapeHTML(locatorTimeText(state.locatorFix.time)) +
+          (state.locatorFix.reportTime ? ' · ' + tr('上报时间：') + escapeHTML(locatorTimeText(state.locatorFix.reportTime)) : '') + '</div>' +
           (state.locatorDistance != null ? '<div class="muted small">' + tr('我到物品距离：约 ') + '<b>' + distanceText(state.locatorDistance) + '</b> · ' + tr(motion) + '</div>' : '')
         : '<div class="muted small">' + tr('正在读取位置…') + '</div>');
     var deviceTools = '<span class="device-tools">' +
