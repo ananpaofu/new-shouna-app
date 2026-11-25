@@ -678,6 +678,10 @@ body.overlay-open .app-view .map-layer-switch { display: none; }
 .leaflet-item-marker .map-item-badge { position: absolute; left: 0; bottom: 14px; transform: translateX(-50%); }
 .amap-item-marker { position: relative; }
 .amap-item-marker .map-item-badge { position: static; transform: none; }
+.baidu-html-marker { position: absolute; transform: translate(-50%, -100%); pointer-events: none; }
+.baidu-html-marker .amap-item-marker { position: relative; }
+.tencent-html-marker { position: absolute; top: 0; left: 0; pointer-events: none; }
+.tencent-html-marker .amap-item-marker { position: relative; }
 .map-item-pin, .map-phone-pin { width: 44px; display: flex; flex-direction: column; align-items: center; pointer-events: none; }
 .map-item-photo, .map-phone-photo {
   width: 38px; height: 38px; flex: 0 0 auto; border-radius: 50%; background: #fff; border: 2px solid #fff;
@@ -746,8 +750,9 @@ body.map-full-open .app-header, body.map-full-open .app-view, body.map-full-open
 .map-providers { display: flex; gap: 6px; margin-bottom: 12px; flex-wrap: wrap; }
 .map-providers button { flex: 1 1 56px; padding: 9px 4px; border-radius: 9px; background: var(--green-soft); color: var(--green); font-size: 12px; }
 .map-providers button:disabled { opacity: .45; }
-.map-choose-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 4px 18px 18px; }
-.map-choose-grid button { padding: 14px 8px; border-radius: 10px; background: var(--green-soft); color: var(--green); font-size: 14px; }
+.map-choose-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; padding: 4px 14px 18px; }
+.map-choose-grid button { padding: 14px 4px; border-radius: 10px; background: #f3f3f3; color: var(--ink-2); font-size: 13px; white-space: nowrap; }
+.map-choose-grid button.selected { background: var(--green); color: #fff; font-weight: 600; }
 .map-primary, .map-ghost { flex: 1; padding: 12px; border-radius: 9px; font-size: 13px; }
 .map-primary { background: var(--green); color: #fff; }
 .map-ghost { background: #f3f3f3; color: var(--ink-2); }
