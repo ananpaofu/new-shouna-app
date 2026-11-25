@@ -6,7 +6,7 @@
   'use strict';
 
   /* ---------------- 常量 ---------------- */
-  var APP_VERSION = '2.79';
+  var APP_VERSION = '2.80';
   var DB_KEY = 'organizer_local_v2';
   var PREF_KEY = 'organizer_pref_v2';
   var HISTORY_KEY = 'organizer_search_history_v2';
@@ -26,6 +26,12 @@
   var DEFAULT_MAP_POINT = { lat: 39.9087, lng: 116.3975 };
 
   var APP_VERSION_CHANGELOG = [
+    { version: '2.80', date: '2026-11-26', title: '地图浮层与弹窗遮挡修复', items: [
+      '地图按钮改为单行，修复弹窗打开时的文字与设备面板遮挡',
+      '修正腾讯地图用户定位坐标和切换地图后无法点击的问题',
+      '打开查找、绑定、图案等弹窗时自动收起设备面板',
+      '我的页删除头像姓名ID，移除设备旁边无作用的小箭头'
+    ] },
     { version: '2.79', date: '2026-11-25', title: '全屏地图与声音细节修正', items: [
       '设备页改为全屏地图，设备信息改为底部弹出面板',
       '地图优先显示用户手机 GPS 定位',
@@ -1614,6 +1620,7 @@
   }
   function renderSheet() {
     var root = $('#sheet-root');
+    if (document.body) document.body.classList.toggle('sheet-open', !!state.sheet);
     if (!root) return;
     if (state.sheet === 'sort') root.innerHTML = sortSheetHTML();
     else if (state.sheet === 'soundSettings') root.innerHTML = soundSettingsSheetHTML();
@@ -1743,10 +1750,6 @@
     }
     var count = getItems().filter(function (it) { return !it.trashed; }).length;
     return '<div class="page me-page">' +
-      '<div class="me-hero"><div class="me-avatar" data-action="pick-avatar">' +
-        (String(p.avatar || '').indexOf('data:') === 0 ? '<img src="' + escapeHTML(p.avatar) + '" alt="">' : escapeHTML(p.avatar || '我')) +
-        '<span class="me-edit">✎</span></div>' +
-        '<div class="me-name">' + escapeHTML(p.nickname || '我的收纳') + '</div><div class="me-id">@local_user · ID 963221</div></div>' +
       meCard('界面设置', 'ui',
         optionRow('pref-list', '▦', '字体大小', labelOf(FONT_SIZE_OPTIONS, p.fontSize), ' data-key="fontSize" data-title="字体大小"') +
         optionRow('pref-list', '✏️', '字体粗细', labelOf(FONT_WEIGHT_OPTIONS, p.fontWeight), ' data-key="fontWeight" data-title="字体粗细"') +
@@ -2609,6 +2612,7 @@
       var point = new TMap.LatLng(p.lat, p.lng);
       var coordKey = hasFix ? (p.lat + ',' + p.lng) : 'default';
       var up = userMapPoint();
+      var upP = up ? mapCoords(up.lat, up.lng, 'qq') : null;
       var itemHTML = '<div class="amap-item-marker">' + mapItemBadgeHTML() + '</div>';
       var phoneHTML = mapPhoneMarkerHTML();
       if (!holder.map || holder.provider !== 'tencent') {
@@ -2631,7 +2635,7 @@
         if (hasFix) holder.marker = tencentHTMLMarker(holder.map, point, itemHTML, 1000);
         holder.coordKey = coordKey;
         if (up) {
-          holder.userMarker = tencentHTMLMarker(holder.map, new TMap.LatLng(up.lat, up.lng), phoneHTML, 900);
+          holder.userMarker = tencentHTMLMarker(holder.map, new TMap.LatLng(upP.lat, upP.lng), phoneHTML, 900);
         }
       } else {
         if (holder.map.resize) holder.map.resize();
@@ -2649,7 +2653,7 @@
           }
         }
         if (up) {
-          var phonePoint = new TMap.LatLng(up.lat, up.lng);
+          var phonePoint = new TMap.LatLng(upP.lat, upP.lng);
           if (holder.userMarker) {
             if (holder.userMarker.setHtml) holder.userMarker.setHtml(phoneHTML);
             if (holder.userMarker.setPosition) holder.userMarker.setPosition(phonePoint);
@@ -2901,7 +2905,7 @@
           '<button class="add-device" data-action="cancel-delete-mode">' + tr('取消') + '</button>' +
           '<button class="add-device danger" data-action="confirm-delete-device">' + tr('完成') + '</button>'
         : '<button class="add-device danger" data-action="enter-delete-mode">' + tr('删除绑定') + '</button>') +
-      '<button class="device-collapse' + (state.deviceCollapsed ? ' folded' : '') + '" data-action="toggle-device-collapse" aria-label="' + tr('收起设备') + '"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></button></span>';
+      '</span>';
     var deviceCardHTML = (!bound || state.deviceCollapsed) ? '' :
       '<div class="link-card device-card">' +
         '<div class="device-top">' +
@@ -3535,6 +3539,7 @@
   }
   function renderOverlay() {
     var root = $('#overlay-root');
+    if (state.overlay && state.sheet) { state.sheet = null; renderSheet(); }
     if (document.body) {
       document.body.classList.toggle('map-full-open', !!(state.overlay && state.overlay.type === 'mapFull'));
       document.body.classList.toggle('overlay-open', !!state.overlay);
@@ -4130,6 +4135,7 @@
           if (provider === 'baidu') state.baiduFailed = false;
           try { localStorage.setItem(MAP_PROVIDER_KEY, provider); } catch (e) {}
           state.overlay = null;
+          renderOverlay();
           render();
           toast(tr('已切换地图') + '：' + mapProviderLabel(provider));
         }
@@ -4246,6 +4252,7 @@
         if (state.overlay && state.overlay.src) {
           var src = state.overlay.src, target = state.overlay.target || 'form';
           state.overlay = null;
+          renderOverlay();
           if (target === 'avatar') { state.pref.avatar = src; savePref(); render(); toast('头像已更新'); }
           else if (target === 'bind') {
             state.bindDraft = state.bindDraft || {};

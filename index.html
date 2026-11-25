@@ -12,7 +12,7 @@
   <link rel="apple-touch-icon" href="icon-192.png" />
   <link rel="icon" href="icon-192.png" />
   <link rel="stylesheet" href="leaflet.css?v=1.9.4" />
-  <link rel="stylesheet" href="mobile.css?v=2.79" />
+  <link rel="stylesheet" href="mobile.css?v=2.80" />
   <title>寻迹 · 收纳清单</title>
 </head>
 <body>
@@ -33,10 +33,10 @@
   <!-- 仅保留纯前端逻辑：无任何后端 / 社交 / 云端 SDK -->
   <script src="leaflet.js?v=1.9.4"></script>
   <script>window._AMapSecurityConfig = { securityJsCode: 'ee56a8dbd4e2928d9744698584c47b8d' };</script>
-  <script src="https://webapi.amap.com/maps?v=2.0&key=6b98f901ff21c1da7bf25bfd03c4ac15&plugin=AMap.Scale,AMap.ToolBar&t=2.79"></script>
-  <script src="https://api.map.baidu.com/api?v=2.0&ak=x76bipdLrCNEA3qP3URxNrMbgDFARN8V&t=2.79"></script>
-  <script src="https://map.qq.com/api/gljs?v=1.exp&key=HAKBZ-BAM6N-PWUFN-SOMJU-D5OW5-EYBKS&t=2.79"></script>
-  <script src="mobile.js?v=2.79"></script>
+  <script src="https://webapi.amap.com/maps?v=2.0&key=6b98f901ff21c1da7bf25bfd03c4ac15&plugin=AMap.Scale,AMap.ToolBar&t=2.80"></script>
+  <script src="https://api.map.baidu.com/api?v=2.0&ak=x76bipdLrCNEA3qP3URxNrMbgDFARN8V&t=2.80"></script>
+  <script src="https://map.qq.com/api/gljs?v=1.exp&key=HAKBZ-BAM6N-PWUFN-SOMJU-D5OW5-EYBKS&t=2.80"></script>
+  <script src="mobile.js?v=2.80"></script>
   <script>
     // PWA 安装事件捕获（供「安装到桌面」按钮调用）
     window.__organizerInstallPrompt = null;
@@ -49,7 +49,7 @@
     });
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', function () {
-        navigator.serviceWorker.register('./sw.js?v=2.79', { updateViaCache: 'none' }).then(function (reg) {
+        navigator.serviceWorker.register('./sw.js?v=2.80', { updateViaCache: 'none' }).then(function (reg) {
           if (reg && typeof reg.update === 'function') reg.update();
           if (reg) reg.addEventListener('updatefound', function () {
             var nw = reg.installing;
