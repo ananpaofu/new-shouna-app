@@ -6,7 +6,7 @@
   'use strict';
 
   /* ---------------- 常量 ---------------- */
-  var APP_VERSION = '2.83';
+  var APP_VERSION = '2.84';
   var DB_KEY = 'organizer_local_v2';
   var PREF_KEY = 'organizer_pref_v2';
   var HISTORY_KEY = 'organizer_search_history_v2';
@@ -26,6 +26,12 @@
   var DEFAULT_MAP_POINT = { lat: 39.9087, lng: 116.3975 };
 
   var APP_VERSION_CHANGELOG = [
+    { version: '2.84', date: '2026-11-26', title: '设备把手与手机定位气泡修复', items: [
+      '恢复设备底部白色方框，隐藏未打开弹层产生的白条',
+      '手机定位增加“我的手机”蓝色气泡并延迟重挂载确保显示',
+      '备用地图实例冲突修复，切换地图源时清空旧实例',
+      '版本号更新到 2.84'
+    ] },
     { version: '2.83', date: '2026-11-26', title: '百度回退与地图细节调整', items: [
       '百度地图瓦片尺寸检测失败时 1.2 秒内切换高德',
       '恢复地图小猫设备标记，手机标签仅表示用户定位',
@@ -2386,6 +2392,7 @@
   }
   function mapPhoneMarkerHTML() {
     return '<div class="map-phone-pin"><span class="map-phone-photo">📱</span>' +
+      '<span class="map-phone-label">我的手机</span>' +
       '<span class="map-pin-stem"></span><span class="map-pin-dot"></span></div>';
   }
   function mapLayerSwitchHTML() {
@@ -2784,6 +2791,12 @@
     var el = document.getElementById(id);
     if (!el) return;
     cleanMapLabels(el);
+    var checkKey = id === 'leaflet-map' ? 'small' : 'full';
+    var checkHolder = state.leaflet[checkKey];
+    if (checkHolder && checkHolder.provider === 'leaflet' && checkHolder.map) {
+      syncFallbackMap(id, el);
+      return;
+    }
     if (state.mapProvider === 'baidu' && !state.baiduFailed) {
       syncBaiduMap(id, el);
       return;
@@ -2849,6 +2862,9 @@
         holder.coordKey = coordKey;
         holder.map.setCenter([p.lng, p.lat]);
       }
+    }
+    if (up && holder.userMarker && holder.map && holder.map.add) {
+      setTimeout(function () { try { holder.map.add(holder.userMarker); } catch (e) {} }, 300);
     }
   }
   function clearDeviceBinding() {
@@ -4193,6 +4209,8 @@
         if (['amap', 'baidu', 'qq'].indexOf(provider) >= 0) {
           state.mapProvider = provider;
           if (provider === 'baidu') state.baiduFailed = false;
+          destroyLeafletMap('small'); destroyLeafletMap('full');
+          state.leaflet = { small: {}, full: {} };
           try { localStorage.setItem(MAP_PROVIDER_KEY, provider); } catch (e) {}
           state.overlay = null;
           renderOverlay();
