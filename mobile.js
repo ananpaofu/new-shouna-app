@@ -6,7 +6,7 @@
   'use strict';
 
   /* ---------------- 常量 ---------------- */
-  var APP_VERSION = '2.75';
+  var APP_VERSION = '2.76';
   var DB_KEY = 'organizer_local_v2';
   var PREF_KEY = 'organizer_pref_v2';
   var HISTORY_KEY = 'organizer_search_history_v2';
@@ -23,8 +23,15 @@
   var DEFAULT_DEVICE_NO = '672305585540';
   var DEFAULT_DEVICE_PWD = '123456';
   var DEFAULT_DEVICE_API = 'https://device-api.xieta1371.workers.dev';
+  var DEFAULT_MAP_POINT = { lat: 39.9087, lng: 116.3975 };
 
   var APP_VERSION_CHANGELOG = [
+    { version: '2.76', date: '2026-11-25', title: '地图常显与声音页焕新', items: [
+      '设备页直接显示完整地图，无需先绑定设备',
+      '地图默认使用展开后的高度，并移除联动能力板块',
+      '声音页重新设计为脉冲声波头图与步骤卡片',
+      '我的页删除老年模式、通知时间和提示音，版本号更新到 2.76'
+    ] },
     { version: '2.75', date: '2026-11-25', title: '设备页地图与声音自定义', items: [
       '底部三个入口等距排列，声音位于正中，联动文案改为设备',
       '设备页打开即显示地图，物品绑定入口移到设备区下方',
@@ -587,6 +594,7 @@
       '当人呼唤物品时，标签会发声回应，帮助你快速找到它。': '當人呼喚物品時，標籤會發出聲音回應，幫助你快速找到它。',
       '常用物品': '常用物品', '未绑定物品时，可直接输入名称试听。': '未綁定物品時，可直接輸入名稱試聽。',
       '语音呼唤': '語音呼喚', '回应声音': '回應聲音', '保存回应声音': '儲存回應聲音', '试听': '試聽',
+      '输入名称，或直接说出物品': '輸入名稱，或直接說出物品',
       '例如：我在这里，{物品}，请来找我': '例如：我在這裡，{物品}，請來找我', '用 {物品} 代表呼唤的物品名称': '用 {物品} 代表呼喚的物品名稱',
       '物品绑定': '物品綁定', '绑定后显示物品实时位置和距离': '綁定後顯示物品即時位置和距離', '绑定设备后显示实时位置': '綁定設備後顯示即時位置',
       '登录验证与密码保护': '登入驗證與密碼保護', '修改密码': '修改密碼', '更新登录密码': '更新登入密碼',
@@ -720,6 +728,7 @@
       '当人呼唤物品时，标签会发声回应，帮助你快速找到它。': 'When you call an item, its tag sounds back to help you find it quickly.',
       '常用物品': 'Frequent items', '未绑定物品时，可直接输入名称试听。': 'Without a bound item, enter a name to preview the sound.',
       '语音呼唤': 'Voice call', '回应声音': 'Reply sound', '保存回应声音': 'Save reply sound', '试听': 'Preview',
+      '输入名称，或直接说出物品': 'Type a name, or just say it aloud',
       '例如：我在这里，{物品}，请来找我': 'e.g. I am here, {item}, come find me', '用 {物品} 代表呼唤的物品名称': 'Use {item} for the called item name',
       '物品绑定': 'Bind item', '绑定后显示物品实时位置和距离': 'Bind a device to show live location and distance', '绑定设备后显示实时位置': 'Live location appears after binding',
       '登录验证与密码保护': 'Sign-in and password protection', '修改密码': 'Change password', '更新登录密码': 'Update password',
@@ -1707,10 +1716,7 @@
         optionRow('pref-list', '✨', '界面颜色', labelOf(THEME_OPTIONS, p.theme), ' data-key="theme" data-title="界面颜色"') +
         optionRow('pref-list', '🌐', '语言', labelOf(LANG_OPTIONS, p.language), ' data-key="language" data-title="语言"')) +
       meCard('功能设置', 'features',
-        toggle('elder', '🧓', '老年模式', '适中放大 · 高对比 · 简化功能') +
         optionRow('go-notifications', '📬', '通知中心', '查看过期与系统消息') +
-        optionRow('edit-time', '🕘', '通知时间', (p.notifyTime || '09:00') + ' · ' + tr('到期与临期提醒')) +
-        toggle('sound', '🔊', '提示音', '查找标签时播放声音') +
         toggle('security', '🛡️', '账号安全', '登录验证与密码保护') +
         optionRow('go-password', '🔒', '修改密码', '更新登录密码') +
         optionRow('go-tutorial', '📖', '使用指南', '操作步骤与颜色说明')) +
@@ -2425,10 +2431,11 @@
     try {
       var holder = state.leaflet[key];
       var f = state.locatorFix;
-      if (!f || !f.lat || !f.lng) return;
-      var p = baiduJSCoords(f.lat, f.lng);
+      var hasFix = !!(f && f.lat && f.lng);
+      var base = hasFix ? f : DEFAULT_MAP_POINT;
+      var p = baiduJSCoords(base.lat, base.lng);
       var point = new BMap.Point(p.lng, p.lat);
-      var coordKey = p.lat + ',' + p.lng;
+      var coordKey = hasFix ? (p.lat + ',' + p.lng) : 'default';
       var up = userBaiduPoint();
       var itemHTML = '<div class="amap-item-marker">' + mapItemBadgeHTML() + '</div>';
       var phoneHTML = mapPhoneMarkerHTML();
@@ -2441,8 +2448,10 @@
         holder.roadLayer = null;
         holder.map.centerAndZoom(point, key === 'small' ? 17 : 16);
         holder.map.enableScrollWheelZoom(true);
-        holder.marker = baiduHTMLMarker(point, itemHTML, 1000);
-        holder.map.addOverlay(holder.marker);
+        if (hasFix) {
+          holder.marker = baiduHTMLMarker(point, itemHTML, 1000);
+          holder.map.addOverlay(holder.marker);
+        }
         holder.coordKey = coordKey;
         if (up) {
           holder.userMarker = baiduHTMLMarker(new BMap.Point(up.lng, up.lat), phoneHTML, 900);
@@ -2451,9 +2460,15 @@
         applyBaiduLayerFor(key);
       } else {
         if (holder.map.checkResize) holder.map.checkResize();
-        if (holder.marker) {
-          if (holder.marker.setHtml) holder.marker.setHtml(itemHTML);
-          if (holder.marker.setPoint) holder.marker.setPoint(point);
+        if (!hasFix && holder.marker) { holder.map.removeOverlay(holder.marker); holder.marker = null; }
+        if (hasFix) {
+          if (holder.marker) {
+            if (holder.marker.setHtml) holder.marker.setHtml(itemHTML);
+            if (holder.marker.setPoint) holder.marker.setPoint(point);
+          } else {
+            holder.marker = baiduHTMLMarker(point, itemHTML, 1000);
+            holder.map.addOverlay(holder.marker);
+          }
         }
         if (up) {
           var phonePoint = new BMap.Point(up.lng, up.lat);
@@ -2533,10 +2548,11 @@
     try {
       var holder = state.leaflet[key];
       var f = state.locatorFix;
-      if (!f || !f.lat || !f.lng) return;
-      var p = mapCoords(f.lat, f.lng, 'qq');
+      var hasFix = !!(f && f.lat && f.lng);
+      var base = hasFix ? f : DEFAULT_MAP_POINT;
+      var p = mapCoords(base.lat, base.lng, 'qq');
       var point = new TMap.LatLng(p.lat, p.lng);
-      var coordKey = p.lat + ',' + p.lng;
+      var coordKey = hasFix ? (p.lat + ',' + p.lng) : 'default';
       var up = userMapPoint();
       var itemHTML = '<div class="amap-item-marker">' + mapItemBadgeHTML() + '</div>';
       var phoneHTML = mapPhoneMarkerHTML();
@@ -2553,16 +2569,25 @@
         holder.tile = null;
         holder.satelliteLayer = null;
         holder.roadLayer = null;
-        holder.marker = tencentHTMLMarker(holder.map, point, itemHTML, 1000);
+        if (hasFix) holder.marker = tencentHTMLMarker(holder.map, point, itemHTML, 1000);
         holder.coordKey = coordKey;
         if (up) {
           holder.userMarker = tencentHTMLMarker(holder.map, new TMap.LatLng(up.lat, up.lng), phoneHTML, 900);
         }
       } else {
         if (holder.map.resize) holder.map.resize();
-        if (holder.marker) {
-          if (holder.marker.setHtml) holder.marker.setHtml(itemHTML);
-          if (holder.marker.setPosition) holder.marker.setPosition(point);
+        if (!hasFix && holder.marker) {
+          if (holder.marker.destroy) holder.marker.destroy();
+          else if (holder.marker.setMap) holder.marker.setMap(null);
+          holder.marker = null;
+        }
+        if (hasFix) {
+          if (holder.marker) {
+            if (holder.marker.setHtml) holder.marker.setHtml(itemHTML);
+            if (holder.marker.setPosition) holder.marker.setPosition(point);
+          } else {
+            holder.marker = tencentHTMLMarker(holder.map, point, itemHTML, 1000);
+          }
         }
         if (up) {
           var phonePoint = new TMap.LatLng(up.lat, up.lng);
@@ -2596,9 +2621,10 @@
     var key = id === 'leaflet-map' ? 'small' : 'full';
     var holder = state.leaflet[key];
     var f = state.locatorFix;
-    if (!f || !f.lat || !f.lng) return;
-    var p = mapCoords(f.lat, f.lng, 'amap');
-    var coordKey = p.lat + ',' + p.lng;
+    var hasFix = !!(f && f.lat && f.lng);
+    var base = hasFix ? f : DEFAULT_MAP_POINT;
+    var p = mapCoords(base.lat, base.lng, 'amap');
+    var coordKey = hasFix ? (p.lat + ',' + p.lng) : 'default';
     var up = userMapPoint();
     var icon = L.divIcon({
       className: 'leaflet-item-icon',
@@ -2618,12 +2644,16 @@
       holder.map = L.map(el, { zoomControl: true, attributionControl: false, preferCanvas: true, minZoom: 3, maxZoom: 18 }).setView([p.lat, p.lng], key === 'small' ? 17 : 16);
       holder.tile = L.tileLayer(fallbackTileURL(state.mapLayerKind === 'satellite'),
         { subdomains: '1234', tileSize: 128, zoomOffset: 1, minZoom: 3, maxZoom: 18, maxNativeZoom: 17 }).addTo(holder.map);
-      holder.marker = L.marker([p.lat, p.lng], { icon: icon, keyboard: false, interactive: false, zIndexOffset: 1000 }).addTo(holder.map);
+      if (hasFix) holder.marker = L.marker([p.lat, p.lng], { icon: icon, keyboard: false, interactive: false, zIndexOffset: 1000 }).addTo(holder.map);
       holder.coordKey = coordKey;
       if (up && phoneIcon) holder.userMarker = L.marker([up.lat, up.lng], { icon: phoneIcon, keyboard: false, interactive: false, zIndexOffset: 900 }).addTo(holder.map);
     } else {
       holder.map.invalidateSize();
-      if (holder.marker) holder.marker.setIcon(icon);
+      if (!hasFix && holder.marker) { holder.map.removeLayer(holder.marker); holder.marker = null; }
+      if (hasFix) {
+        if (holder.marker) holder.marker.setIcon(icon);
+        else holder.marker = L.marker([p.lat, p.lng], { icon: icon, keyboard: false, interactive: false, zIndexOffset: 1000 }).addTo(holder.map);
+      }
       if (up && phoneIcon) {
         if (holder.userMarker) holder.userMarker.setLatLng([up.lat, up.lng]).setIcon(phoneIcon);
         else holder.userMarker = L.marker([up.lat, up.lng], { icon: phoneIcon, keyboard: false, interactive: false, zIndexOffset: 900 }).addTo(holder.map);
@@ -2655,9 +2685,10 @@
     var key = id === 'leaflet-map' ? 'small' : 'full';
     var holder = state.leaflet[key];
     var f = state.locatorFix;
-    if (!f || !f.lat || !f.lng) return;
-    var p = mapCoords(f.lat, f.lng, 'amap');
-    var coordKey = p.lat + ',' + p.lng;
+    var hasFix = !!(f && f.lat && f.lng);
+    var base = hasFix ? f : DEFAULT_MAP_POINT;
+    var p = mapCoords(base.lat, base.lng, 'amap');
+    var coordKey = hasFix ? (p.lat + ',' + p.lng) : 'default';
     var up = userMapPoint();
     var content = '<div class="amap-item-marker">' + mapItemBadgeHTML() + '</div>';
     if (!holder.map) {
@@ -2670,8 +2701,10 @@
         resizeEnable: true,
         mapStyle: 'amap://styles/normal'
       });
-      holder.marker = new AMap.Marker({ position: [p.lng, p.lat], content: content, anchor: 'bottom-center', zIndex: 1000 });
-      holder.map.add(holder.marker);
+      if (hasFix) {
+        holder.marker = new AMap.Marker({ position: [p.lng, p.lat], content: content, anchor: 'bottom-center', zIndex: 1000 });
+        holder.map.add(holder.marker);
+      }
       holder.coordKey = coordKey;
       if (up) {
         holder.userMarker = new AMap.Marker({ position: [up.lng, up.lat], content: mapPhoneMarkerHTML(), anchor: 'bottom-center', zIndex: 900 });
@@ -2680,7 +2713,14 @@
       applyMapLayerFor(key);
     } else {
       holder.map.resize();
-      if (holder.marker) holder.marker.setContent(content);
+      if (!hasFix && holder.marker) { holder.map.remove(holder.marker); holder.marker = null; }
+      if (hasFix) {
+        if (holder.marker) holder.marker.setContent(content);
+        else {
+          holder.marker = new AMap.Marker({ position: [p.lng, p.lat], content: content, anchor: 'bottom-center', zIndex: 1000 });
+          holder.map.add(holder.marker);
+        }
+      }
       if (up) {
         if (holder.userMarker) holder.userMarker.setPosition([up.lng, up.lat]);
         else {
@@ -2727,19 +2767,7 @@
     toast('绑定已删除');
   }
   function linkHTML() {
-    var expanded = state.link.mapExpanded;
     var bound = !!(state.deviceBind && state.deviceVerified && state.deviceBind.deviceNo && state.deviceBind.itemName);
-    var abilities = [
-      { icon: '📍', title: '查找位置', body: '打开地图，按你当前位置到物品位置规划路线。' },
-      { icon: '🏠', title: '离位提醒', body: '物品离开设定区域时自动提醒，防止遗忘或丢失。' },
-      { icon: '📅', title: '自动记录收纳', body: '标签回到收纳区域时，自动更新收纳时间。' },
-      { icon: '🧭', title: '物品导航', body: '一键打开地图，直接导航到物品当前位置。' }
-    ];
-    var abilityHTML = '<div class="section-title">联动能力<span class="muted small">设备 + App</span></div>' +
-      '<div class="ability-grid">' + abilities.map(function (a) {
-        return '<div class="ability-card"><div class="ability-icon">' + a.icon + '</div><div class="bold">' + a.title + '</div><p>' + a.body + '</p></div>';
-      }).join('') + '</div>';
-
     var bind = state.deviceBind || {};
     var deviceName = bind.itemName || '物品';
     var deviceSub = bind.deviceNo ? '设备 ' + bind.deviceNo + ' · 已绑定' : '尚未绑定设备';
@@ -2747,11 +2775,7 @@
       ? '<img src="' + escapeHTML(bind.photo) + '" alt="">'
       : escapeHTML(state.link.icon || '🐱');
     var deviceSelected = !!(state.deleteMode && state.selectedDevices[bind.deviceNo]);
-    var mapInner = !bound
-      ? '<div class="map-placeholder">' + tr('绑定设备后显示实时位置') + '</div>'
-      : (state.locatorFix && state.locatorFix.lat && state.locatorFix.lng
-        ? '<div class="leaflet-map" id="leaflet-map"></div>' + mapLayerSwitchHTML()
-        : '<div class="map-placeholder">' + tr('物品位置读取中，请稍后刷新') + '</div>');
+    var mapInner = '<div class="leaflet-map" id="leaflet-map"></div>' + mapLayerSwitchHTML();
     var motion = state.locatorFix && (Number(state.locatorFix.speed) || 0) > 0 ? '移动中' : '静止';
     var mapInfo = !bound ? '<div class="muted small">' + tr('绑定设备后显示实时位置') + '</div>' :
       (state.locatorLoading ? tr('正在读取位置…') :
@@ -2790,21 +2814,19 @@
     return '<div class="page link-page">' +
       leaveBanner +
       '<div class="link-card map-card">' +
-        '<div class="link-card-head"><div><div class="bold">物品实时地图</div><div class="muted small">' + escapeHTML(locationStatusText()) + '</div>' + locationActionHTML() + '</div>' +
-          '<button class="map-toggle" data-action="toggle-map">' + (expanded ? '收起地图 ›' : '下拉展开地图 ›') + '</button></div>' +
+        '<div class="link-card-head"><div><div class="bold">物品实时地图</div><div class="muted small">' + escapeHTML(locationStatusText()) + '</div>' + locationActionHTML() + '</div></div>' +
         '<div class="map-actions">' +
           '<button class="map-primary" data-action="refresh-locator">' + tr('刷新位置') + '</button>' +
           '<button class="map-ghost" data-action="item-navigation">' + tr('物品导航') + '</button>' +
           '<button class="map-ghost" data-action="fullscreen-map">' + tr('全屏地图') + '</button>' +
           '<button class="map-ghost" data-action="choose-map">' + tr('选择地图') + '</button>' +
         '</div>' +
-        '<div class="map-box' + (expanded ? ' expanded' : '') + '">' + mapInner + '</div>' +
+        '<div class="map-box expanded">' + mapInner + '</div>' +
         '<div class="map-live-info">' + mapInfo + '</div>' +
       '</div>' +
       '<div class="section-title device-section-title"><span>' + tr('设备') + '</span>' + (bound ? deviceTools : '') + '</div>' +
       deviceCardHTML +
       bindCardHTML +
-      abilityHTML +
     '</div>';
   }
 
@@ -2817,32 +2839,34 @@
       if (names.indexOf(it.name) < 0) names.push(it.name);
     });
     var quick = names.length
-      ? '<div class="sound-quick"><div class="muted small">' + tr('常用物品') + '</div><div class="sound-chips">' + names.map(function (n) {
-          return '<button class="chip" data-action="call-item-by-name" data-name="' + escapeHTML(n) + '">' + escapeHTML(n) + '</button>';
+      ? '<div class="sound-quick"><div class="sound-quick-title">' + tr('常用物品') + '</div><div class="sound-chips">' + names.map(function (n) {
+          return '<button class="sound-chip" data-action="call-item-by-name" data-name="' + escapeHTML(n) + '"><span class="sound-chip-dot"></span>' + escapeHTML(n) + '</button>';
         }).join('') + '</div></div>'
       : '';
     var reply = String((state.pref && state.pref.soundReply) || DEFAULT_PREF.soundReply);
     return '<div class="page sound-page">' +
-      '<div class="sound-hero"><div class="sound-wave">' + navSVG('sound') + '</div>' +
-        '<div class="bold">' + tr('呼唤物品') + '</div>' +
-        '<div class="muted small">' + tr('当人呼唤物品时，标签会发声回应，帮助你快速找到它。') + '</div>' +
+      '<div class="sound-hero">' +
+        '<div class="sound-orb"><span class="sound-pulse p1"></span><span class="sound-pulse p2"></span><span class="sound-orb-core">' + navSVG('sound') + '</span></div>' +
+        '<div class="sound-eyebrow">VOICE FINDER</div>' +
+        '<div class="sound-title">' + tr('呼唤物品') + '</div>' +
+        '<div class="sound-sub">' + tr('当人呼唤物品时，标签会发声回应，帮助你快速找到它。') + '</div>' +
       '</div>' +
-      '<div class="link-card sound-card">' +
+      '<div class="link-card sound-card sound-step">' +
+        '<div class="sound-step-head"><span class="sound-step-no">01</span><div><div class="sound-step-title">' + tr('呼唤物品') + '</div><div class="muted small">' + tr('输入名称，或直接说出物品') + '</div></div></div>' +
         '<label class="form-label" for="sound-item-name">' + tr('物品名称') + '</label>' +
         '<input class="form-input" id="sound-item-name" placeholder="' + tr('输入物品名称，例如：防晒霜') + '">' +
         '<div class="sound-btn-row">' +
           '<button class="link-btn" data-action="call-item">' + tr('呼唤') + '</button>' +
-          '<button class="link-btn" data-action="voice-call">' + tr('语音呼唤') + '</button>' +
+          '<button class="link-btn ghost" data-action="voice-call">' + tr('语音呼唤') + '</button>' +
         '</div>' +
         '<div class="sound-status" id="sound-status">' + tr('未绑定物品时，可直接输入名称试听。') + '</div>' +
       '</div>' +
-      '<div class="link-card sound-card">' +
-        '<label class="form-label" for="sound-reply">' + tr('回应声音') + '</label>' +
+      '<div class="link-card sound-card sound-step">' +
+        '<div class="sound-step-head"><span class="sound-step-no">02</span><div><div class="sound-step-title">' + tr('回应声音') + '</div><div class="muted small">' + tr('用 {物品} 代表呼唤的物品名称') + '</div></div></div>' +
         '<input class="form-input" id="sound-reply" value="' + escapeHTML(reply) + '" placeholder="' + tr('例如：我在这里，{物品}，请来找我') + '">' +
-        '<div class="muted small">' + tr('用 {物品} 代表呼唤的物品名称') + '</div>' +
         '<div class="sound-btn-row">' +
           '<button class="link-btn" data-action="save-sound-reply">' + tr('保存回应声音') + '</button>' +
-          '<button class="link-btn" data-action="preview-sound-reply">' + tr('试听') + '</button>' +
+          '<button class="link-btn ghost" data-action="preview-sound-reply">' + tr('试听') + '</button>' +
         '</div>' +
       '</div>' +
       quick +
