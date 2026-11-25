@@ -110,7 +110,7 @@ a { color: inherit; text-decoration: none; }
 .header-actions { display: flex; align-items: center; gap: 2px; }
 .header-actions svg { width: 19px; height: 19px; }
 .header-back svg { width: 24px; height: 24px; }
-.header-edit { background: var(--green); color: #fff; padding: 6px 13px; border-radius: 11px; font-size: 12px; font-weight: 600; }
+.header-edit { background: var(--green); color: #fff; padding: 8px 16px; border-radius: 12px; font-size: 13px; font-weight: 600; }
 .header-edit:active { opacity: .8; }
 .home-header { display: grid; grid-template-columns: 34px 1fr 34px; gap: 0; }
 .home-title { text-align: center; font-size: 15px; font-weight: 600; }
