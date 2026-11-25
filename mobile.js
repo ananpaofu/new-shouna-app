@@ -6,7 +6,7 @@
   'use strict';
 
   /* ---------------- 常量 ---------------- */
-  var APP_VERSION = '2.74';
+  var APP_VERSION = '2.75';
   var DB_KEY = 'organizer_local_v2';
   var PREF_KEY = 'organizer_pref_v2';
   var HISTORY_KEY = 'organizer_search_history_v2';
@@ -25,6 +25,12 @@
   var DEFAULT_DEVICE_API = 'https://device-api.xieta1371.workers.dev';
 
   var APP_VERSION_CHANGELOG = [
+    { version: '2.75', date: '2026-11-25', title: '设备页地图与声音自定义', items: [
+      '底部三个入口等距排列，声音位于正中，联动文案改为设备',
+      '设备页打开即显示地图，物品绑定入口移到设备区下方',
+      '声音页新增语音呼唤和可保存的自定义回应声音',
+      '版本号从 2.74 更新到 2.75'
+    ] },
     { version: '2.74', date: '2026-11-25', title: '导航精简与声音页', items: [
       '底部导航改为联动 / 声音 / 我的，移除首页、分类和加号',
       '新增声音页，呼唤物品时由标签发声回应',
@@ -509,6 +515,7 @@
     fontWeight: 'standard',
     theme: 'mono',
     language: 'system',
+    soundReply: '我在这里，{物品}，请来找我',
     meSettings: { elder: false, notification: true, sound: true, security: true }
   };
 
@@ -579,6 +586,9 @@
       '呼唤物品': '呼喚物品', '输入物品名称，例如：防晒霜': '輸入物品名稱，例如：防曬霜', '呼唤': '呼喚',
       '当人呼唤物品时，标签会发声回应，帮助你快速找到它。': '當人呼喚物品時，標籤會發出聲音回應，幫助你快速找到它。',
       '常用物品': '常用物品', '未绑定物品时，可直接输入名称试听。': '未綁定物品時，可直接輸入名稱試聽。',
+      '语音呼唤': '語音呼喚', '回应声音': '回應聲音', '保存回应声音': '儲存回應聲音', '试听': '試聽',
+      '例如：我在这里，{物品}，请来找我': '例如：我在這裡，{物品}，請來找我', '用 {物品} 代表呼唤的物品名称': '用 {物品} 代表呼喚的物品名稱',
+      '物品绑定': '物品綁定', '绑定后显示物品实时位置和距离': '綁定後顯示物品即時位置和距離', '绑定设备后显示实时位置': '綁定設備後顯示即時位置',
       '登录验证与密码保护': '登入驗證與密碼保護', '修改密码': '修改密碼', '更新登录密码': '更新登入密碼',
       '使用指南': '使用指南', '操作步骤与颜色说明': '操作步驟與顏色說明', '版本与更新': '版本與更新',
       '查看历史更新内容': '查看歷史更新內容', '注册于': '註冊於', '已收纳': '已收納', '件物品': '件物品',
@@ -709,6 +719,9 @@
       '呼唤物品': 'Call item', '输入物品名称，例如：防晒霜': 'Enter item name, e.g. Sunscreen', '呼唤': 'Call',
       '当人呼唤物品时，标签会发声回应，帮助你快速找到它。': 'When you call an item, its tag sounds back to help you find it quickly.',
       '常用物品': 'Frequent items', '未绑定物品时，可直接输入名称试听。': 'Without a bound item, enter a name to preview the sound.',
+      '语音呼唤': 'Voice call', '回应声音': 'Reply sound', '保存回应声音': 'Save reply sound', '试听': 'Preview',
+      '例如：我在这里，{物品}，请来找我': 'e.g. I am here, {item}, come find me', '用 {物品} 代表呼唤的物品名称': 'Use {item} for the called item name',
+      '物品绑定': 'Bind item', '绑定后显示物品实时位置和距离': 'Bind a device to show live location and distance', '绑定设备后显示实时位置': 'Live location appears after binding',
       '登录验证与密码保护': 'Sign-in and password protection', '修改密码': 'Change password', '更新登录密码': 'Update password',
       '使用指南': 'Guide', '操作步骤与颜色说明': 'Steps and colors', '版本与更新': 'Version and updates',
       '查看历史更新内容': 'View changelog', '注册于': 'Joined', '已收纳': 'Stored', '件物品': 'items',
@@ -1266,7 +1279,7 @@
   function renderNav() {
     if (state.view === 'form') { $('#bottom-nav').innerHTML = ''; return; }
     var tabs = [
-      { key: 'link', label: '联动' },
+      { key: 'link', label: '设备' },
       { key: 'sound', label: '声音' },
       { key: 'me', label: '我的' }
     ];
@@ -2727,35 +2740,27 @@
         return '<div class="ability-card"><div class="ability-icon">' + a.icon + '</div><div class="bold">' + a.title + '</div><p>' + a.body + '</p></div>';
       }).join('') + '</div>';
 
-    if (!bound) {
-      return '<div class="page link-page">' +
-        '<div class="link-card bind-prompt">' +
-          '<div class="bind-prompt-icon">📍</div>' +
-          '<div class="bold">绑定设备与物品</div>' +
-          '<div class="muted small">验证设备号和密码后，才会显示物品实时位置和距离。</div>' +
-          '<button class="link-btn" data-action="bind-device">绑定设备与物品</button>' +
-        '</div>' +
-      '</div>';
-    }
-
-    var bind = state.deviceBind;
+    var bind = state.deviceBind || {};
     var deviceName = bind.itemName || '物品';
-    var deviceSub = '设备 ' + bind.deviceNo + ' · 已绑定';
+    var deviceSub = bind.deviceNo ? '设备 ' + bind.deviceNo + ' · 已绑定' : '尚未绑定设备';
     var deviceIcon = bind.photo
       ? '<img src="' + escapeHTML(bind.photo) + '" alt="">'
       : escapeHTML(state.link.icon || '🐱');
     var deviceSelected = !!(state.deleteMode && state.selectedDevices[bind.deviceNo]);
-    var mapInner = state.locatorFix && state.locatorFix.lat && state.locatorFix.lng
-      ? '<div class="leaflet-map" id="leaflet-map"></div>' + mapLayerSwitchHTML()
-      : '<div class="map-placeholder">' + tr('物品位置读取中，请稍后刷新') + '</div>';
+    var mapInner = !bound
+      ? '<div class="map-placeholder">' + tr('绑定设备后显示实时位置') + '</div>'
+      : (state.locatorFix && state.locatorFix.lat && state.locatorFix.lng
+        ? '<div class="leaflet-map" id="leaflet-map"></div>' + mapLayerSwitchHTML()
+        : '<div class="map-placeholder">' + tr('物品位置读取中，请稍后刷新') + '</div>');
     var motion = state.locatorFix && (Number(state.locatorFix.speed) || 0) > 0 ? '移动中' : '静止';
-    var mapInfo = state.locatorLoading ? tr('正在读取位置…') :
+    var mapInfo = !bound ? '<div class="muted small">' + tr('绑定设备后显示实时位置') + '</div>' :
+      (state.locatorLoading ? tr('正在读取位置…') :
       (state.locatorFix
         ? '<div>纬度 <b>' + state.locatorFix.lat + '</b> · 经度 <b>' + state.locatorFix.lng + '</b></div>' +
           '<div class="muted small">' + tr('定位时间：') + escapeHTML(locatorTimeText(state.locatorFix.time)) +
           (state.locatorFix.reportTime ? ' · ' + tr('上报时间：') + escapeHTML(locatorTimeText(state.locatorFix.reportTime)) : '') + '</div>' +
           (state.locatorDistance != null ? '<div class="muted small">' + tr('我到物品距离：约 ') + '<b>' + distanceText(state.locatorDistance) + '</b> · ' + tr(motion) + '</div>' : '')
-        : '<div class="muted small">' + tr('正在读取位置…') + '</div>');
+        : '<div class="muted small">' + tr('正在读取位置…') + '</div>'));
     var deviceTools = '<span class="device-tools">' +
       (state.deleteMode
         ? '<button class="add-device" data-action="select-all-device">' + tr('全选') + '</button>' +
@@ -2763,7 +2768,7 @@
           '<button class="add-device danger" data-action="confirm-delete-device">' + tr('完成') + '</button>'
         : '<button class="add-device danger" data-action="enter-delete-mode">' + tr('删除绑定') + '</button>') +
       '<button class="device-collapse' + (state.deviceCollapsed ? ' folded' : '') + '" data-action="toggle-device-collapse" aria-label="' + tr('收起设备') + '"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></button></span>';
-    var deviceCardHTML = state.deviceCollapsed ? '' :
+    var deviceCardHTML = (!bound || state.deviceCollapsed) ? '' :
       '<div class="link-card device-card">' +
         '<div class="device-top">' +
           (state.deleteMode ? '<span class="device-select-circle' + (deviceSelected ? ' selected' : '') + '" data-action="toggle-device-select"></span>' : '') +
@@ -2772,10 +2777,13 @@
         '<div class="device-actions">' +
           '<button data-action="find-me">查找位置</button>' +
           '<button data-action="pick-device-icon">选择图案</button>' +
-          '<button data-action="bind-device">' + tr('修改绑定') + '</button>' +
           '<button class="leave-alert-btn' + (state.leaveAlertEnabled ? ' active' : '') + '" data-action="toggle-leave-alert">' + tr('离开提醒') + '</button>' +
         '</div>' +
       '</div>';
+    var bindCardHTML = '<div class="link-card bind-card">' +
+      '<div class="muted small">' + (bound ? tr('已绑定') + '：' + escapeHTML(deviceName) : tr('绑定后显示物品实时位置和距离')) + '</div>' +
+      '<button class="link-btn" data-action="bind-device">' + (bound ? tr('修改绑定') : tr('物品绑定')) + '</button>' +
+    '</div>';
     var leaveBanner = state.leaveAlertTriggered
       ? '<div class="leave-alert-banner">⚠ 离开提醒：' + escapeHTML(deviceName) + ' 距离手机已超过 60 米</div>'
       : '';
@@ -2793,8 +2801,9 @@
         '<div class="map-box' + (expanded ? ' expanded' : '') + '">' + mapInner + '</div>' +
         '<div class="map-live-info">' + mapInfo + '</div>' +
       '</div>' +
-      '<div class="section-title device-section-title"><span>' + tr('设备') + '</span>' + deviceTools + '</div>' +
+      '<div class="section-title device-section-title"><span>' + tr('设备') + '</span>' + (bound ? deviceTools : '') + '</div>' +
       deviceCardHTML +
+      bindCardHTML +
       abilityHTML +
     '</div>';
   }
@@ -2812,6 +2821,7 @@
           return '<button class="chip" data-action="call-item-by-name" data-name="' + escapeHTML(n) + '">' + escapeHTML(n) + '</button>';
         }).join('') + '</div></div>'
       : '';
+    var reply = String((state.pref && state.pref.soundReply) || DEFAULT_PREF.soundReply);
     return '<div class="page sound-page">' +
       '<div class="sound-hero"><div class="sound-wave">' + navSVG('sound') + '</div>' +
         '<div class="bold">' + tr('呼唤物品') + '</div>' +
@@ -2820,8 +2830,20 @@
       '<div class="link-card sound-card">' +
         '<label class="form-label" for="sound-item-name">' + tr('物品名称') + '</label>' +
         '<input class="form-input" id="sound-item-name" placeholder="' + tr('输入物品名称，例如：防晒霜') + '">' +
-        '<button class="link-btn" data-action="call-item">' + tr('呼唤') + '</button>' +
+        '<div class="sound-btn-row">' +
+          '<button class="link-btn" data-action="call-item">' + tr('呼唤') + '</button>' +
+          '<button class="link-btn" data-action="voice-call">' + tr('语音呼唤') + '</button>' +
+        '</div>' +
         '<div class="sound-status" id="sound-status">' + tr('未绑定物品时，可直接输入名称试听。') + '</div>' +
+      '</div>' +
+      '<div class="link-card sound-card">' +
+        '<label class="form-label" for="sound-reply">' + tr('回应声音') + '</label>' +
+        '<input class="form-input" id="sound-reply" value="' + escapeHTML(reply) + '" placeholder="' + tr('例如：我在这里，{物品}，请来找我') + '">' +
+        '<div class="muted small">' + tr('用 {物品} 代表呼唤的物品名称') + '</div>' +
+        '<div class="sound-btn-row">' +
+          '<button class="link-btn" data-action="save-sound-reply">' + tr('保存回应声音') + '</button>' +
+          '<button class="link-btn" data-action="preview-sound-reply">' + tr('试听') + '</button>' +
+        '</div>' +
       '</div>' +
       quick +
     '</div>';
@@ -2830,7 +2852,11 @@
     var el = $('#sound-status');
     if (el) el.textContent = msg;
   }
-  function playBeepFallback(name) {
+  function soundReplyText(name) {
+    var tpl = String((state.pref && state.pref.soundReply) || DEFAULT_PREF.soundReply);
+    return tpl.replace(/\{物品\}/g, name || '物品');
+  }
+  function playBeepFallback(name, reply) {
     try {
       var AudioCtx = window.AudioContext || window.webkitAudioContext;
       if (!AudioCtx) { setSoundStatus('当前浏览器不支持发声，请换用手机浏览器'); return; }
@@ -2846,10 +2872,27 @@
       gain.connect(ctx.destination);
       osc.start();
       osc.stop(ctx.currentTime + 0.6);
-      setSoundStatus('已发出提示音：' + name);
+      setSoundStatus('已发出提示音：' + (reply || name));
     } catch (e) {
       setSoundStatus('发声失败，请检查浏览器声音权限');
     }
+  }
+  function speakReply(reply, name) {
+    setSoundStatus('正在回应：' + reply);
+    try {
+      if ('speechSynthesis' in window && window.SpeechSynthesisUtterance) {
+        window.speechSynthesis.cancel();
+        var u = new window.SpeechSynthesisUtterance(reply);
+        u.lang = currentLang() === 'en' ? 'en-US' : (currentLang() === 'zh-TW' ? 'zh-TW' : 'zh-CN');
+        u.rate = 1;
+        u.pitch = 1;
+        u.onend = function () { setSoundStatus('已发出声音回应：' + reply); };
+        u.onerror = function () { playBeepFallback(name, reply); };
+        window.speechSynthesis.speak(u);
+        return;
+      }
+    } catch (e) {}
+    playBeepFallback(name, reply);
   }
   function callItemByName(name) {
     name = String(name || '').trim();
@@ -2857,24 +2900,54 @@
     var input = $('#sound-item-name');
     if (input) input.value = name;
     setSoundStatus('正在呼唤 ' + name + '…');
-    try {
-      if ('speechSynthesis' in window && window.SpeechSynthesisUtterance) {
-        window.speechSynthesis.cancel();
-        var u = new window.SpeechSynthesisUtterance('我在这里，' + name + '，请来找我');
-        u.lang = 'zh-CN';
-        u.rate = 1;
-        u.pitch = 1;
-        u.onend = function () { setSoundStatus('已发出声音回应：' + name); };
-        u.onerror = function () { playBeepFallback(name); };
-        window.speechSynthesis.speak(u);
-        return;
-      }
-    } catch (e) {}
-    playBeepFallback(name);
+    speakReply(soundReplyText(name), name);
   }
   function callItem() {
     var input = $('#sound-item-name');
     callItemByName(input ? input.value : '');
+  }
+  function saveSoundReply() {
+    var input = $('#sound-reply');
+    var v = input ? String(input.value || '').trim() : '';
+    if (!v) { toast('请输入回应内容'); return; }
+    state.pref.soundReply = v;
+    savePref();
+    toast('回应声音已保存');
+  }
+  function previewSoundReply() {
+    var input = $('#sound-reply');
+    var tpl = input ? String(input.value || '').trim() : '';
+    if (!tpl) { toast('请先输入回应内容'); return; }
+    var nameInput = $('#sound-item-name');
+    var name = nameInput ? String(nameInput.value || '').trim() || '物品' : '物品';
+    speakReply(tpl.replace(/\{物品\}/g, name), name);
+  }
+  function startVoiceCall() {
+    var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SR) { setSoundStatus('当前浏览器不支持语音识别，请用 Chrome 或 Safari 打开'); return; }
+    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+      navigator.mediaDevices.getUserMedia({ audio: true }).then(function (stream) {
+        stream.getTracks().forEach(function (t) { try { t.stop(); } catch (e) {} });
+      }).catch(function () {});
+    }
+    var recognition = new SR();
+    recognition.lang = currentLang() === 'en' ? 'en-US' : (currentLang() === 'zh-TW' ? 'zh-TW' : 'zh-CN');
+    recognition.continuous = false;
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
+    setSoundStatus('正在聆听，请说出物品名称…');
+    recognition.onresult = function (e) {
+      var text = e.results && e.results[0] && e.results[0][0] ? String(e.results[0][0].transcript || '') : '';
+      text = text.replace(/[，。！？、,.!?]/g, '').trim();
+      if (text) callItemByName(text);
+      else setSoundStatus('没有听清，请再说一次');
+    };
+    recognition.onerror = function (e) { setSoundStatus('语音识别失败：' + (e.error || '未知错误')); };
+    recognition.onend = function () {
+      var el = $('#sound-status');
+      if (el && el.textContent.indexOf('正在聆听') === 0) setSoundStatus('已结束聆听');
+    };
+    try { recognition.start(); } catch (e) { setSoundStatus('无法启动语音识别'); }
   }
 
   /* ---------------- 分类管理 ---------------- */
@@ -3733,6 +3806,9 @@
         break;
       case 'call-item': callItem(); break;
       case 'call-item-by-name': callItemByName(el.getAttribute('data-name')); break;
+      case 'voice-call': startVoiceCall(); break;
+      case 'save-sound-reply': saveSoundReply(); break;
+      case 'preview-sound-reply': previewSoundReply(); break;
       case 'go-search': openView('search'); break;
       case 'focus-home-search': focusHomeSearch(); break;
       case 'clear-home-search': clearHomeSearch(); break;
