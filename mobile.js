@@ -6,7 +6,7 @@
   'use strict';
 
   /* ---------------- 常量 ---------------- */
-  var APP_VERSION = '2.78';
+  var APP_VERSION = '2.79';
   var DB_KEY = 'organizer_local_v2';
   var PREF_KEY = 'organizer_pref_v2';
   var HISTORY_KEY = 'organizer_search_history_v2';
@@ -26,6 +26,12 @@
   var DEFAULT_MAP_POINT = { lat: 39.9087, lng: 116.3975 };
 
   var APP_VERSION_CHANGELOG = [
+    { version: '2.79', date: '2026-11-25', title: '全屏地图与声音细节修正', items: [
+      '设备页改为全屏地图，设备信息改为底部弹出面板',
+      '地图优先显示用户手机 GPS 定位',
+      '修正腾讯地图控件/标签并给百度地图增加失败回退',
+      '常用回复高亮、点击呼唤、欢迎/退出语音改为呼唤流程播放'
+    ] },
     { version: '2.78', date: '2026-11-25', title: '声音自定义与设备电量', items: [
       '声音页只保留置顶呼唤卡片和三个按钮，删除常用物品',
       '新增声音自定义小窗口：唤醒词、回复、音色、欢迎/退出语音、中英识别',
@@ -614,7 +620,7 @@
       '常用物品': '常用物品', '未绑定物品时，可直接输入名称试听。': '未綁定物品時，可直接輸入名稱試聽。',
       '语音呼唤': '語音呼喚', '回应声音': '回應聲音', '保存回应声音': '儲存回應聲音', '试听': '試聽',
       '输入名称，或直接说出物品': '輸入名稱，或直接說出物品',
-      '自定义': '自訂', '说出唤醒词和物品名称即可呼唤': '說出喚醒詞和物品名稱即可呼喚', '声音自定义': '聲音自訂',
+      '自定义': '自訂', '点击呼唤': '點擊呼喚', '说出唤醒词和物品名称即可呼唤': '說出喚醒詞和物品名稱即可呼喚', '声音自定义': '聲音自訂',
       '唤醒词': '喚醒詞', '回复内容': '回覆內容', '音色': '音色', '欢迎语音': '歡迎語音', '退出语音': '退出語音',
       '识别语言': '辨識語言', '常用唤醒词': '常用喚醒詞', '常用回复': '常用回覆',
       '默认': '預設', '女声': '女聲', '男声': '男聲', '中英自动': '中英自動', '中文': '中文', '英文': '英文',
@@ -752,7 +758,7 @@
       '常用物品': 'Frequent items', '未绑定物品时，可直接输入名称试听。': 'Without a bound item, enter a name to preview the sound.',
       '语音呼唤': 'Voice call', '回应声音': 'Reply sound', '保存回应声音': 'Save reply sound', '试听': 'Preview',
       '输入名称，或直接说出物品': 'Type a name, or just say it aloud',
-      '自定义': 'Custom', '说出唤醒词和物品名称即可呼唤': 'Say the wake word and item name to call', '声音自定义': 'Sound settings',
+      '自定义': 'Custom', '点击呼唤': 'Tap to call', '说出唤醒词和物品名称即可呼唤': 'Say the wake word and item name to call', '声音自定义': 'Sound settings',
       '唤醒词': 'Wake word', '回复内容': 'Reply', '音色': 'Voice tone', '欢迎语音': 'Welcome voice', '退出语音': 'Exit voice',
       '识别语言': 'Recognition language', '常用唤醒词': 'Common wake words', '常用回复': 'Common replies',
       '默认': 'Default', '女声': 'Female', '男声': 'Male', '中英自动': 'Auto CN/EN', '中文': 'Chinese', '英文': 'English',
@@ -920,6 +926,7 @@
     crop: null,
     mapLayerKind: 'road',
     soundSettingKey: 'wake',
+    baiduFailed: false,
     mapProvider: (function () {
       try {
         var v = localStorage.getItem(MAP_PROVIDER_KEY);
@@ -1610,6 +1617,7 @@
     if (!root) return;
     if (state.sheet === 'sort') root.innerHTML = sortSheetHTML();
     else if (state.sheet === 'soundSettings') root.innerHTML = soundSettingsSheetHTML();
+    else if (state.sheet === 'device') root.innerHTML = deviceSheetHTML();
     else root.innerHTML = '';
     applyI18n(root);
   }
@@ -2461,7 +2469,7 @@
       var holder = state.leaflet[key];
       var f = state.locatorFix;
       var hasFix = !!(f && f.lat && f.lng);
-      var base = hasFix ? f : DEFAULT_MAP_POINT;
+      var base = mapBasePoint(hasFix, f);
       var p = baiduJSCoords(base.lat, base.lng);
       var point = new BMap.Point(p.lng, p.lat);
       var coordKey = hasFix ? (p.lat + ',' + p.lng) : 'default';
@@ -2493,6 +2501,17 @@
             holder.map.centerAndZoom(new BMap.Point(p.lng, p.lat), key === 'small' ? 17 : 16);
           }
         }, 350);
+        setTimeout(function () {
+          if (!holder.map || holder.provider !== 'baidu') return;
+          if (!el.querySelectorAll('img').length) {
+            state.baiduFailed = true;
+            holder.map = null;
+            holder.marker = null;
+            holder.userMarker = null;
+            el.innerHTML = '';
+            syncFallbackMap(id, el);
+          }
+        }, 1800);
       } else {
         if (holder.map.checkResize) holder.map.checkResize();
         if (!hasFix && holder.marker) { holder.map.removeOverlay(holder.marker); holder.marker = null; }
@@ -2537,6 +2556,7 @@
         this.position = options.position;
         this.html = options.html;
         this.zIndex = options.zIndex || 1000;
+        this.setMap(options.map);
       }
       onInit(options) {
         this.map = options.map;
@@ -2584,7 +2604,7 @@
       var holder = state.leaflet[key];
       var f = state.locatorFix;
       var hasFix = !!(f && f.lat && f.lng);
-      var base = hasFix ? f : DEFAULT_MAP_POINT;
+      var base = mapBasePoint(hasFix, f);
       var p = mapCoords(base.lat, base.lng, 'qq');
       var point = new TMap.LatLng(p.lat, p.lng);
       var coordKey = hasFix ? (p.lat + ',' + p.lng) : 'default';
@@ -2597,6 +2617,10 @@
           zoom: key === 'small' ? 17 : 16,
           pitch: 0,
           rotation: 0,
+          zoomControl: false,
+          scaleControl: false,
+          rotateControl: false,
+          compassControl: false,
           baseMap: { type: state.mapLayerKind === 'satellite' ? 'satellite' : 'vector' }
         });
         holder.provider = 'tencent';
@@ -2657,7 +2681,7 @@
     var holder = state.leaflet[key];
     var f = state.locatorFix;
     var hasFix = !!(f && f.lat && f.lng);
-    var base = hasFix ? f : DEFAULT_MAP_POINT;
+    var base = mapBasePoint(hasFix, f);
     var p = mapCoords(base.lat, base.lng, 'amap');
     var coordKey = hasFix ? (p.lat + ',' + p.lng) : 'default';
     var up = userMapPoint();
@@ -2702,25 +2726,37 @@
       }
     }
   }
+  function mapBasePoint(hasFix, f) {
+    if (state.myPos && state.myPos.lat && state.myPos.lng) return state.myPos;
+    return hasFix ? f : DEFAULT_MAP_POINT;
+  }
   function cleanMapLabels(el) {
     if (!el) return;
-    setTimeout(function () {
-      var nodes = el.querySelectorAll('div,span,p');
+    function scrub() {
+      var nodes = el.querySelectorAll('div,span,p,canvas');
       Array.prototype.forEach.call(nodes, function (n) {
-        if (n === el || n.children.length) return;
+        if (n === el) return;
+        var cls = String(n.className || '');
+        if (/zoom|scale|compass|copyright|logo|anchorBL|ctrl/i.test(cls)) {
+          n.style.setProperty('display', 'none', 'important');
+          return;
+        }
+        if (n.children.length) return;
         var t = (n.textContent || '').trim();
         if (!t) return;
-        if (t === 'undefined' || /腾讯地图|Tencent|GS\(20\d{2}\)|百度地图|Baidu/i.test(t)) {
+        if (t === 'undefined' || /腾讯地图|Tencent|GS\(20\d{2}\)|百度地图|Baidu|米\b|英尺\b/i.test(t)) {
           n.style.setProperty('display', 'none', 'important');
         }
       });
-    }, 400);
+    }
+    setTimeout(scrub, 400);
+    setTimeout(scrub, 1400);
   }
   function syncLeafletMap(id) {
     var el = document.getElementById(id);
     if (!el) return;
     cleanMapLabels(el);
-    if (state.mapProvider === 'baidu') {
+    if (state.mapProvider === 'baidu' && !state.baiduFailed) {
       syncBaiduMap(id, el);
       return;
     }
@@ -2736,7 +2772,7 @@
     var holder = state.leaflet[key];
     var f = state.locatorFix;
     var hasFix = !!(f && f.lat && f.lng);
-    var base = hasFix ? f : DEFAULT_MAP_POINT;
+    var base = mapBasePoint(hasFix, f);
     var p = mapCoords(base.lat, base.lng, 'amap');
     var coordKey = hasFix ? (p.lat + ',' + p.lng) : 'default';
     var up = userMapPoint();
@@ -2824,6 +2860,24 @@
     return '电量 ' + String(raw);
   }
   function linkHTML() {
+    var mapInner = '<div class="leaflet-map" id="leaflet-map"></div>' + mapLayerSwitchHTML();
+    return '<div class="page link-page">' +
+      '<div class="link-map-full">' +
+        mapInner +
+        '<div class="map-actions">' +
+          '<button class="map-primary" data-action="refresh-locator">' + tr('刷新位置') + '</button>' +
+          '<button class="map-ghost" data-action="item-navigation">' + tr('物品导航') + '</button>' +
+          '<button class="map-ghost" data-action="fullscreen-map">' + tr('全屏地图') + '</button>' +
+          '<button class="map-ghost" data-action="choose-map">' + tr('选择地图') + '</button>' +
+        '</div>' +
+        '<div class="map-status">' + escapeHTML(locationStatusText()) + locationActionHTML() + '</div>' +
+        '<button class="device-drawer-handle" data-action="open-device-sheet">' +
+          '<span class="drawer-grab"></span><span>' + tr('设备') + '</span><span>›</span>' +
+        '</button>' +
+      '</div>' +
+    '</div>';
+  }
+  function deviceSheetHTML() {
     var bound = !!(state.deviceBind && state.deviceVerified && state.deviceBind.deviceNo && state.deviceBind.itemName);
     var bind = state.deviceBind || {};
     var deviceName = bind.itemName || '物品';
@@ -2832,7 +2886,6 @@
       ? '<img src="' + escapeHTML(bind.photo) + '" alt="">'
       : escapeHTML(state.link.icon || '🐱');
     var deviceSelected = !!(state.deleteMode && state.selectedDevices[bind.deviceNo]);
-    var mapInner = '<div class="leaflet-map" id="leaflet-map"></div>' + mapLayerSwitchHTML();
     var motion = state.locatorFix && (Number(state.locatorFix.speed) || 0) > 0 ? '移动中' : '静止';
     var mapInfo = !bound ? '<div class="muted small">' + tr('绑定设备后显示实时位置') + '</div>' :
       (state.locatorLoading ? tr('正在读取位置…') :
@@ -2870,23 +2923,11 @@
     var leaveBanner = state.leaveAlertTriggered
       ? '<div class="leave-alert-banner">⚠ 离开提醒：' + escapeHTML(deviceName) + ' 距离手机已超过 60 米</div>'
       : '';
-    return '<div class="page link-page">' +
-      leaveBanner +
-      '<div class="link-card map-card">' +
-        '<div class="link-card-head"><div><div class="bold">物品实时地图</div><div class="muted small">' + escapeHTML(locationStatusText()) + '</div>' + locationActionHTML() + '</div></div>' +
-        '<div class="map-actions">' +
-          '<button class="map-primary" data-action="refresh-locator">' + tr('刷新位置') + '</button>' +
-          '<button class="map-ghost" data-action="item-navigation">' + tr('物品导航') + '</button>' +
-          '<button class="map-ghost" data-action="fullscreen-map">' + tr('全屏地图') + '</button>' +
-          '<button class="map-ghost" data-action="choose-map">' + tr('选择地图') + '</button>' +
-        '</div>' +
-        '<div class="map-box expanded">' + mapInner + '</div>' +
-        '<div class="map-live-info">' + mapInfo + '</div>' +
-      '</div>' +
-      '<div class="section-title device-section-title"><span>' + tr('设备') + '</span>' + (bound ? deviceTools : '') + '</div>' +
-      deviceCardHTML +
-      bindCardHTML +
-    '</div>';
+    return '<div class="sheet-mask show" data-action="close-sheet"></div>' +
+      '<div class="sheet show device-sheet"><div class="sheet-handle"></div>' +
+      '<div class="sheet-head"><h2>' + tr('设备') + '</h2>' + (bound ? deviceTools : '') +
+      '<button class="sheet-close" data-action="close-sheet">✕</button></div>' +
+      '<div class="device-sheet-body">' + leaveBanner + mapInfo + deviceCardHTML + bindCardHTML + '</div></div>';
   }
 
   /* ---------------- 声音 ---------------- */
@@ -2897,7 +2938,7 @@
         '<label class="form-label" for="sound-item-name">' + tr('物品名称') + '</label>' +
         '<input class="form-input" id="sound-item-name" placeholder="' + tr('输入物品名称，例如：防晒霜') + '">' +
         '<div class="sound-btn-row three">' +
-          '<button class="link-btn" data-action="call-item">' + tr('呼唤') + '</button>' +
+          '<button class="link-btn" data-action="call-item">' + tr('点击呼唤') + '</button>' +
           '<button class="link-btn ghost" data-action="voice-call">' + tr('语音呼唤') + '</button>' +
           '<button class="link-btn ghost" data-action="open-sound-settings">' + tr('自定义') + '</button>' +
         '</div>' +
@@ -2975,19 +3016,30 @@
   }
   function speakReply(reply, name) {
     setSoundStatus('正在回应：' + reply);
-    if (speakText(reply, function () { setSoundStatus('已发出声音回应：' + reply); })) return;
+    function done() {
+      setSoundStatus('已发出声音回应：' + reply);
+      if (String((state.pref && state.pref.soundExit) || '').trim()) {
+        setTimeout(function () { speakSystem(state.pref.soundExit); }, 250);
+      }
+    }
+    if (speakText(reply, done)) return;
     playBeepFallback(name, reply);
   }
-  function speakSystem(text) {
-    if (!String(text || '').trim()) return;
-    speakText(String(text));
+  function speakSystem(text, onDone) {
+    var t = String(text || '').trim();
+    if (!t) { if (onDone) onDone(); return false; }
+    return speakText(t, onDone);
   }
   function callItemByName(name) {
     name = String(name || '').trim();
     if (!name) { toast('请输入要呼唤的物品名称'); return; }
     var input = $('#sound-item-name');
     if (input) input.value = name;
-    setSoundStatus('正在呼唤 ' + name + '…');
+    setSoundStatus('正在唤醒…');
+    var welcome = (state.pref && state.pref.soundWelcome) || '';
+    if (String(welcome).trim()) {
+      if (speakSystem(welcome, function () { speakReply(soundReplyText(name), name); })) return;
+    }
     speakReply(soundReplyText(name), name);
   }
   function callItem() {
@@ -3079,7 +3131,8 @@
     } else {
       var presets = key === 'wake' ? (p.soundWakeWords || DEFAULT_PREF.soundWakeWords) : (key === 'reply' ? (p.soundReplies || DEFAULT_PREF.soundReplies) : []);
       var chips = presets.length ? '<div class="sound-preset-title">' + tr((key === 'wake' ? '常用唤醒词' : '常用回复')) + '</div><div class="sound-chips">' + presets.map(function (v) {
-        return '<button class="sound-chip" data-action="sound-preset" data-value="' + escapeHTML(v) + '">' + escapeHTML(v) + '</button>';
+        var active = v === soundSettingValue() ? ' active' : '';
+        return '<button class="sound-chip' + active + '" data-action="sound-preset" data-value="' + escapeHTML(v) + '">' + escapeHTML(v) + '</button>';
       }).join('') + '</div>' : '';
       editor = '<input class="form-input" id="sound-setting-value" value="' + escapeHTML(soundSettingValue()) + '">' + chips;
     }
@@ -3676,7 +3729,6 @@
     if (state.viewStack.length > 20) state.viewStack.shift();
   }
   function openView(view) {
-    var wasSound = state.view === 'sound';
     if (view !== state.view) pushView();
     state.view = view;
     state.sheet = null;
@@ -3686,8 +3738,6 @@
     state.selectedIds = [];
     state.searchFocused = false;
     render();
-    if (view === 'sound') setTimeout(function () { speakSystem(state.pref.soundWelcome); }, 200);
-    else if (wasSound) setTimeout(function () { speakSystem(state.pref.soundExit); }, 120);
   }
   function openFromMe(view) {
     if (state.view !== 'me') {
@@ -3704,7 +3754,6 @@
     render();
   }
   function goBack() {
-    var wasSound = state.view === 'sound';
     if (state.overlay) { state.overlay = null; renderOverlay(); return; }
     if (state.sheet) { state.sheet = null; renderSheet(); return; }
     if (state.multiSelect) { exitMultiSelect(); return; }
@@ -3728,7 +3777,6 @@
     state.formDraft = null;
     state.searchFocused = false;
     render();
-    if (wasSound && state.view !== 'sound') setTimeout(function () { speakSystem(state.pref.soundExit); }, 120);
   }
   function setCategory(cat, from) {
     var fromSearch = state.view === 'search';
@@ -3976,6 +4024,7 @@
       case 'call-item-by-name': callItemByName(el.getAttribute('data-name')); break;
       case 'voice-call': startVoiceCall(); break;
       case 'open-sound-settings': state.sheet = 'soundSettings'; renderSheet(); break;
+      case 'open-device-sheet': state.sheet = 'device'; renderSheet(); break;
       case 'sound-setting-tab': syncSoundSetting(); state.soundSettingKey = key; renderSheet(); break;
       case 'sound-preset': var pv = el.getAttribute('data-value'); var pi = $('#sound-setting-value'); if (pi && pv) { pi.value = pv; syncSoundSetting(); renderSheet(); } break;
       case 'sound-voice': state.pref.soundVoice = el.getAttribute('data-value') || 'default'; savePref(); renderSheet(); toast('音色已保存'); break;
@@ -4078,6 +4127,7 @@
         var provider = el.getAttribute('data-map');
         if (['amap', 'baidu', 'qq'].indexOf(provider) >= 0) {
           state.mapProvider = provider;
+          if (provider === 'baidu') state.baiduFailed = false;
           try { localStorage.setItem(MAP_PROVIDER_KEY, provider); } catch (e) {}
           state.overlay = null;
           render();

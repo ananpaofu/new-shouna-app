@@ -676,6 +676,23 @@ body.overlay-open .app-view .map-layer-switch { display: none; }
 .leaflet-map .qmap-logo, .leaflet-map .qmap-copyright, .leaflet-map .qt-logo,
 .leaflet-map .qt-copyright, .leaflet-map .TMap-logo, .leaflet-map .TMap-copyright,
 .leaflet-map .BMap_logo, .leaflet-map .BMap_cpyCtrl, .leaflet-map .BMap_copyright { display: none !important; }
+.leaflet-map .anchorBL { display: none !important; }
+
+/* 全屏地图 + 设备底部面板 */
+.link-page { display: block; height: 100%; padding: 0; overflow: hidden; }
+.link-map-full { position: relative; width: 100%; height: 100%; }
+.link-map-full .leaflet-map { position: absolute; inset: 0; width: 100%; height: 100%; }
+.link-map-full .map-actions { position: absolute; top: 10px; left: 10px; right: auto; z-index: 500;
+  display: flex; flex-wrap: wrap; gap: 6px; max-width: calc(100% - 100px); }
+.link-map-full .map-status { position: absolute; left: 10px; bottom: 72px; z-index: 500; max-width: calc(100% - 20px);
+  background: rgba(255,255,255,.88); border-radius: 10px; padding: 7px 10px; font-size: 12px; color: var(--ink-3); }
+.device-drawer-handle { position: absolute; left: 14px; right: 14px; bottom: 14px; z-index: 600; height: 48px;
+  border-radius: 16px; background: var(--bg); border: 1px solid var(--line); box-shadow: var(--shadow);
+  display: flex; align-items: center; justify-content: center; gap: 8px; font-weight: 700; color: var(--ink); }
+.drawer-grab { position: absolute; top: 6px; width: 36px; height: 3px; border-radius: 999px; background: var(--line); }
+.device-sheet-body { padding: 0 14px 22px; max-height: 62vh; overflow-y: auto; }
+.device-sheet .sheet-head { position: relative; }
+.device-sheet .sheet-head .device-tools { margin-left: auto; margin-right: 8px; }
 .leaflet-item-icon { width: 0 !important; height: 0 !important; }
 .leaflet-item-marker { position: relative; width: 0; height: 0; }
 .leaflet-item-marker .map-item-badge { position: absolute; left: 0; bottom: 14px; transform: translateX(-50%); }
@@ -945,6 +962,7 @@ input[type='time'], input[type='date'] { accent-color: var(--green); color-schem
 .sound-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
 .sound-chip { display: inline-flex; align-items: center; border: 1px solid var(--line); background: var(--bg);
   border-radius: 999px; padding: 7px 12px; font-size: 12px; color: var(--ink); }
+.sound-chip.active { background: var(--green); border-color: var(--green); color: #fff; font-weight: 600; }
 
 .prefs-page .pref-block { margin-bottom: 10px; }
 .prefs-page .pref-radio-row { padding: 7px 2px; }
