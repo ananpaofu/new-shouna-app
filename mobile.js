@@ -6,7 +6,7 @@
   'use strict';
 
   /* ---------------- 常量 ---------------- */
-  var APP_VERSION = '2.65';
+  var APP_VERSION = '2.66';
   var DB_KEY = 'organizer_local_v2';
   var PREF_KEY = 'organizer_pref_v2';
   var HISTORY_KEY = 'organizer_search_history_v2';
@@ -24,6 +24,13 @@
   var DEFAULT_DEVICE_API = 'https://device-api.xieta1371.workers.dev';
 
   var APP_VERSION_CHANGELOG = [
+    { version: '2.66', date: '2026-11-25', title: '多语言与详情编辑优化', items: [
+      '补齐英文界面翻译，到期提醒、联动页、设置页等不再出现中英混杂',
+      '拍照预览改为完整显示不裁剪，物品照片支持点击全屏查看',
+      '定位请求禁用缓存以提升 iPhone 精度；设备在线标签改为绿底白字',
+      '物品详情返回箭头放大，编辑移到右上角，删除底部收起键，物品名称加大',
+      '编辑页与新建页区分，右上角按钮改为“更新”；数量增加时可选择显示补货标签'
+    ] },
     { version: '2.65', date: '2026-11-25', title: '电脑端定位权限入口', items: [
       '联动页地图信息区新增“开启我的定位 / 重新开启定位”按钮，方便电脑端手动触发浏览器定位权限',
       '定位失败文案改为“允许浏览器定位或开启系统定位服务”，不再只提示手机定位',
@@ -612,7 +619,19 @@
       '维生素C片': '維生素C片', '防晒霜': '防曬霜', '全麦面包': '全麥麵包',
       '通知中心': '通知中心', '查看过期与系统消息': '查看過期與系統訊息',
       '距离过期还有': '距離過期還有', '库存不足，仅剩': '庫存不足，僅剩', '昨天': '昨天',
-      '暂无通知': '暫無通知', '系统': '系統', '过期': '過期', '时': '時', '分': '分', '上午': '上午', '下午': '下午'
+      '暂无通知': '暫無通知', '系统': '系統', '过期': '過期', '时': '時', '分': '分', '上午': '上午', '下午': '下午',
+      '到期提醒': '到期提醒', '删除提醒': '刪除提醒', '返回首页': '返回首頁',
+      '只删除提醒，不会删除物品；不点删除直接返回，提醒仍会保留在首页。': '只刪除提醒，不會刪除物品；不點刪除直接返回，提醒仍會保留在首頁。',
+      '适中放大 · 高对比 · 简化功能': '適中放大 · 高對比 · 簡化功能',
+      '物品实时地图': '物品即時地圖', '已获取我的位置': '已取得我的位置', '尚未获取我的位置': '尚未取得我的位置',
+      '正在请求定位权限…': '正在要求定位權限…', '定位权限未允许，请在浏览器地址栏允许定位': '定位權限未允許，請在瀏覽器網址列允許定位',
+      '定位失败，请允许浏览器定位或开启系统定位服务': '定位失敗，請允許瀏覽器定位或開啟系統定位服務',
+      '开启我的定位': '開啟我的定位', '重新开启定位': '重新開啟定位',
+      '刷新位置': '重新整理位置', '物品导航': '物品導航', '全屏地图': '全螢幕地圖', '选择地图': '選擇地圖',
+      '查找位置': '尋找位置', '选择图案': '選擇圖案', '修改绑定': '修改綁定', '离开提醒': '離開提醒', '删除绑定': '刪除綁定', '已绑定': '已綁定',
+      '打开地图，按你当前位置到物品位置规划路线。': '開啟地圖，依你目前位置到物品位置規劃路線。',
+      '一键打开地图，直接导航到物品当前位置。': '一鍵開啟地圖，直接導航到物品目前位置。',
+      '更新': '更新', '显示补货数量标签': '顯示補貨數量標籤', '补货': '補貨', '查看照片': '查看照片'
     },
     'en': {
       '全部': 'All', '状态良好': 'Good', '临近过期': 'Expiring', '已过期': 'Expired', '已开封': 'Opened',
@@ -734,7 +753,19 @@
       '通知中心': 'Notification center', '查看过期与系统消息': 'View expiry and system messages',
       '距离过期还有': 'Expires in', '库存不足，仅剩': 'Low stock, only', '昨天': 'Yesterday',
       '暂无通知': 'No notifications', '系统': 'System', '过期': 'Expired', '天': 'days',
-      '时': 'Hour', '分': 'Minute', '上午': 'AM', '下午': 'PM'
+      '时': 'Hour', '分': 'Minute', '上午': 'AM', '下午': 'PM',
+      '到期提醒': 'Expiry alerts', '删除提醒': 'Dismiss alert', '返回首页': 'Back to Home',
+      '只删除提醒，不会删除物品；不点删除直接返回，提醒仍会保留在首页。': 'Dismiss the alert only; the item stays. Go back without dismissing and the alert remains on Home.',
+      '适中放大 · 高对比 · 简化功能': 'Moderate zoom, high contrast, simpler layout',
+      '物品实时地图': 'Live item map', '已获取我的位置': 'My location ready', '尚未获取我的位置': 'My location not available yet',
+      '正在请求定位权限…': 'Requesting location access…', '定位权限未允许，请在浏览器地址栏允许定位': 'Location blocked. Allow location from the address bar.',
+      '定位失败，请允许浏览器定位或开启系统定位服务': 'Location failed. Allow browser location or enable system location service.',
+      '开启我的定位': 'Enable my location', '重新开启定位': 'Retry location',
+      '刷新位置': 'Refresh', '物品导航': 'Item navigation', '全屏地图': 'Fullscreen map', '选择地图': 'Map options',
+      '查找位置': 'Find me', '选择图案': 'Choose icon', '修改绑定': 'Edit binding', '离开提醒': 'Away alert', '删除绑定': 'Remove binding', '已绑定': 'Bound',
+      '打开地图，按你当前位置到物品位置规划路线。': 'Open the map and plan a route from your location to the item.',
+      '一键打开地图，直接导航到物品当前位置。': 'Open the map with one tap and navigate to the item.',
+      '更新': 'Update', '显示补货数量标签': 'Show restock label', '补货': 'Restock', '查看照片': 'View photo'
     }
   };
 
@@ -1060,7 +1091,8 @@
       '<div class="alert-detail-card">' + alerts.expired.map(function (it) { return row(it, true); }).join('') + '</div>';
     if (alerts.soon.length) body += '<div class="section-title">' + tr('临近过期') + '</div>' +
       '<div class="alert-detail-card">' + alerts.soon.map(function (it) { return row(it, false); }).join('') + '</div>';
-    var alertTip = tr('只删除提醒，不会删除物品；不点删除直接返回，提醒仍会保留在首页。').replace('；', '；<br>');
+    var alertTip = tr('只删除提醒，不会删除物品；不点删除直接返回，提醒仍会保留在首页。')
+      .replace('；', '；<br>').replace(/;\s*/, ';<br>');
     return '<div class="page alert-page">' +
       '<div class="alert-tip">' + alertTip + '</div>' +
       (body || '<div class="empty"><div class="empty-emoji">✅</div><div class="empty-text">' + tr('暂无到期提醒') + '</div></div>') +
@@ -1100,10 +1132,10 @@
       header.innerHTML = status +
         '<div class="header-row form-header">' +
           '<button class="icon-btn form-cancel" data-action="cancel-form" aria-label="取消">✕</button>' +
-          '<div class="header-title">' + (state.editingId ? '编辑物品' : '新增物品') + '</div>' +
-          '<button class="form-save" data-action="save-form">保存</button>' +
+          '<div class="header-title">' + tr(state.editingId ? '编辑物品' : '新增物品') + '</div>' +
+          '<button class="form-save" data-action="save-form">' + tr(state.editingId ? '更新' : '保存') + '</button>' +
         '</div>' +
-        '<div class="required-note">* 为必填项，未标注的为选填项</div>';
+        '<div class="required-note">' + tr('* 为必填项，未标注的为选填项') + '</div>';
       return;
     }
     if (state.view === 'link') {
@@ -1126,8 +1158,13 @@
     var headerClass = state.view === 'me' ? 'header-row me-header' : 'header-row';
     header.innerHTML = status +
       '<div class="' + headerClass + '">' +
-        (showBack ? '<button class="icon-btn" data-action="go-back" aria-label="返回">‹</button>' : '') +
-        '<div class="header-title">' + escapeHTML(title) + '</div>' +
+        (showBack
+        ? '<button class="icon-btn header-back" data-action="go-back" aria-label="' + tr('返回') + '"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m14 5-7 7 7 7"/></svg></button>'
+        : '<span class="header-placeholder"></span>') +
+        '<div class="header-title">' + escapeHTML(tr(title)) + '</div>' +
+        (state.view === 'itemDetail' && state.currentId
+          ? '<div class="header-actions" style="margin-left:auto"><button class="header-edit" data-action="edit-item" data-id="' + escapeHTML(state.currentId) + '">' + tr('编辑') + '</button></div>'
+          : '') +
       '</div>';
   }
   function homeHeaderHTML() {
@@ -1247,8 +1284,11 @@
     var days = daysUntil(it.expiry);
     var expiredTag = days != null && days < 0
       ? '<span class="item-expired-inline">' + tr('已过期') + '</span>' : '';
+    var restockTag = Number(it.restockQty) > 0
+      ? '<span class="tag-restock">' + tr('补货') + ' +' + Number(it.restockQty) + '</span>' : '';
     var tagList = ['<span class="tag-yellow">' + escapeHTML(it.folder || '未分类') + '</span>', stock];
     if (expiredTag) tagList.push(expiredTag);
+    else if (restockTag) tagList.push(restockTag);
     else if (locationTag) tagList.push(locationTag);
     var tags = tagList.slice(0, 3).join('');
     var time = timeAgo(it.updatedAt || it.createdAt);
@@ -1357,7 +1397,7 @@
     var d = state.formDraft || {};
     var images = d.images || (d.image ? [d.image] : []);
     var photoHTML = images.map(function (src, i) {
-      return '<div class="photo-thumb"><img src="' + escapeHTML(src) + '" alt=""><span class="photo-del" data-action="remove-photo" data-index="' + i + '">✕</span></div>';
+      return '<div class="photo-thumb" data-action="view-photo" data-src="' + escapeHTML(src) + '"><img src="' + escapeHTML(src) + '" alt=""><span class="photo-del" data-action="remove-photo" data-index="' + i + '">✕</span></div>';
     }).join('') + '<div class="photo-upload" data-action="pick-image"><span>＋</span><span>拍照/选图</span></div>';
     function dateCell(field, label) {
       var v = d[field];
@@ -1378,7 +1418,14 @@
     var reminderCell = d.reminderCustom
       ? inlineOrSelect('f-reminder-inline', 'pick-reminder', d.reminder, '天数')
       : '<span class="form-value" data-action="pick-reminder">' + (d.reminder != null ? d.reminder + ' 天前' : '7 天前') + ' ›</span>';
-    return '<div class="page form-page compact-form">' +
+    var originalQty = Number(d._originalQuantity) || 0;
+    var currentQty = Number(d.quantity) || 1;
+    var restockRow = '';
+    if (state.editingId && originalQty && currentQty > originalQty) {
+      restockRow = '<div class="form-row restock-row"><label><input type="checkbox" id="f-restock-tag"' +
+        (d.restockTag ? ' checked' : '') + '> ' + tr('显示补货数量标签') + '</label></div>';
+    }
+    return '<div class="page form-page compact-form' + (state.editingId ? ' edit-form' : '') + '">' +
       '<div class="form-group">' +
         '<div class="form-row"><div class="form-label">物品名称 *</div><input class="form-input" id="f-name" placeholder="请输入名称" value="' + escapeHTML(d.name || '') + '"></div>' +
         '<div class="form-row"><div class="form-label">图片</div><div class="photo-grid">' + photoHTML + '</div></div>' +
@@ -1387,6 +1434,7 @@
           '<div class="triple-col qty-col"><div class="form-label">数量</div><div class="qty-stepper"><button data-action="qty-minus">−</button><span>' + (Number(d.quantity) || 1) + '</span><button data-action="qty-plus">＋</button></div></div>' +
           '<div class="triple-col unit-col"><div class="form-label">单位</div>' + unitCell + '</div>' +
         '</div>' +
+        restockRow +
         '<div class="form-row dual-row">' + dateCell('production', '生产日期') + dateCell('expiry', '保质期至') + '</div>' +
         '<div class="form-row"><div class="form-label">过期提醒</div>' + reminderCell + '</div>' +
       '</div>' +
@@ -1610,7 +1658,7 @@
       meCard('功能设置', 'features',
         toggle('elder', '🧓', '老年模式', '适中放大 · 高对比 · 简化功能') +
         optionRow('go-notifications', '📬', '通知中心', '查看过期与系统消息') +
-        optionRow('edit-time', '🕘', '通知时间', (p.notifyTime || '09:00') + ' · 到期与临期提醒') +
+        optionRow('edit-time', '🕘', '通知时间', (p.notifyTime || '09:00') + ' · ' + tr('到期与临期提醒')) +
         toggle('sound', '🔊', '提示音', '查找标签时播放声音') +
         toggle('security', '🛡️', '账号安全', '登录验证与密码保护') +
         optionRow('go-password', '🔒', '修改密码', '更新登录密码') +
@@ -2125,7 +2173,7 @@
       state.myGeoStatus = err && err.code === 1 ? 'denied' : 'error';
       render();
       if (!silent) toast(err && err.code === 1 ? '请允许浏览器获取位置' : '无法获取当前位置，请开启手机定位');
-    }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 30000 });
+    }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 });
   }
   function updateLeaveAlertPosition(pos) {
     var lat = pos.coords.latitude, lng = pos.coords.longitude;
@@ -2142,7 +2190,7 @@
     state.leaveAlertWatch = navigator.geolocation.watchPosition(updateLeaveAlertPosition, function (err) {
       state.myGeoStatus = err && err.code === 1 ? 'denied' : 'error';
       render();
-    }, { enableHighAccuracy: true, maximumAge: 10000, timeout: 20000 });
+    }, { enableHighAccuracy: true, maximumAge: 0, timeout: 20000 });
   }
   function stopLeaveAlertWatch() {
     if (navigator.geolocation && state.leaveAlertWatch != null) {
@@ -2518,14 +2566,14 @@
     var d = daysUntil(it.expiry);
     var status = d == null ? tr('未设置日期') : (d < 0 ? tr('已过期 ') + Math.abs(d) + tr(' 天') : (d === 0 ? tr('今天到期') : tr('剩 ') + d + tr(' 天')));
     var dayClass = d != null && d <= 7 ? (d < 0 ? 'expired' : 'soon') : '';
-    var thumb = it.image ? '<div class="item-thumb" style="width:76px;height:76px"><img src="' + escapeHTML(it.image) + '" alt=""></div>'
+    var thumb = it.image
+      ? '<div class="item-thumb" style="width:76px;height:76px" data-action="view-photo" data-src="' + escapeHTML(it.image) + '"><img src="' + escapeHTML(it.image) + '" alt=""></div>'
       : '<div class="item-thumb art-thumb" style="width:76px;height:76px">' + itemArtHTML(it) + '</div>';
     var actions = it.trashed
       ? '<button class="btn" data-action="delete-item" data-id="' + it.id + '">' + tr('彻底删除') + '</button>' +
         '<button class="btn btn-primary" data-action="restore-item" data-id="' + it.id + '">' + tr('恢复') + '</button>'
       : '<button class="btn" data-action="toggle-item-opened" data-id="' + it.id + '">' + tr(it.opened ? '取消开封' : '标记开封') + '</button>' +
-        '<button class="btn" data-action="trash-item" data-id="' + it.id + '">' + tr('移入回收站') + '</button>' +
-        '<button class="btn btn-primary" data-action="edit-item" data-id="' + it.id + '">' + tr('编辑') + '</button>';
+        '<button class="btn" data-action="trash-item" data-id="' + it.id + '">' + tr('移入回收站') + '</button>';
     var info = '';
     if (!state.detailCollapsed) {
       info = '<div class="link-card detail-info">' +
@@ -2544,11 +2592,7 @@
         '<div class="item-name" style="justify-content:center;margin-top:10px">' + escapeHTML(it.name) + '</div>' +
         '<div class="item-days ' + dayClass + '" style="margin-top:4px">' + escapeHTML(status) + '</div>' +
       '</div>' + info +
-      '<div class="detail-actions"><div class="detail-btns">' + actions + '</div>' +
-        '<button class="detail-collapse" data-action="toggle-detail-collapse" aria-label="' + tr('一键收起') + '" title="' + tr('一键收起') + '">' +
-          '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>' +
-        '</button>' +
-      '</div>' +
+      '<div class="detail-actions"><div class="detail-btns">' + actions + '</div></div>' +
     '</div>';
   }
 
@@ -2799,6 +2843,12 @@
           '<span class="row-emoji">🧭</span><span class="row-main">' + escapeHTML(navName) +
           '<span class="row-sub">' + tr('打开高德地图导航到物品当前位置') + '</span></span></div></div>');
     }
+    if (o.type === 'photoView') {
+      return '<div class="sheet-mask show" data-action="close-overlay"></div>' +
+        '<div class="photo-view-overlay"><div class="photo-view-head"><span>' + tr('查看照片') + '</span>' +
+        '<button data-action="close-overlay" aria-label="' + tr('关闭') + '">✕</button></div>' +
+        '<img src="' + escapeHTML(o.src || '') + '" alt="' + tr('查看照片') + '"></div>';
+    }
     if (o.type === 'photoChoice') {
       return sheetShell('添加照片',
         '<div class="photo-choice"><img src="' + escapeHTML(o.src) + '" alt="">' +
@@ -2874,6 +2924,7 @@
     var cat = $('#f-folder-inline'); if (cat) d.folder = cat.value;
     var unit = $('#f-unit-inline'); if (unit) d.unit = unit.value;
     var reminder = $('#f-reminder-inline'); if (reminder) d.reminder = reminder.value;
+    var restock = $('#f-restock-tag'); if (restock) d.restockTag = restock.checked;
   }
   function blankDraft(keep) {
     var old = state.formDraft || {};
@@ -2888,7 +2939,7 @@
     if (state.view !== 'form') pushView();
     state.editingId = id || null;
     var it = id ? findItem(id) : null;
-    state.formDraft = it ? Object.assign({}, it) : blankDraft(false);
+    state.formDraft = it ? Object.assign({}, it, { _originalQuantity: Number(it.quantity) || 1 }) : blankDraft(false);
     if (state.formDraft && !state.formDraft.images) {
       state.formDraft.images = state.formDraft.image ? [state.formDraft.image] : [];
     }
@@ -2909,6 +2960,9 @@
       state.folders.push(category);
       saveFolders();
     }
+    var qty = Math.max(1, Number(d.quantity) || 1);
+    var originalQty = Number(d._originalQuantity) || 0;
+    var restockQty = state.editingId && d.restockTag && originalQty && qty > originalQty ? qty - originalQty : 0;
     var item = {
       id: state.editingId || uid(),
       name: name,
@@ -2918,7 +2972,8 @@
       expiry: d.expiry || '',
       production: d.production || '',
       reminder: Math.max(0, Number(d.reminder) || 0),
-      quantity: Math.max(1, Number(d.quantity) || 1),
+      quantity: qty,
+      restockQty: restockQty,
       unit: String(d.unit || '').trim() || '件',
       folder: category,
       location: d.location || '',
@@ -3549,6 +3604,10 @@
         if (state.crop) { state.crop.scale = 1; state.crop.x = 0; state.crop.y = 0; updateCropTransform(); }
         break;
       case 'crop-save': saveCrop(); break;
+      case 'view-photo':
+        state.overlay = { type: 'photoView', src: el.getAttribute('data-src') || '' };
+        render();
+        break;
       case 'remove-photo':
         syncFormDraft();
         if (state.formDraft && state.formDraft.images) {
