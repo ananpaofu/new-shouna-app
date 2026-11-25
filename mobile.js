@@ -6,7 +6,7 @@
   'use strict';
 
   /* ---------------- 常量 ---------------- */
-  var APP_VERSION = '2.64';
+  var APP_VERSION = '2.65';
   var DB_KEY = 'organizer_local_v2';
   var PREF_KEY = 'organizer_pref_v2';
   var HISTORY_KEY = 'organizer_search_history_v2';
@@ -24,6 +24,11 @@
   var DEFAULT_DEVICE_API = 'https://device-api.xieta1371.workers.dev';
 
   var APP_VERSION_CHANGELOG = [
+    { version: '2.65', date: '2026-11-25', title: '电脑端定位权限入口', items: [
+      '联动页地图信息区新增“开启我的定位 / 重新开启定位”按钮，方便电脑端手动触发浏览器定位权限',
+      '定位失败文案改为“允许浏览器定位或开启系统定位服务”，不再只提示手机定位',
+      '允许定位后，App 会显示我的位置蓝点并计算与物品的距离；物品位置仍来自设备定位源'
+    ] },
     { version: '2.64', date: '2026-11-25', title: '定位与上报时间区分', items: [
       '地图信息区同时显示“定位时间”和“上报时间”，区分设备真实 GPS 时间与最新心跳时间',
       '定位接口解析 heart_time / sys_time，云知行显示的最新时间可以在 App 中看到',
@@ -2085,10 +2090,16 @@
   function locationStatusText() {
     if (state.locatingMe) return '正在请求定位权限…';
     if (state.myGeoStatus === 'granted' && state.myPos) return '已获取我的位置';
-    if (state.myGeoStatus === 'denied') return '定位权限未允许';
-    if (state.myGeoStatus === 'error') return '定位失败，请开启手机定位';
+    if (state.myGeoStatus === 'denied') return '定位权限未允许，请在浏览器地址栏允许定位';
+    if (state.myGeoStatus === 'error') return '定位失败，请允许浏览器定位或开启系统定位服务';
     if (state.myGeoStatus === 'requesting') return '正在请求定位权限…';
     return '尚未获取我的位置';
+  }
+  function locationActionHTML() {
+    if (state.myPos && state.myGeoStatus === 'granted') return '';
+    if (state.locatingMe || state.myGeoStatus === 'requesting') return '';
+    var label = state.myGeoStatus === 'denied' ? '重新开启定位' : '开启我的定位';
+    return '<button class="location-permit-btn" data-action="request-my-location">' + label + '</button>';
   }
   function showMyDistance(silent) {
     if (!navigator.geolocation) {
@@ -2450,7 +2461,7 @@
     return '<div class="page link-page">' +
       leaveBanner +
       '<div class="link-card map-card">' +
-        '<div class="link-card-head"><div><div class="bold">物品实时地图</div><div class="muted small">' + escapeHTML(locationStatusText()) + '</div></div>' +
+        '<div class="link-card-head"><div><div class="bold">物品实时地图</div><div class="muted small">' + escapeHTML(locationStatusText()) + '</div>' + locationActionHTML() + '</div>' +
           '<button class="map-toggle" data-action="toggle-map">' + (expanded ? '收起地图 ›' : '下拉展开地图 ›') + '</button></div>' +
         '<div class="map-actions">' +
           '<button class="map-primary" data-action="refresh-locator">' + tr('刷新位置') + '</button>' +
@@ -3395,6 +3406,7 @@
         if (typeof window !== 'undefined' && window.location) window.location.href = mapURL;
         break;
       case 'find-me': showMyDistance(); break;
+      case 'request-my-location': state.myGeoAutoTried = true; showMyDistance(false); break;
       case 'fullscreen-map':
         if (!state.locatorShare) { toast('请先绑定并刷新物品位置'); break; }
         state.overlay = { type: 'mapFull' };
