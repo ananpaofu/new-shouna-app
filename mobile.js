@@ -6,7 +6,7 @@
   'use strict';
 
   /* ---------------- 常量 ---------------- */
-  var APP_VERSION = '2.81';
+  var APP_VERSION = '2.82';
   var DB_KEY = 'organizer_local_v2';
   var PREF_KEY = 'organizer_pref_v2';
   var HISTORY_KEY = 'organizer_search_history_v2';
@@ -26,6 +26,11 @@
   var DEFAULT_MAP_POINT = { lat: 39.9087, lng: 116.3975 };
 
   var APP_VERSION_CHANGELOG = [
+    { version: '2.82', date: '2026-11-26', title: '腾讯定位与百度地图彻底修复', items: [
+      '按腾讯官方 DOMOverlay 写法重写手机定位标签，修复腾讯地图无定位',
+      '百度地图监听 tilesloaded 事件，瓦片未真正加载立即切换高德地图',
+      '版本号更新到 2.82'
+    ] },
     { version: '2.81', date: '2026-11-26', title: '声音设置页与地图标记修复', items: [
       '声音自定义从弹窗改为独立页面，长文本使用多行输入框',
       '地图默认标记改为手机小标签',
@@ -2489,6 +2494,10 @@
       var phoneHTML = mapPhoneMarkerHTML();
       if (!holder.map || holder.provider !== 'baidu') {
         holder.map = new BMap.Map(el, { enableMapClick: false });
+        var baiduTilesLoaded = false;
+        if (holder.map.addEventListener) {
+          holder.map.addEventListener('tilesloaded', function () { baiduTilesLoaded = true; });
+        }
         holder.provider = 'baidu';
         holder.fallback = false;
         holder.tile = null;
@@ -2519,7 +2528,7 @@
           for (var i = 0; i < imgs.length; i++) {
             if (imgs[i].complete && imgs[i].naturalWidth > 0) { loaded = true; break; }
           }
-          if (!loaded) {
+          if (!baiduTilesLoaded || !loaded) {
             state.baiduFailed = true;
             state.mapProvider = 'amap';
             try { localStorage.setItem(MAP_PROVIDER_KEY, 'amap'); } catch (e) {}
@@ -2530,7 +2539,7 @@
             syncFallbackMap(id, el);
             toast('百度地图未能加载，已切换高德地图');
           }
-        }, 2200);
+        }, 1800);
       } else {
         if (holder.map.checkResize) holder.map.checkResize();
         if (!hasFix && holder.marker) { holder.map.removeOverlay(holder.marker); holder.marker = null; }
@@ -2569,45 +2578,42 @@
   }
   function tencentHTMLMarker(map, position, html, zIndex) {
     if (typeof TMap === 'undefined' || !TMap.DOMOverlay) return null;
-    var Marker = class extends TMap.DOMOverlay {
-      constructor(options) {
-        super(options);
-        this.position = options.position;
-        this.html = options.html;
-        this.zIndex = options.zIndex || 1000;
-        this.setMap(options.map);
-      }
-      onInit(options) {
-        this.map = options.map;
-      }
-      createDOM() {
-        var div = document.createElement('div');
-        div.className = 'tencent-html-marker';
-        div.style.position = 'absolute';
-        div.style.top = '0px';
-        div.style.left = '0px';
-        div.style.pointerEvents = 'none';
-        div.innerHTML = this.html;
-        this.dom = div;
-        return div;
-      }
-      updateDOM() {
-        if (!this.map || !this.position || !this.dom || !this.map.projectToContainer) return;
-        var pixel = this.map.projectToContainer(this.position);
-        var w = this.dom.clientWidth || 44;
-        var h = this.dom.clientHeight || 66;
-        this.dom.style.transform = 'translate(' + (pixel.getX() - w / 2) + 'px,' + (pixel.getY() - h) + 'px)';
-        this.dom.style.zIndex = String(this.zIndex);
-      }
-      setPosition(position) {
-        this.position = position;
-        this.updateDOM();
-      }
-      setHtml(html) {
-        this.html = html;
-        if (this.dom) this.dom.innerHTML = html;
-        this.updateDOM();
-      }
+    function Marker(options) {
+      TMap.DOMOverlay.call(this, options);
+    }
+    Marker.prototype = new TMap.DOMOverlay();
+    Marker.prototype.onInit = function (options) {
+      this.position = options.position;
+      this.html = options.html;
+      this.zIndex = options.zIndex || 1000;
+    };
+    Marker.prototype.createDOM = function () {
+      var div = document.createElement('div');
+      div.className = 'tencent-html-marker';
+      div.style.position = 'absolute';
+      div.style.top = '0px';
+      div.style.left = '0px';
+      div.style.pointerEvents = 'none';
+      div.innerHTML = this.html;
+      this.dom = div;
+      return div;
+    };
+    Marker.prototype.updateDOM = function () {
+      if (!this.map || !this.position || !this.dom || !this.map.projectToContainer) return;
+      var pixel = this.map.projectToContainer(this.position);
+      var w = this.dom.clientWidth || 44;
+      var h = this.dom.clientHeight || 66;
+      this.dom.style.transform = 'translate3d(' + (pixel.getX() - w / 2) + 'px,' + (pixel.getY() - h) + 'px,0px)';
+      this.dom.style.zIndex = String(this.zIndex);
+    };
+    Marker.prototype.setPosition = function (position) {
+      this.position = position;
+      this.updateDOM();
+    };
+    Marker.prototype.setHtml = function (html) {
+      this.html = html;
+      if (this.dom) this.dom.innerHTML = html;
+      this.updateDOM();
     };
     return new Marker({ map: map, position: position, html: html, zIndex: zIndex });
   }
